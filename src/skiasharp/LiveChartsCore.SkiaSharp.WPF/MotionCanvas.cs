@@ -41,6 +41,7 @@ public class MotionCanvas : Canvas
             .HasRenderingFactory(
                 (settings, forceGPU) =>
                 {
+#if NET6_0_OR_GREATER
                     IRenderMode renderMode = forceGPU || settings.UseGPU
                         ? new GPURenderMode()
                         : new CPURenderMode();
@@ -50,6 +51,17 @@ public class MotionCanvas : Canvas
                         : new AsyncLoopTicker();
 
                     return new MotionCanvasComposer(renderMode, ticker);
+#else
+                    IRenderMode renderMode = forceGPU || settings.UseGPU
+                        ? throw new System.Exception("LiveCharts does not support hardware acceleration in .Net Framework.")
+                        : new CPURenderMode();
+
+                    IFrameTicker ticker = settings.TryUseVSync
+                        ? new CompositionTargetTicker()
+                        : new AsyncLoopTicker();
+
+                    return new MotionCanvasComposer(renderMode, ticker);
+#endif
                 });
     }
 
