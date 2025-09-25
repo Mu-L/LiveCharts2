@@ -10,6 +10,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenCartesianChart.sgp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenChartControl.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenChartControl.sgp.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SourceGenMapChart.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SourceGenMapChart.sgp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenPieChart.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenPieChart.sgp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenPolarChart.cs" />
