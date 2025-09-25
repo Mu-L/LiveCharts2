@@ -38,6 +38,14 @@ public class MotionCanvas : AbsoluteLayout
 
     static MotionCanvas()
     {
+        if (!LiveChartsCoreMauiAppBuilderExtensions.AreHandlersRegistered)
+        {
+            throw new InvalidOperationException(
+                "`.UseLiveCharts()` and `.UseSkiaSharp()` must be " +
+                "chained to `.UseMauiApp<T>()`, in the MauiProgram.cs file. For more info see: " +
+                "https://livecharts.dev/docs/Maui/latest/Overview.Installation");
+        }
+
         _ = LiveChartsSkiaSharp
             .EnsureInitialized()
             .HasRenderingFactory(

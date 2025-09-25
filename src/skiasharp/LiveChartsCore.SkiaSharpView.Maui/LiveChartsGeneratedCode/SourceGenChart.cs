@@ -64,7 +64,7 @@ public abstract partial class SourceGenChart : ChartView, IChartView
 
     private MotionCanvas CanvasView => (MotionCanvas)Content;
 
-    /// <inheritdoc cref="IChartView.CoreCanvas"/>
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => CanvasView.CanvasCore;
 
     bool IChartView.DesignerMode => false;
@@ -79,7 +79,7 @@ public abstract partial class SourceGenChart : ChartView, IChartView
                 : CoreCanvas._virtualBackgroundColor;
         }
     }
-    LvcSize IChartView.ControlSize => new() { Width = (float)Width, Height = (float)Height };
+    LvcSize IDrawnView.ControlSize => new() { Width = (float)Width, Height = (float)Height };
 
     private void OnLoaded(object? sender, EventArgs e)
     {
