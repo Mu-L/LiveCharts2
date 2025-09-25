@@ -50,6 +50,10 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     {
         Content = new MotionCanvas();
         InitializeChartControl();
+
+        SizeChanged += (s, e) =>
+            CoreChart.Update();
+
         DetachedFromVisualTree += GeoMap_DetachedFromVisualTree;
     }
 
