@@ -55,13 +55,10 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
 
     private MotionCanvas MotionCanvas => (MotionCanvas)Content!;
 
-    /// <inheritdoc cref="IGeoMapView.DesignerMode" />
-    bool IGeoMapView.DesignerMode => Design.IsDesignMode;
-
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
-    /// <inheritdoc cref="IDrawnView.ControlSize"/>
+    bool IGeoMapView.DesignerMode => Design.IsDesignMode;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)MotionCanvas.Bounds.Width, Height = (float)MotionCanvas.Bounds.Height };
 
     private void GeoMap_DetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
