@@ -35,16 +35,16 @@ namespace LiveChartsCore.SkiaSharpView.SKCharts;
 /// <remarks>
 /// Initializes a new instance of the <see cref="InMemorySkiaSharpChart"/> class.
 /// </remarks>
-public abstract class InMemorySkiaSharpChart(IChartView? chartView = null)
+public abstract class InMemorySkiaSharpChart(IDrawnView? drawnView = null)
 {
-    private readonly IChartView? _chartView = chartView;
+    private readonly IDrawnView? _drawnView = drawnView;
 
     static InMemorySkiaSharpChart()
     {
         _ = LiveChartsSkiaSharp.EnsureInitialized();
     }
 
-    /// <inheritdoc cref="IChartView.CoreCanvas"/>
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas { get; } = new();
 
     internal bool ExplicitDisposing { get; set; }
@@ -65,7 +65,7 @@ public abstract class InMemorySkiaSharpChart(IChartView? chartView = null)
     /// </value>
     public int Height
     {
-        get => _chartView is null ? field : (int)_chartView.ControlSize.Height;
+        get => _drawnView is null ? field : (int)_drawnView.ControlSize.Height;
         set { field = value; WarnSize(); }
     } = 600;
 
@@ -77,7 +77,7 @@ public abstract class InMemorySkiaSharpChart(IChartView? chartView = null)
     /// </value>
     public int Width
     {
-        get => _chartView is null ? field : (int)_chartView.ControlSize.Width;
+        get => _drawnView is null ? field : (int)_drawnView.ControlSize.Width;
         set { field = value; WarnSize(); }
     } = 900;
 
@@ -153,9 +153,9 @@ public abstract class InMemorySkiaSharpChart(IChartView? chartView = null)
 
         var bg = coreChart.GetTheme().VirtualBackroundColor.AsSKColor();
 
-        if (_chartView is not null)
+        if (_drawnView is not null)
         {
-            _chartView.CoreCanvas.DrawFrame(
+            _drawnView.CoreCanvas.DrawFrame(
                 new SkiaSharpDrawingContext(CoreCanvas, canvas, bg));
             return;
         }
@@ -178,9 +178,9 @@ public abstract class InMemorySkiaSharpChart(IChartView? chartView = null)
     private void WarnSize()
     {
 #if DEBUG
-        if (_chartView is null) return;
+        if (_drawnView is null) return;
         throw new InvalidOperationException(
-           $"The chart image dimensions are ignored when built from an {nameof(IChartView)} instance. " +
+           $"The chart image dimensions are ignored when built from an {nameof(IDrawnView)} instance. " +
            $"If you need the chart in a specific size, please use the parameterless contructor and build " +
            $"the chart from there, or resize the chart in UI first to the desired size.");
 #endif
