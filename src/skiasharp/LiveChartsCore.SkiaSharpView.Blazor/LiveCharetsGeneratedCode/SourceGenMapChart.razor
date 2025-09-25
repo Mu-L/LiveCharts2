@@ -22,18 +22,10 @@
 	SOFTWARE.
 *@
 
-@inherits LiveChartsGeneratedCode.SourceGenMapChart
+@using LiveChartsCore.SkiaSharpView.Blazor
 
-@*
-==============================================================================
+@namespace LiveChartsGeneratedCode
 
-use the LiveChartsGeneratedCode.SourceGenCartesianChart class to add blazor specific
-code, this class is just to expose the CartesianChart class in this namespace.
-
-==============================================================================
-*@
-
-@{
-    base.BuildRenderTree(__builder);
-}
-
+<MotionCanvas
+    @ref="_motionCanvas">
+</MotionCanvas>

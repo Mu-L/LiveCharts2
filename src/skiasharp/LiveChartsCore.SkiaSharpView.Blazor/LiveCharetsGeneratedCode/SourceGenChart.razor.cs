@@ -55,7 +55,7 @@ public abstract partial class SourceGenChart : IDisposable, IChartView
         CoreChart = null!;
     }
 
-    /// <inheritdoc cref="IChartView.CoreCanvas"/>
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => _motionCanvas.CanvasCore;
 
     /// <inheritdoc />
@@ -78,7 +78,7 @@ public abstract partial class SourceGenChart : IDisposable, IChartView
     bool IChartView.IsDarkMode => false; // Is this possible in Blazor?
     LvcColor IChartView.BackColor { get; }
 
-    LvcSize IChartView.ControlSize => new()
+    LvcSize IDrawnView.ControlSize => new()
     {
         Width = _motionCanvas.Width,
         Height = _motionCanvas.Height
