@@ -24,6 +24,7 @@ using System;
 using Eto.Drawing;
 using Eto.Forms;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Eto;
@@ -32,18 +33,18 @@ namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 // 
-// this file contains the Eto specific code for the SourceGenChart class,
+// this file contains the Eto specific code for the SourceGenMapChart class,
 // the rest of the code can be found in the _Shared project.
 // 
 // ==============================================================================
 
 /// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenChart : Panel, IChartView
+public abstract partial class SourceGenMapChart : Panel, IGeoMapView
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SourceGenChart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
-    protected SourceGenChart()
+    protected SourceGenMapChart()
     {
         var motionCanvas = new MotionCanvas();
 
@@ -51,61 +52,24 @@ public abstract partial class SourceGenChart : Panel, IChartView
         BackgroundColor = Colors.White;
 
         InitializeChartControl();
-        InitializeObservedProperties();
 
         Content.SizeChanged += (s, e) =>
             CoreChart.Update();
-
-        Content.MouseDown += OnMouseDown;
-        Content.MouseMove += OnMouseMove;
-        Content.MouseUp += OnMouseUp;
-        Content.MouseLeave += OnMouseLeave;
     }
 
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Content).CanvasCore;
 
-    bool IChartView.DesignerMode => false;
-
-    bool IChartView.IsDarkMode => false;
-
-    LvcColor IChartView.BackColor =>
-        new((byte)BackgroundColor.Rb, (byte)BackgroundColor.Gb, (byte)BackgroundColor.Bb, (byte)BackgroundColor.Ab);
-
+    bool IGeoMapView.DesignerMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = Content.Width, Height = Content.Height };
 
-    void IChartView.InvokeOnUIThread(Action action) =>
+    void IGeoMapView.InvokeOnUIThread(Action action) =>
         _ = Application.Instance.InvokeAsync(action);
-
-    /// <inheritdoc cref="Control.OnLoadComplete(EventArgs)"/>
-    protected override void OnLoadComplete(EventArgs e)
-    {
-        base.OnLoadComplete(e);
-        StartObserving();
-        CoreChart.Load();
-    }
 
     /// <inheritdoc cref="Control.OnUnLoad(EventArgs)"/>
     protected override void OnUnLoad(EventArgs e)
     {
         base.OnUnLoad(e);
-        StopObserving();
         CoreChart.Unload();
     }
-
-    private void OnMouseMove(object? sender, MouseEventArgs e)
-    {
-        base.OnMouseMove(e);
-        CoreChart?.InvokePointerMove(new LvcPoint(e.Location.X, e.Location.Y));
-    }
-
-    private void OnMouseDown(object? sender, MouseEventArgs e) =>
-        //if (ModifierKeys > 0) return; // is this supported in Eto.Forms?
-        CoreChart?.InvokePointerDown(new LvcPoint(e.Location.X, e.Location.Y), e.Buttons != MouseButtons.Primary);
-
-    private void OnMouseUp(object? sender, MouseEventArgs e) =>
-        CoreChart?.InvokePointerUp(new LvcPoint(e.Location.X, e.Location.Y), e.Buttons != MouseButtons.Primary);
-
-    private void OnMouseLeave(object? sender, MouseEventArgs e) =>
-        CoreChart?.InvokePointerLeft();
 }
