@@ -9,8 +9,10 @@
     <Import_RootNamespace>_Shared.WinUI</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)GeoMap.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CartesianChart.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)LiveChartsGeneratedCode\SourceGenCartesianChart.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)LiveChartsGeneratedCode\SourceGenMapChart.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)LiveChartsGeneratedCode\SourceGenChart.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)LiveChartsGeneratedCode\SourceGenPieChart.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)LiveChartsGeneratedCode\SourceGenPolarChart.cs" />

@@ -75,7 +75,7 @@ public abstract partial class SourceGenChart : UserControl, IChartView, ICustomH
 
     private MotionCanvas CanvasView => (MotionCanvas)Content!;
 
-    /// <inheritdoc cref="IChartView.CoreCanvas"/>
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => CanvasView.CanvasCore;
 
     bool IChartView.DesignerMode => Design.IsDesignMode;
@@ -84,7 +84,7 @@ public abstract partial class SourceGenChart : UserControl, IChartView, ICustomH
         Background is not ISolidColorBrush b
             ? CoreCanvas._virtualBackgroundColor
             : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
-    LvcSize IChartView.ControlSize => new() { Width = (float)CanvasView.Bounds.Width, Height = (float)CanvasView.Bounds.Height };
+    LvcSize IDrawnView.ControlSize => new() { Width = (float)CanvasView.Bounds.Width, Height = (float)CanvasView.Bounds.Height };
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {

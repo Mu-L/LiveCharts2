@@ -1,4 +1,4 @@
-// The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,17 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Geo;
+using LiveChartsCore.Drawing;
+using LiveChartsCore.Motion;
 
-// ==============================================================================
-// 
-// use the LiveChartsGeneratedCode.SourceGenMapChart class to add avalonia specific
-// code, this class is just to expose the GeoMap class in this namespace.
-// 
-// ==============================================================================
+namespace LiveChartsCore.Kernel.Sketches;
 
-namespace LiveChartsCore.SkiaSharpView.Avalonia;
+/// <summary>
+/// Defines a drawn view.
+/// </summary>
+public interface IDrawnView
+{
+    /// <summary>
+    /// Gets the motion canvas.
+    /// </summary>
+    CoreMotionCanvas CoreCanvas { get; }
 
-/// <inheritdoc cref="IGeoMapView" />
-public class GeoMap : LiveChartsGeneratedCode.SourceGenMapChart
-{ }
+    /// <summary>
+    /// Gets the size of the control.
+    /// </summary>
+    /// <value>
+    /// The size of the control.
+    /// </value>
+    LvcSize ControlSize { get; }
+}

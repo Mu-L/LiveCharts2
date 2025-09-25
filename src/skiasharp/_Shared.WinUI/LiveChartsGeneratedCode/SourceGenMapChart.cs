@@ -20,52 +20,65 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
-
 using System;
-using LiveChartsCore;
+using System.Runtime.InteropServices;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.SkiaSharpView.WinUI;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using LiveChartsCore.Motion;
+using LiveChartsCore.Geo;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 // 
-// this file contains the Skia (image generation) specific code for the SourceGenSKChart class,
+// this file contains the WinUI/UNO specific code for the SourceGenMapChart class,
 // the rest of the code can be found in the _Shared project.
 // 
 // ==============================================================================
 
-/// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenSKChart : InMemorySkiaSharpChart
+/// <inheritdoc cref="IChartView"/>
+public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
 {
+    private static readonly bool s_isWebAssembly = RuntimeInformation.IsOSPlatform(OSPlatform.Create("BROWSER"));
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="SourceGenSKChart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
-    /// <param name="chartView">The chart view to generate the image from.</param>
-    public SourceGenSKChart(IChartView? chartView = null)
-        : base(chartView)
+    public SourceGenMapChart()
     {
-        EasingFunction = null;
-        AutoUpdateEnabled = false;
+        Content = new MotionCanvas(false);
 
         InitializeChartControl();
-        InitializeObservedProperties();
 
-        StartObserving();
-        CoreChart?.Load();
+        SizeChanged += (s, e) =>
+            CoreChart.Update();
+
+        Unloaded += OnUnloaded;
     }
 
-    bool IChartView.DesignerMode => false;
-    bool IChartView.IsDarkMode => false;
-    LvcColor IChartView.BackColor => Background.AsLvcColor();
-    LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
+    private MotionCanvas MotionCanvas => (MotionCanvas)Content;
 
-    void IChartView.InvokeOnUIThread(Action action) =>
-        action();
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
+    public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
-    /// <inheritdoc cref="InMemorySkiaSharpChart.GetCoreChart"/>
-    protected override Chart GetCoreChart() => CoreChart;
+    bool IGeoMapView.DesignerMode => false;
+    LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
+
+    private void OnUnloaded(object sender, RoutedEventArgs e) =>
+        CoreChart.Unload();
+
+    void IGeoMapView.InvokeOnUIThread(Action action)
+    {
+        if (s_isWebAssembly)
+        {
+            action();
+            return;
+        }
+
+        _ = DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () => action());
+    }
 }

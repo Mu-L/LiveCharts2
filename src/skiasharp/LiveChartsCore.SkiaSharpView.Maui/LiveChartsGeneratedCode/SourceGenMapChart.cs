@@ -20,17 +20,52 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
+using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Motion;
+using LiveChartsCore.SkiaSharpView.Maui;
+using Microsoft.Maui.ApplicationModel;
+
+namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 // 
-// use the LiveChartsGeneratedCode.SourceGenMapChart class to add avalonia specific
-// code, this class is just to expose the GeoMap class in this namespace.
+// this file contains the MAUI specific code for the SourceGenMapChart class,
+// the rest of the code can be found in the _Shared project.
 // 
 // ==============================================================================
 
-namespace LiveChartsCore.SkiaSharpView.Avalonia;
+/// <inheritdoc cref="IChartView"/>
+public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
+    /// </summary>
+    protected SourceGenMapChart()
+    {
+        Content = new MotionCanvas(false);
 
-/// <inheritdoc cref="IGeoMapView" />
-public class GeoMap : LiveChartsGeneratedCode.SourceGenMapChart
-{ }
+        SizeChanged += (s, e) =>
+            CoreChart.Update();
+
+        InitializeChartControl();
+
+        Unloaded += OnUnloaded;
+    }
+
+    private MotionCanvas CanvasView => (MotionCanvas)Content;
+
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
+    public CoreMotionCanvas CoreCanvas => CanvasView.CanvasCore;
+
+    bool IGeoMapView.DesignerMode => false;
+    LvcSize IDrawnView.ControlSize => new() { Width = (float)Width, Height = (float)Height };
+
+    private void OnUnloaded(object? sender, EventArgs e) =>
+        CoreChart?.Unload();
+
+    void IGeoMapView.InvokeOnUIThread(Action action) =>
+        MainThread.BeginInvokeOnMainThread(action);
+}

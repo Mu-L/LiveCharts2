@@ -20,52 +20,60 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
-
 using System;
-using LiveChartsCore;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Rendering;
+using Avalonia.Threading;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.Motion;
+using LiveChartsCore.SkiaSharpView.Avalonia;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 // 
-// this file contains the Skia (image generation) specific code for the SourceGenSKChart class,
+// this file contains the Avalonia specific code for the SourceGenMapChart class,
 // the rest of the code can be found in the _Shared project.
 // 
 // ==============================================================================
 
-/// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenSKChart : InMemorySkiaSharpChart
+/// <inheritdoc cref="IGeoMapView" />
+public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTest
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SourceGenSKChart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
-    /// <param name="chartView">The chart view to generate the image from.</param>
-    public SourceGenSKChart(IChartView? chartView = null)
-        : base(chartView)
+    public SourceGenMapChart()
     {
-        EasingFunction = null;
-        AutoUpdateEnabled = false;
-
+        Content = new MotionCanvas();
         InitializeChartControl();
-        InitializeObservedProperties();
 
-        StartObserving();
-        CoreChart?.Load();
+        SizeChanged += (s, e) =>
+            CoreChart.Update();
+
+        DetachedFromVisualTree += GeoMap_DetachedFromVisualTree;
     }
 
-    bool IChartView.DesignerMode => false;
-    bool IChartView.IsDarkMode => false;
-    LvcColor IChartView.BackColor => Background.AsLvcColor();
-    LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
+    private MotionCanvas MotionCanvas => (MotionCanvas)Content!;
 
-    void IChartView.InvokeOnUIThread(Action action) =>
-        action();
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
+    public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
-    /// <inheritdoc cref="InMemorySkiaSharpChart.GetCoreChart"/>
-    protected override Chart GetCoreChart() => CoreChart;
+    bool IGeoMapView.DesignerMode => Design.IsDesignMode;
+    LvcSize IDrawnView.ControlSize => new() { Width = (float)MotionCanvas.Bounds.Width, Height = (float)MotionCanvas.Bounds.Height };
+
+    private void GeoMap_DetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (CoreChart is null) return;
+        CoreChart.Unload();
+    }
+
+    void IGeoMapView.InvokeOnUIThread(Action action) =>
+        Dispatcher.UIThread.Post(action);
+
+    bool ICustomHitTest.HitTest(Point point) =>
+        new Rect(Bounds.Size).Contains(point);
 }

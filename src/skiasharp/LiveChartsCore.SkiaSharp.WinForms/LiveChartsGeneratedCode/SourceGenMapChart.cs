@@ -25,6 +25,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.WinForms;
@@ -33,18 +34,18 @@ namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 // 
-// this file contains the WinForms specific code for the SourceGenChart class,
+// this file contains the WinForms specific code for the SourceGenMapChart class,
 // the rest of the code can be found in the _Shared project.
 // 
 // ==============================================================================
 
-/// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenChart : UserControl, IChartView
+/// <inheritdoc cref="IGeoMapView" />
+public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SourceGenChart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
-    protected SourceGenChart()
+    protected SourceGenMapChart()
     {
         var motionCanvas = new MotionCanvas();
         SuspendLayout();
@@ -55,31 +56,21 @@ public abstract partial class SourceGenChart : UserControl, IChartView
         motionCanvas.TabIndex = 0;
         AutoScaleMode = AutoScaleMode.Font;
         Controls.Add(motionCanvas);
-        Name = "Chart";
+        Name = "GeoChart";
         ResumeLayout(true);
 
         InitializeChartControl();
-        InitializeObservedProperties();
 
         motionCanvas.Resize += (s, e) =>
             CoreChart.Update();
-
-        var c = GetDrawnControl();
-        c.MouseDown += OnMouseDown;
-        c.MouseMove += OnMouseMove;
-        c.MouseUp += OnMouseUp;
-        c.MouseLeave += OnMouseLeave;
     }
 
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>"/>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Controls[0]).CanvasCore;
 
-    bool IChartView.DesignerMode => LicenseManager.UsageMode == LicenseUsageMode.Designtime;
-
-    bool IChartView.IsDarkMode => false;
-
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    LvcColor IChartView.BackColor => new(BackColor.R, BackColor.G, BackColor.B, BackColor.A);
+    bool IGeoMapView.DesignerMode => false;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
@@ -90,18 +81,10 @@ public abstract partial class SourceGenChart : UserControl, IChartView
     /// <returns></returns>
     public Control GetDrawnControl() => Controls[0].Controls[0];
 
-    void IChartView.InvokeOnUIThread(Action action)
+    void IGeoMapView.InvokeOnUIThread(Action action)
     {
         if (!IsHandleCreated) return;
         _ = BeginInvoke(action);
-    }
-
-    /// <inheritdoc cref="ContainerControl.OnParentChanged(EventArgs)"/>
-    protected override void OnParentChanged(EventArgs e)
-    {
-        base.OnParentChanged(e);
-        StartObserving();
-        CoreChart?.Load();
     }
 
     /// <summary>
@@ -112,33 +95,6 @@ public abstract partial class SourceGenChart : UserControl, IChartView
     protected override void OnHandleDestroyed(EventArgs e)
     {
         base.OnHandleDestroyed(e);
-
-        StopObserving();
         CoreChart?.Unload();
-    }
-
-    private void OnMouseMove(object? sender, MouseEventArgs e)
-    {
-        base.OnMouseMove(e);
-        CoreChart?.InvokePointerMove(new LvcPoint(e.Location.X, e.Location.Y));
-    }
-
-    private void OnMouseDown(object? sender, MouseEventArgs e)
-    {
-        base.OnMouseDown(e);
-        if (ModifierKeys > 0) return;
-        CoreChart?.InvokePointerDown(new LvcPoint(e.Location.X, e.Location.Y), e.Button == MouseButtons.Right);
-    }
-
-    private void OnMouseUp(object? sender, MouseEventArgs e)
-    {
-        base.OnMouseUp(e);
-        CoreChart?.InvokePointerUp(new LvcPoint(e.Location.X, e.Location.Y), e.Button == MouseButtons.Right);
-    }
-
-    private void OnMouseLeave(object? sender, EventArgs e)
-    {
-        base.OnMouseLeave(e);
-        CoreChart?.InvokePointerLeft();
     }
 }

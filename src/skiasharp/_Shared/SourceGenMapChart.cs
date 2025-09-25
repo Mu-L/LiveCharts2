@@ -1,4 +1,4 @@
-// The MIT License(MIT)
+﻿// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,17 +20,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using LiveChartsCore;
 using LiveChartsCore.Geo;
+using LiveChartsCore.Kernel.Observers;
 
-// ==============================================================================
-// 
-// use the LiveChartsGeneratedCode.SourceGenMapChart class to add avalonia specific
-// code, this class is just to expose the GeoMap class in this namespace.
-// 
-// ==============================================================================
-
-namespace LiveChartsCore.SkiaSharpView.Avalonia;
+namespace LiveChartsGeneratedCode;
 
 /// <inheritdoc cref="IGeoMapView" />
-public class GeoMap : LiveChartsGeneratedCode.SourceGenMapChart
-{ }
+#if SKIA_IMAGE_LVC
+public partial class SourceGenSKMapChart : IGeoMapView
+#else
+public partial class SourceGenMapChart : IGeoMapView
+#endif
+{
+    private CollectionDeepObserver _seriesObserver = null!;
+
+    /// <summary>
+    /// Gets the core chart.
+    /// </summary>
+    public GeoMapChart CoreChart { get; private set; } = null!;
+
+    /// <inheritdoc cref="IGeoMapView.AutoUpdateEnabled" />
+    public bool AutoUpdateEnabled { get; set; } = true;
+
+    private void InitializeChartControl()
+    {
+        CoreChart = new GeoMapChart(this);
+        _seriesObserver = new CollectionDeepObserver(() => CoreChart?.Update());
+
+        ActiveMap = Maps.GetWorldMap();
+        SyncContext = new object();
+    }
+}

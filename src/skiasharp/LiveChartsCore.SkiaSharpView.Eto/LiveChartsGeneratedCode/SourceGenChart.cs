@@ -62,7 +62,7 @@ public abstract partial class SourceGenChart : Panel, IChartView
         Content.MouseLeave += OnMouseLeave;
     }
 
-    /// <inheritdoc cref="IChartView.CoreCanvas"/>
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Content).CanvasCore;
 
     bool IChartView.DesignerMode => false;
@@ -72,7 +72,7 @@ public abstract partial class SourceGenChart : Panel, IChartView
     LvcColor IChartView.BackColor =>
         new((byte)BackgroundColor.Rb, (byte)BackgroundColor.Gb, (byte)BackgroundColor.Bb, (byte)BackgroundColor.Ab);
 
-    LvcSize IChartView.ControlSize => new() { Width = Content.Width, Height = Content.Height };
+    LvcSize IDrawnView.ControlSize => new() { Width = Content.Width, Height = Content.Height };
 
     void IChartView.InvokeOnUIThread(Action action) =>
         _ = Application.Instance.InvokeAsync(action);

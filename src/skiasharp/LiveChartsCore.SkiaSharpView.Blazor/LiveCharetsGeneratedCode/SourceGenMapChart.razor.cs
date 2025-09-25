@@ -20,52 +20,64 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
-
-using System;
-using LiveChartsCore;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.Motion;
+using LiveChartsCore.SkiaSharpView.Blazor;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 // 
-// this file contains the Skia (image generation) specific code for the SourceGenSKChart class,
+// this file contains the Blazor specific code for the SourceGenMapChart class,
 // the rest of the code can be found in the _Shared project.
 // 
 // ==============================================================================
 
 /// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenSKChart : InMemorySkiaSharpChart
+public abstract partial class SourceGenMapChart : IDisposable, IGeoMapView
 {
+#pragma warning disable IDE0032 // Use auto property, blazor ref
+    private MotionCanvas _motionCanvas = null!;
+#pragma warning restore IDE0032 // Use auto property
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="SourceGenSKChart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
-    /// <param name="chartView">The chart view to generate the image from.</param>
-    public SourceGenSKChart(IChartView? chartView = null)
-        : base(chartView)
+    protected SourceGenMapChart()
     {
-        EasingFunction = null;
-        AutoUpdateEnabled = false;
-
-        InitializeChartControl();
-        InitializeObservedProperties();
-
-        StartObserving();
-        CoreChart?.Load();
+        CoreChart = null!;
     }
 
-    bool IChartView.DesignerMode => false;
-    bool IChartView.IsDarkMode => false;
-    LvcColor IChartView.BackColor => Background.AsLvcColor();
-    LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
+    public CoreMotionCanvas CoreCanvas => _motionCanvas.CanvasCore;
 
-    void IChartView.InvokeOnUIThread(Action action) =>
-        action();
+    bool IGeoMapView.DesignerMode => false;
 
-    /// <inheritdoc cref="InMemorySkiaSharpChart.GetCoreChart"/>
-    protected override Chart GetCoreChart() => CoreChart;
+    LvcSize IDrawnView.ControlSize => new()
+    {
+        Width = _motionCanvas.Width,
+        Height = _motionCanvas.Height
+    };
+
+    /// <inheritdoc />
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        InitializeChartControl();
+
+        _motionCanvas.SizeChanged +=
+            () =>
+                CoreChart.Update();
+
+        CoreCanvas.Sync = SyncContext;
+    }
+
+    void IGeoMapView.InvokeOnUIThread(Action action) =>
+        _ = InvokeAsync(action);
+
+    void IDisposable.Dispose() =>
+        CoreChart.Unload();
 }

@@ -70,7 +70,7 @@ public abstract partial class SourceGenChart : UserControl, IChartView
 
     private MotionCanvas MotionCanvas => (MotionCanvas)Content;
 
-    /// <inheritdoc cref="IChartView.CoreCanvas" />
+    /// <inheritdoc cref="IDrawnView.CoreCanvas" />
     public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
     bool IChartView.DesignerMode => DesignerProperties.GetIsInDesignMode(this);
@@ -79,7 +79,7 @@ public abstract partial class SourceGenChart : UserControl, IChartView
         Background is not SolidColorBrush b
             ? CoreCanvas._virtualBackgroundColor
             : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
-    LvcSize IChartView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
+    LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {

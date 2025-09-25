@@ -25,7 +25,6 @@ using System.Collections.Generic;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Measure;
-using LiveChartsCore.Motion;
 using LiveChartsCore.Painting;
 using LiveChartsCore.Themes;
 using LiveChartsCore.VisualElements;
@@ -35,7 +34,7 @@ namespace LiveChartsCore.Kernel.Sketches;
 /// <summary>
 /// Defines a chart view
 /// </summary>
-public interface IChartView
+public interface IChartView : IDrawnView
 {
     /// <summary>
     /// Gets or sets the series collection.
@@ -79,14 +78,6 @@ public interface IChartView
     /// The color of the back.
     /// </value>
     LvcColor BackColor { get; }
-
-    /// <summary>
-    /// Gets the size of the control.
-    /// </summary>
-    /// <value>
-    /// The size of the control.
-    /// </value>
-    LvcSize ControlSize { get; }
 
     /// <summary>
     /// Gets or sets the draw margin, if this property is null, the library will calculate a margin, this margin is the distance 
@@ -175,14 +166,6 @@ public interface IChartView
     ///   <c>true</c> if automatic update are enabled; otherwise, <c>false</c>.
     /// </value>
     bool AutoUpdateEnabled { get; set; }
-
-    /// <summary>
-    /// Gets the core canvas.
-    /// </summary>
-    /// <value>
-    /// The core canvas.
-    /// </value>
-    CoreMotionCanvas CoreCanvas { get; }
 
     /// <summary>
     /// Gets or sets the chart title.
