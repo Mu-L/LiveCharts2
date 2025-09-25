@@ -44,7 +44,7 @@ namespace LiveChartsGeneratedCode;
 public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="Chart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
     /// <exception cref="Exception">Default colors are not valid</exception>
     protected SourceGenMapChart()
