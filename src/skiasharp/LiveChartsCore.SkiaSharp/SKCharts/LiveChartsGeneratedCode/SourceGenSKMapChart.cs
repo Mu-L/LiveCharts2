@@ -33,7 +33,7 @@ namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 // 
-// this file contains the Avalonia specific code for the SourceGenChart class,
+// this file contains the SkiaSharp (image generation) specific code for the SourceGenSKMapChart class,
 // the rest of the code can be found in the _Shared project.
 // 
 // ==============================================================================
