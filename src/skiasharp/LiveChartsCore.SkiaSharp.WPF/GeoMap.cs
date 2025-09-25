@@ -31,6 +31,6 @@ namespace LiveChartsCore.SkiaSharpView.WPF;
 // 
 // ==============================================================================
 
-/// <inheritdoc cref="IChartView" />
+/// <inheritdoc cref="IGeoMapView" />
 public sealed partial class GeoMap : LiveChartsGeneratedCode.SourceGenMapChart
 { }
