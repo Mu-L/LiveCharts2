@@ -89,7 +89,7 @@ public partial class MotionCanvas : UserControl, IRenderMode
             new SkiaSharpDrawingContext(CanvasCore, e.Surface.Canvas, GetBackground()));
 
     private SKColor GetBackground() =>
-        ((IChartView)Parent!)?.BackColor.AsSKColor() ?? SKColor.Empty;
+        (Parent as IChartView)?.BackColor.AsSKColor() ?? SKColor.Empty;
 
     void IRenderMode.InitializeRenderMode(CoreMotionCanvas canvas) =>
         throw new NotImplementedException();
