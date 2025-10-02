@@ -30,7 +30,6 @@ using System.Windows.Input;
 using System;
 using LiveChartsCore.Painting;
 using System.Collections.Generic;
-using SkiaSharp;
 using LiveChartsCore.Drawing;
 
 #if SKIA_IMAGE_LVC
