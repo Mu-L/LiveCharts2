@@ -7,6 +7,8 @@
 
     <GlobalLangVersion>preview</GlobalLangVersion>
 
+    <MSTestVersion>3.11.0</MSTestVersion>
+
     <!--
     This version is the minimum supported version by LiveCharts,
     currently only used by Avalonia, if you need to downgrade any view package,
