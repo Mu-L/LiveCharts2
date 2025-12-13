@@ -20,17 +20,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using LiveChartsCore;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the Blazor specific code for the PieChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the Blazor specific code
+// ===============================================
 
-/// <inheritdoc cref="IPieChartView"/>
-public partial class SourceGenPieChart : SourceGenChart, IPieChartView
-{ }
+/// <inheritdoc cref="ICartesianChartView"/>
+public partial class SourceGenCartesianChart : SourceGenChart, ICartesianChartView
+{
+    /// <summary>
+    /// Builds the render tree.
+    /// </summary>
+    protected override void BuildRenderTree(RenderTreeBuilder builder) =>
+        base.BuildRenderTree(builder);
+
+    /// <inheritdoc cref="SourceGenChart.OnWheel(WheelEventArgs)" />
+    protected override void OnWheel(WheelEventArgs e)
+    {
+        var c = (CartesianChartEngine)CoreChart;
+        var p = new LvcPoint((float)e.OffsetX, (float)e.OffsetY);
+
+        c.Zoom(ZoomMode, p, e.DeltaY < 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
+    }
+}

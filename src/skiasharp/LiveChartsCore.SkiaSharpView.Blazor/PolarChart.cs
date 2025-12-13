@@ -21,16 +21,11 @@
 // SOFTWARE.
 
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsGeneratedCode;
 
-namespace LiveChartsGeneratedCode;
-
-// ==============================================================================
-// 
-// this file contains the Blazor specific code for the PolarChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+namespace LiveChartsCore.SkiaSharpView.Blazor;
 
 /// <inheritdoc cref="IPolarChartView"/>
-public partial class SourceGenPolarChart : SourceGenChart, IPolarChartView
+public partial class PolarChart : SourceGenPolarChart
 { }
+

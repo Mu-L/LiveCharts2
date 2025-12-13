@@ -25,18 +25,17 @@ using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Blazor;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the Blazor specific code for the SourceGenMapChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the Blazor specific code
+// ===============================================
 
 /// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenMapChart : IDisposable, IGeoMapView
+public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IGeoMapView
 {
 #pragma warning disable IDE0032 // Use auto property, blazor ref
     private MotionCanvas _motionCanvas = null!;
@@ -60,6 +59,16 @@ public abstract partial class SourceGenMapChart : IDisposable, IGeoMapView
         Width = _motionCanvas.Width,
         Height = _motionCanvas.Height
     };
+
+    /// <summary>
+    /// Builds the render tree.
+    /// </summary>
+    protected override void BuildRenderTree(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<MotionCanvas>(0);
+        builder.AddComponentReferenceCapture(1, r => _motionCanvas = (MotionCanvas)r);
+        builder.CloseComponent();
+    }
 
     /// <inheritdoc />
     protected override void OnAfterRender(bool firstRender)

@@ -20,6 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Runtime.CompilerServices;
+using LiveChartsCore.Kernel.Sketches;
+using Microsoft.AspNetCore.Components.Rendering;
 
-[assembly: InternalsVisibleTo("LiveChartsCore.BackersPackage")]
+namespace LiveChartsGeneratedCode;
+
+// ===============================================
+// this file contains the Blazor specific code
+// ===============================================
+
+/// <inheritdoc cref="IPolarChartView"/>
+public partial class SourceGenPolarChart : SourceGenChart, IPolarChartView
+{
+    /// <summary>
+    /// Builds the render tree.
+    /// </summary>
+    protected override void BuildRenderTree(RenderTreeBuilder builder) =>
+        base.BuildRenderTree(builder);
+}
