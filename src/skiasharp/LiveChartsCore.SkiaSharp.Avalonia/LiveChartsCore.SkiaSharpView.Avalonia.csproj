@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <LangVersion>$(GlobalLangVersion)</LangVersion>
@@ -28,8 +28,8 @@
     <DebugType>embedded</DebugType>-->
   </PropertyGroup>
 
-  <Import Project="..\_Shared\_Shared.projitems" Label="Shared" />
-  <Import Project="..\_Shared.Xaml\_Shared.Xaml.projitems" Label="Shared" />
+  <Import Project="..\..\..\build\SharedLinks.Build.props" />
+  <Import Project="..\..\..\build\XamlSharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);AVALONIA_LVC;XAML_LVC</DefineConstants>

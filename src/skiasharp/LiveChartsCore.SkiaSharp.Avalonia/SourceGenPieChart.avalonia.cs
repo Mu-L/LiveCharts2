@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,6 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Runtime.CompilerServices;
+using LiveChartsCore.Kernel.Sketches;
 
-[assembly: InternalsVisibleTo("LiveChartsCore.BackersPackage")]
+namespace LiveChartsGeneratedCode;
+
+// ==============================================================
+// this file contains the shared code between all UI frameworks
+// ==============================================================
+
+/// <inheritdoc cref="IPieChartView" />
+public partial class SourceGenPieChart : SourceGenChart, IPieChartView
+{ }

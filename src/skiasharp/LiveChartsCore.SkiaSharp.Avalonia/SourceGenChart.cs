@@ -39,10 +39,11 @@ using LiveChartsCore.SkiaSharpView.Avalonia;
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
-// 
-// this file contains the Avalonia specific code for the SourceGenChart class,
-// the rest of the code can be found in the _Shared project.
-// 
+// this file is the base class for this UI framework controls, in this file we
+// define the UI framework specific code. 
+// expanding this file in the solution explorer will show 2 more files:
+//    - *.shared.cs:        shared code between all UI frameworks
+//    - *.sgp.cs:           the source generated properties
 // ==============================================================================
 
 /// <inheritdoc cref="ICartesianChartView" />
@@ -177,9 +178,6 @@ public abstract partial class SourceGenChart : UserControl, IChartView, ICustomH
 
         return series;
     }
-
-    private static object GetSeriesSource(ISeries series) =>
-        ((Control)series).DataContext!;
 
     bool ICustomHitTest.HitTest(Point point) =>
         new Rect(Bounds.Size).Contains(point);

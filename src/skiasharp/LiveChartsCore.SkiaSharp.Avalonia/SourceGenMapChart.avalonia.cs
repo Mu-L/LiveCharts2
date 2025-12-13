@@ -33,12 +33,9 @@ using LiveChartsCore.SkiaSharpView.Avalonia;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the Avalonia specific code for the SourceGenMapChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ==============================================================
+// this file contains the shared code between all UI frameworks
+// ==============================================================
 
 /// <inheritdoc cref="IGeoMapView" />
 public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTest

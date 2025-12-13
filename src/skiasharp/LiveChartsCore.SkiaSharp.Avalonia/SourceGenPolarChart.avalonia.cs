@@ -24,12 +24,9 @@ using LiveChartsCore.Kernel.Sketches;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the Avalonia specific code for the SourceGenPolarChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ==============================================================
+// this file contains the shared code between all UI frameworks
+// ==============================================================
 
 /// <inheritdoc cref="IPolarChartView" />
 public partial class SourceGenPolarChart : SourceGenChart, IPolarChartView
