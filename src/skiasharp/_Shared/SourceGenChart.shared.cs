@@ -38,6 +38,10 @@ using LiveChartsCore.VisualElements;
 
 namespace LiveChartsGeneratedCode;
 
+// ==============================================================
+// this file contains the shared code between all UI frameworks
+// ==============================================================
+
 /// <inheritdoc cref="IChartView" />
 #if SKIA_IMAGE_LVC
 public partial class SourceGenSKChart : IChartView

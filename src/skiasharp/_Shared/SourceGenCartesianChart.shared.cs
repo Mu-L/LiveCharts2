@@ -35,41 +35,61 @@ using SGChart = LiveChartsGeneratedCode.SourceGenChart;
 
 namespace LiveChartsGeneratedCode;
 
-/// <inheritdoc cref="IPolarChartView" />
+// ==============================================================
+// this file contains the shared code between all UI frameworks
+// ==============================================================
+
+/// <inheritdoc cref="ICartesianChartView" />
 #if SKIA_IMAGE_LVC
-public partial class SourceGenSKPolarChart : SGChart, IPolarChartView
+public partial class SourceGenSKCartesianChart : SGChart, ICartesianChartView
 #else
-public partial class SourceGenPolarChart : SGChart, IPolarChartView
+public partial class SourceGenCartesianChart : SGChart, ICartesianChartView
 #endif
 {
-    PolarChartEngine IPolarChartView.Core => (PolarChartEngine)CoreChart;
+    CartesianChartEngine ICartesianChartView.Core => (CartesianChartEngine)CoreChart;
 
-    /// <inheritdoc cref="IPolarChartView.ScalePixelsToData(LvcPointD, int, int)"/>
-    public LvcPointD ScalePixelsToData(LvcPointD point, int angleAxisIndex = 0, int radiusAxisIndex = 0)
-        => ((PolarChartEngine)CoreChart).ScalePixelsToData(point, angleAxisIndex, radiusAxisIndex);
+    /// <inheritdoc cref="ICartesianChartView.MatchAxesScreenDataRatio" />
+    public bool MatchAxesScreenDataRatio
+    {
+        get;
+        set
+        {
+            field = value;
 
-    /// <inheritdoc cref="IPolarChartView.ScaleDataToPixels(LvcPointD, int, int)"/>
-    public LvcPointD ScaleDataToPixels(LvcPointD point, int angleAxisIndex = 0, int radiusAxisIndex = 0)
-        => ((PolarChartEngine)CoreChart).ScaleDataToPixels(point, angleAxisIndex, radiusAxisIndex);
+            if (value) SharedAxes.MatchAxesScreenDataRatio(this);
+            else SharedAxes.DisposeMatchAxesScreenDataRatio(this);
+        }
+    }
+
+    /// <inheritdoc cref="ICartesianChartView.ScalePixelsToData(LvcPointD, int, int)"/>
+    public LvcPointD ScalePixelsToData(LvcPointD point, int xAxisIndex = 0, int yAxisIndex = 0)
+        => ((CartesianChartEngine)CoreChart).ScalePixelsToData(point, xAxisIndex, yAxisIndex);
+
+    /// <inheritdoc cref="ICartesianChartView.ScaleDataToPixels(LvcPointD, int, int)"/>
+    public LvcPointD ScaleDataToPixels(LvcPointD point, int xAxisIndex = 0, int yAxisIndex = 0)
+        => ((CartesianChartEngine)CoreChart).ScaleDataToPixels(point, xAxisIndex, yAxisIndex);
 
     /// <inheritdoc cref="SGChart.CreateCoreChart"/>
     protected override Chart CreateCoreChart() =>
-        new PolarChartEngine(this, CoreCanvas);
+        new CartesianChartEngine(this, CoreCanvas);
 
     /// <inheritdoc cref="SGChart.ConfigureObserver(ChartObserver)"/>
     protected override ChartObserver ConfigureObserver(ChartObserver observe)
     {
         return base.ConfigureObserver(observe)
-            .Collection(nameof(AngleAxes), () => AngleAxes)
-            .Collection(nameof(RadiusAxes), () => RadiusAxes);
+            .Collection(nameof(XAxes), () => XAxes)
+            .Collection(nameof(YAxes), () => YAxes)
+            .Collection(nameof(Sections), () => Sections)
+            .Property(nameof(DrawMarginFrame), () => DrawMarginFrame);
     }
 
     /// <inheritdoc cref="SGChart.InitializeObservedProperties"/>
     protected override void InitializeObservedProperties()
     {
-        AngleAxes = new ObservableCollection<IPolarAxis>();
-        RadiusAxes = new ObservableCollection<IPolarAxis>();
+        XAxes = new ObservableCollection<ICartesianAxis>();
+        YAxes = new ObservableCollection<ICartesianAxis>();
         Series = new ObservableCollection<ISeries>();
+        Sections = new ObservableCollection<IChartElement>();
         VisualElements = new ObservableCollection<IChartElement>();
         SyncContext = new object();
     }

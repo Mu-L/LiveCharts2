@@ -33,6 +33,10 @@ using SGChart = LiveChartsGeneratedCode.SourceGenChart;
 
 namespace LiveChartsGeneratedCode;
 
+// ==============================================================
+// this file contains the shared code between all UI frameworks
+// ==============================================================
+
 /// <inheritdoc cref="IPieChartView" />
 #if SKIA_IMAGE_LVC
 public partial class SourceGenSKPieChart : SGChart, IPieChartView

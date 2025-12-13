@@ -26,6 +26,10 @@ using LiveChartsCore.Kernel.Observers;
 
 namespace LiveChartsGeneratedCode;
 
+// ==============================================================
+// this file contains the shared code between all UI frameworks
+// ==============================================================
+
 /// <inheritdoc cref="IGeoMapView" />
 #if SKIA_IMAGE_LVC
 public partial class SourceGenSKMapChart : IGeoMapView
