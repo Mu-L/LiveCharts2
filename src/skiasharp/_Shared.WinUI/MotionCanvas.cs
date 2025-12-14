@@ -24,12 +24,7 @@ using LiveChartsCore.Motion;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using LiveChartsCore.Native;
-
-#if !HAS_OS_LVC
-using LiveChartsCore.SkiaSharpView.WinUI.SkiaRenderer;
-#else
 using LiveChartsCore.SkiaSharpView.WinUI.Rendering;
-#endif
 
 #pragma warning disable IDE0028 // Simplify collection initialization
 

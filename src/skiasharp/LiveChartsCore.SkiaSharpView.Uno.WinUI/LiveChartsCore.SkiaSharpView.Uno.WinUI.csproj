@@ -1,4 +1,4 @@
-﻿<Project Sdk="Uno.Sdk">
+﻿<Project Sdk="Uno.Sdk/6.2.29">
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <LangVersion>$(GlobalLangVersion)</LangVersion>
@@ -8,14 +8,14 @@
     <SkiaSharpVersion>$(LatestSkiaSharpVersion)</SkiaSharpVersion>
 
     <TargetFrameworks>
-      net8.0;net8.0-android;net8.0-ios;net8.0-maccatalyst;
-      net9.0;net9.0-android;net9.0-ios;net9.0-browserwasm;net9.0-desktop
+      net9.0;net9.0-android;net9.0-ios;net9.0-browserwasm;net9.0-desktop;
+      net10.0;net10.0-android;net10.0-ios;net10.0-browserwasm;net10.0-desktop
     </TargetFrameworks>
 
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">
       $(TargetFrameworks);
-      net8.0-windows10.0.19041.0;
-      net9.0-windows10.0.26100.0;
+      net9.0-windows10.0.19041.0;
+      net10.0-windows10.0.19041.0;
     </TargetFrameworks>
 
     <EnableMsixTooling Condition="$([MSBuild]::IsOSPlatform('windows'))">true</EnableMsixTooling>
@@ -51,10 +51,10 @@
     <None Include="$(OutputPath)$(AssemblyName).uprimarker" Pack="false" />
   </ItemGroup>
 
-  <Import Project="..\..\_Shared.Native\_Shared.Native.projitems" Label="Shared" />
-  <Import Project="..\_Shared\_Shared.projitems" Label="Shared" />
-  <Import Project="..\_Shared.WinUI\_Shared.WinUI.projitems" Label="Shared" />
-  <Import Project="..\_Shared.Xaml\_Shared.Xaml.projitems" Label="Shared" />
+  <Import Project="..\..\..\build\WinUISharedLinks.Build.props" />
+  <Import Project="..\..\..\build\SharedLinks.Build.props" />
+  <Import Project="..\..\..\build\XamlSharedLinks.Build.props" />
+  <Import Project="..\..\..\build\NativeSharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);UNO_LVC;WINUI_LVC;XAML_LVC</DefineConstants>

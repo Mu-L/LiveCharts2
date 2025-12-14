@@ -20,17 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Geo;
 
 namespace LiveChartsCore.SkiaSharpView.WinForms;
 
 // ==============================================================================
-// 
-// use the LiveChartsGeneratedCode.SourceGenMapChart class to add winui/uno specific
-// code, this class is just to expose the GeoMap class in this namespace.
-// 
+// this file exposes the control at this namespace.
+// to see the code expand this file in the solution explorer, it will include 3 files:
+//    - *.uiFramework.cs:   The UI framework specific code
+//    - *.shared.cs:        shared code between all UI frameworks
+//    - *.sgp.cs:           the source generated properties
 // ==============================================================================
 
 /// <inheritdoc cref="IGeoMapView" />
+[System.ComponentModel.DesignerCategory("")]
 public sealed partial class GeoMap : LiveChartsGeneratedCode.SourceGenMapChart
 { }

@@ -27,7 +27,7 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
-  <Import Project="..\_Shared\_Shared.projitems" Label="Shared" />
+  <Import Project="..\..\..\build\SharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);BLAZOR_LVC</DefineConstants>
@@ -74,4 +74,5 @@
   <ItemGroup>
     <None Include="images\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
+
 </Project>

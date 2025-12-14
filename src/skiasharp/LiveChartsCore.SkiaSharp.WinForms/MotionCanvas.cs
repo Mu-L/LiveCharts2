@@ -35,6 +35,7 @@ namespace LiveChartsCore.SkiaSharpView.WinForms;
 /// The motion canvas control for windows forms, <see cref="CoreMotionCanvas"/>.
 /// </summary>
 /// <seealso cref="UserControl" />
+[DesignerCategory("")]
 public partial class MotionCanvas : UserControl, IRenderMode
 {
     private IFrameTicker _ticker = null!;
