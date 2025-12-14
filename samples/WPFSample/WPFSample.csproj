@@ -29,4 +29,15 @@
     <Resource Include="Images\livecharts.png" />
   </ItemGroup>
 
+  <!-- UI test setup -->
+
+  <ItemGroup>
+    <PackageReference Include="Factos.WPF" Version="0.3.3" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <UITesting>true</UITesting>
+    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING</DefineConstants>
+  </PropertyGroup>
+
 </Project>

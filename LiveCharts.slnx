@@ -159,6 +159,10 @@
       <BuildType Solution="Ad-Hoc|*" Project="Release" />
       <BuildType Solution="AppStore|*" Project="Release" />
     </Project>
+    <Project Path="tests/UITests/UITests.csproj" Id="78f0491c-c08c-406c-ae95-7af7ccdcfdca">
+      <BuildType Solution="Ad-Hoc|*" Project="Release" />
+      <BuildType Solution="AppStore|*" Project="Release" />
+    </Project>
   </Folder>
   <Project Path="src/LiveChartsCore/LiveChartsCore.csproj">
     <BuildType Solution="Ad-Hoc|*" Project="Release" />
