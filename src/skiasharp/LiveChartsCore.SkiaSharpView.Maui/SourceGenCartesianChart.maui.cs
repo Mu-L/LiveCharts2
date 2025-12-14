@@ -27,12 +27,9 @@ using LiveChartsCore.Measure;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the MAUI specific code for the SourceGenCartesianChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the MAUI specific code
+// ===============================================
 
 /// <inheritdoc cref="ICartesianChartView"/>
 public partial class SourceGenCartesianChart : SourceGenChart, ICartesianChartView

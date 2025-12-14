@@ -30,12 +30,9 @@ using Microsoft.Maui.ApplicationModel;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the MAUI specific code for the SourceGenMapChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the MAUI specific code
+// ===============================================
 
 /// <inheritdoc cref="IChartView"/>
 public abstract partial class SourceGenMapChart : ChartView, IGeoMapView

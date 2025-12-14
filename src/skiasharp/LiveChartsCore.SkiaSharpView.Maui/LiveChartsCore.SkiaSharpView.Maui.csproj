@@ -47,9 +47,9 @@
     <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
   </PropertyGroup>
 
-  <Import Project="..\..\_Shared.Native\_Shared.Native.projitems" Label="Shared" />
-  <Import Project="..\_Shared\_Shared.projitems" Label="Shared" />
-  <Import Project="..\_Shared.Xaml\_Shared.Xaml.projitems" Label="Shared" />
+  <Import Project="..\..\..\build\SharedLinks.Build.props" />
+  <Import Project="..\..\..\build\XamlSharedLinks.Build.props" />
+  <Import Project="..\..\..\build\NativeSharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);MAUI_LVC;XAML_LVC</DefineConstants>
