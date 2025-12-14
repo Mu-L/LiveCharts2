@@ -25,6 +25,14 @@ using LiveChartsGeneratedCode;
 
 namespace LiveChartsCore.SkiaSharpView.Blazor;
 
+// ==============================================================================
+// this file exposes the control at this namespace.
+// to see the code expand this file in the solution explorer, it will include 3 files:
+//    - *.uiFramework.cs:   The UI framework specific code
+//    - *.shared.cs:        shared code between all UI frameworks
+//    - *.sgp.cs:           the source generated properties
+// ==============================================================================
+
 /// <inheritdoc cref="IPolarChartView"/>
 public partial class PolarChart : SourceGenPolarChart
 { }

@@ -22,16 +22,12 @@
 
 using LiveChartsCore.Kernel.Sketches;
 
-namespace LiveChartsCore.SkiaSharpView.Eto;
+namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// this file exposes the control at this namespace.
-// to see the code expand this file in the solution explorer, it will include 3 files:
-//    - *.uiFramework.cs:   The UI framework specific code
-//    - *.shared.cs:        shared code between all UI frameworks
-//    - *.sgp.cs:           the source generated properties
-// ==============================================================================
+// ===============================================
+// this file contains the Eto specific code
+// ===============================================
 
 /// <inheritdoc cref="IPieChartView" />
-public partial class PieChart : LiveChartsGeneratedCode.SourceGenPieChart
+public partial class SourceGenPieChart : SourceGenChart, IPieChartView
 { }

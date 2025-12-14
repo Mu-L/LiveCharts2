@@ -20,37 +20,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
+using Eto.Drawing;
 using Eto.Forms;
-using LiveChartsCore;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Measure;
+using LiveChartsCore.Motion;
+using LiveChartsCore.SkiaSharpView.Eto;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the ETO specific code for the SourceGenCartesianChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the Eto specific code
+// ===============================================
 
-/// <inheritdoc cref="ICartesianChartView" />
-public partial class SourceGenCartesianChart : SourceGenChart, ICartesianChartView
+/// <inheritdoc cref="IChartView" />
+public abstract partial class SourceGenMapChart : Panel, IGeoMapView
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SourceGenCartesianChart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
-    public SourceGenCartesianChart()
+    protected SourceGenMapChart()
     {
-        Content.MouseWheel += OnMouseWheel;
+        var motionCanvas = new MotionCanvas();
+
+        Content = motionCanvas;
+        BackgroundColor = Colors.White;
+
+        InitializeChartControl();
+
+        Content.SizeChanged += (s, e) =>
+            CoreChart.Update();
     }
 
-    private void OnMouseWheel(object? sender, MouseEventArgs e)
+    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
+    public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Content).CanvasCore;
+
+    bool IGeoMapView.DesignerMode => false;
+    LvcSize IDrawnView.ControlSize => new() { Width = Content.Width, Height = Content.Height };
+
+    void IGeoMapView.InvokeOnUIThread(Action action) =>
+        _ = Application.Instance.InvokeAsync(action);
+
+    /// <inheritdoc cref="Control.OnUnLoad(EventArgs)"/>
+    protected override void OnUnLoad(EventArgs e)
     {
-        var c = (CartesianChartEngine)CoreChart;
-        var p = e.Location;
-        c.Zoom(ZoomMode, new LvcPoint(p.X, p.Y), e.Delta.Height > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
-        e.Handled = true;
+        base.OnUnLoad(e);
+        CoreChart.Unload();
     }
 }

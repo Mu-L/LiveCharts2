@@ -20,17 +20,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Eto.Forms;
+using LiveChartsCore;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the Eto specific code for the SourceGenPolarChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the Eto specific code
+// ===============================================
 
-/// <inheritdoc cref="IPolarChartView" />
-public partial class SourceGenPolarChart : SourceGenChart, IPolarChartView
-{ }
+/// <inheritdoc cref="ICartesianChartView" />
+public partial class SourceGenCartesianChart : SourceGenChart, ICartesianChartView
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SourceGenCartesianChart"/> class.
+    /// </summary>
+    public SourceGenCartesianChart()
+    {
+        Content.MouseWheel += OnMouseWheel;
+    }
+
+    private void OnMouseWheel(object? sender, MouseEventArgs e)
+    {
+        var c = (CartesianChartEngine)CoreChart;
+        var p = e.Location;
+        c.Zoom(ZoomMode, new LvcPoint(p.X, p.Y), e.Delta.Height > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
+        e.Handled = true;
+    }
+}
