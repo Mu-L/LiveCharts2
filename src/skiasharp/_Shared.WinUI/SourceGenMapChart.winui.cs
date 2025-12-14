@@ -32,12 +32,9 @@ using LiveChartsCore.Geo;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the WinUI/UNO specific code for the SourceGenMapChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the WinUI/Uno specific code
+// ===============================================
 
 /// <inheritdoc cref="IChartView"/>
 public abstract partial class SourceGenMapChart : UserControl, IGeoMapView

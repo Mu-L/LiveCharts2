@@ -20,17 +20,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using LiveChartsCore.Native.Events;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
+using LiveChartsCore;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the WinUI/UNO specific code for the SourceGenPolarChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the WinUI/Uno specific code
+// ===============================================
 
-/// <inheritdoc cref="IPolarChartView" />
-public partial class SourceGenPolarChart : SourceGenChart, IPolarChartView
-{ }
+/// <inheritdoc cref="IChartView" />
+public partial class SourceGenCartesianChart : SourceGenChart, ICartesianChartView
+{
+    internal override void OnScrolled(object? sender, ScrollEventArgs args)
+    {
+        var c = (CartesianChartEngine)CoreChart;
+        c.Zoom(ZoomMode, args.Location, args.ScrollDelta > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
+    }
+
+    internal override void OnPinched(object? sender, PinchEventArgs args)
+    {
+        var c = (CartesianChartEngine)CoreChart;
+        var p = args.PinchStart;
+        var pivot = new LvcPoint(p.X, p.Y);
+        c.Zoom(ZoomMode, pivot, ZoomDirection.DefinedByScaleFactor, args.Scale);
+
+        // hack:
+        // when the pinch started, the isPanning property is set to true,
+        // when the pinch is completed, the pointerUp will be called,
+        // and within that method panning will occur, lets prevent that
+        // by setting isPanning to false here.
+        c.ClearPointerDown();
+    }
+}

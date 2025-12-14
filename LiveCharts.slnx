@@ -147,6 +147,7 @@
     <File Path="build/NativeSharedLinks.Build.props" />
     <File Path="build/RenderSettings.Build.props" />
     <File Path="build/SharedLinks.Build.props" />
+    <File Path="build/WinUISharedLinks.Build.props" />
     <File Path="build/XamlSharedLinks.Build.props" />
   </Folder>
   <Folder Name="/Tests/">

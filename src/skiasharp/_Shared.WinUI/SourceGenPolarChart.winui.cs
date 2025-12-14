@@ -20,6 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Runtime.CompilerServices;
+using LiveChartsCore.Kernel.Sketches;
 
-[assembly: InternalsVisibleTo("LiveChartsCore.BackersPackage")]
+namespace LiveChartsGeneratedCode;
+
+// ===============================================
+// this file contains the WinUI/Uno specific code
+// ===============================================
+
+/// <inheritdoc cref="IPolarChartView" />
+public partial class SourceGenPolarChart : SourceGenChart, IPolarChartView
+{ }

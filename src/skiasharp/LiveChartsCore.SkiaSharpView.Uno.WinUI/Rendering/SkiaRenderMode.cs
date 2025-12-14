@@ -34,7 +34,7 @@ using SkiaSharp;
 using Uno.WinUI.Graphics2DSK;
 using Windows.Foundation;
 
-namespace LiveChartsCore.SkiaSharpView.WinUI.SkiaRenderer;
+namespace LiveChartsCore.SkiaSharpView.WinUI.Rendering;
 
 internal partial class SkiaRenderMode : Grid, IRenderMode
 {

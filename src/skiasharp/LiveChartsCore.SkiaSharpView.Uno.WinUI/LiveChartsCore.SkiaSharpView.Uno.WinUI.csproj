@@ -51,10 +51,10 @@
     <None Include="$(OutputPath)$(AssemblyName).uprimarker" Pack="false" />
   </ItemGroup>
 
-  <Import Project="..\..\_Shared.Native\_Shared.Native.projitems" Label="Shared" />
-  <Import Project="..\_Shared\_Shared.projitems" Label="Shared" />
-  <Import Project="..\_Shared.WinUI\_Shared.WinUI.projitems" Label="Shared" />
-  <Import Project="..\_Shared.Xaml\_Shared.Xaml.projitems" Label="Shared" />
+  <Import Project="..\..\..\build\WinUISharedLinks.Build.props" />
+  <Import Project="..\..\..\build\SharedLinks.Build.props" />
+  <Import Project="..\..\..\build\XamlSharedLinks.Build.props" />
+  <Import Project="..\..\..\build\NativeSharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);UNO_LVC;WINUI_LVC;XAML_LVC</DefineConstants>
