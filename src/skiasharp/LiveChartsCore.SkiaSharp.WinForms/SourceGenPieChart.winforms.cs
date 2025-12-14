@@ -24,12 +24,9 @@ using LiveChartsCore.Kernel.Sketches;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the WinForms specific code for the SourceGenPieChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the Winforms specific code
+// ===============================================
 
 /// <inheritdoc cref="IPieChartView" />
 public partial class SourceGenPieChart : SourceGenChart, IPieChartView

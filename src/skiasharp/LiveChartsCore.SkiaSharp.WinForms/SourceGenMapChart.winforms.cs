@@ -32,12 +32,9 @@ using LiveChartsCore.SkiaSharpView.WinForms;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the WinForms specific code for the SourceGenMapChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the Winforms specific code
+// ===============================================
 
 /// <inheritdoc cref="IGeoMapView" />
 public abstract partial class SourceGenMapChart : UserControl, IGeoMapView

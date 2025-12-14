@@ -24,7 +24,6 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
@@ -33,12 +32,9 @@ using LiveChartsCore.SkiaSharpView.WPF;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the WPF specific code for the SourceGenMapChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the WPF specific code
+// ===============================================
 
 /// <inheritdoc cref="IGeoMapView" />
 public abstract partial class SourceGenMapChart : UserControl, IGeoMapView

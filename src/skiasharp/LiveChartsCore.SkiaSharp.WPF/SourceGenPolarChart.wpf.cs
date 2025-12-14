@@ -20,36 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Windows.Input;
-using LiveChartsCore;
-using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Measure;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-// 
-// this file contains the WPF specific code for the SourceGenCartesianChart class,
-// the rest of the code can be found in the _Shared project.
-// 
-// ==============================================================================
+// ===============================================
+// this file contains the WPF specific code
+// ===============================================
 
-/// <inheritdoc cref="ICartesianChartView" />
-public partial class SourceGenCartesianChart : SourceGenChart, ICartesianChartView
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SourceGenCartesianChart"/> class.
-    /// </summary>
-    public SourceGenCartesianChart()
-    {
-        MouseWheel += OnMouseWheel;
-    }
-
-    private void OnMouseWheel(object? sender, MouseWheelEventArgs e)
-    {
-        var c = (CartesianChartEngine)CoreChart;
-        var p = e.GetPosition(this);
-        c.Zoom(ZoomMode, new LvcPoint((float)p.X, (float)p.Y), e.Delta > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
-    }
-}
+/// <inheritdoc cref="IPolarChartView" />
+public partial class SourceGenPolarChart : SourceGenChart, IPolarChartView
+{ }
