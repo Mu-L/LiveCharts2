@@ -39,5 +39,17 @@
   <ItemGroup Condition="!$(UseNuGetForSamples)">
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharp.Avalonia\LiveChartsCore.SkiaSharpView.Avalonia.csproj" />
   </ItemGroup>
+
+  <!-- UI test setup -->
+  <Import Project="..\..\build\UITestsLinks.Build.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Factos.Avalonia" Version="$(FactosVersion)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <UITesting>true</UITesting>
+    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;AVALONIA_UI_TESTING</DefineConstants>
+  </PropertyGroup>
   
 </Project>

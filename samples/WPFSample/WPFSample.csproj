@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -30,14 +30,15 @@
   </ItemGroup>
 
   <!-- UI test setup -->
+  <Import Project="..\..\build\UITestsLinks.Build.props" />
 
   <ItemGroup>
-    <PackageReference Include="Factos.WPF" Version="0.3.3" />
+    <PackageReference Include="Factos.WPF" Version="$(FactosVersion)" />
   </ItemGroup>
 
   <PropertyGroup>
     <UITesting>true</UITesting>
-    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING</DefineConstants>
+    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;WPF_UI_TESTING</DefineConstants>
   </PropertyGroup>
 
 </Project>

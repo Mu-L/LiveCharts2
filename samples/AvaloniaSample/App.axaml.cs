@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Factos.Avalonia;
 using LiveChartsCore; // mark
 using ViewModelsSamples;
 
@@ -19,6 +20,9 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+#if UI_TESTING
+        this.UseFactosApp();
+#else
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow();
@@ -29,5 +33,6 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+#endif
     }
 }

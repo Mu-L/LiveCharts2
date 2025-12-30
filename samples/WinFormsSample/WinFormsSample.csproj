@@ -20,4 +20,16 @@
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharp.WinForms\LiveChartsCore.SkiaSharpView.WinForms.csproj" />
   </ItemGroup>
 
+  <!-- UI test setup -->
+  <Import Project="..\..\build\UITestsLinks.Build.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Factos.WinForms" Version="$(FactosVersion)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <UITesting>true</UITesting>
+    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;WINFORMS_UI_TESTING</DefineConstants>
+  </PropertyGroup>
+
 </Project>

@@ -39,5 +39,17 @@
   <ItemGroup Condition="!$(UseNuGetForSamples)">
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharpView.Eto\LiveChartsCore.SkiaSharpView.Eto.csproj" />
   </ItemGroup>
+
+  <!-- UI test setup -->
+  <Import Project="..\..\build\UITestsLinks.Build.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Factos.Eto" Version="$(FactosVersion)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <UITesting>true</UITesting>
+    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;ETO_UI_TESTING</DefineConstants>
+  </PropertyGroup>
   
 </Project>

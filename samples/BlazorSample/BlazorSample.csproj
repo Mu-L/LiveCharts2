@@ -3,7 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -34,5 +33,17 @@
   <ItemGroup Condition="!$(UseNuGetForSamples)">
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharpView.Blazor\LiveChartsCore.SkiaSharpView.Blazor.csproj" />
   </ItemGroup>
+
+  <!-- UI test setup -->
+  <Import Project="..\..\build\UITestsLinks.Build.props" />
+
+  <ItemGroup>
+    <PackageReference Include="Factos.Blazor" Version="$(FactosVersion)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <UITesting>true</UITesting>
+    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;BLAZOR_UI_TESTING</DefineConstants>
+  </PropertyGroup>
 
 </Project>

@@ -40,9 +40,9 @@
 
     </PropertyGroup>
 
-    <Import Project="./../Directory.Build.props"/>
-    <Import Project="./../../../Directory.Build.props"/>
-    <Import Project="./../../../build/RenderSettings.Build.props"/>
+    <Import Project="./../Directory.Build.props" />
+    <Import Project="./../../../Directory.Build.props" />
+    <Import Project="./../../../build/RenderSettings.Build.props" />
 
     <ItemGroup>
         <Page Include="..\..\WinUISample\WinUISample\Samples\**\*.xaml">
@@ -65,5 +65,23 @@
     <ItemGroup Condition="!$(UseNuGetForSamples)">
         <ProjectReference Include="..\..\..\src\skiasharp\LiveChartsCore.SkiaSharpView.Uno.WinUI\LiveChartsCore.SkiaSharpView.Uno.WinUI.csproj" />
     </ItemGroup>
+
+    <!-- UI test setup -->
+    <!--<Import Project="..\..\build\UITestsLinks.Build.props" />-->
+    <!--in uno we do not use the UITestsLinks because the uno folder is different.-->
+    <ItemGroup>
+        <Compile Include="..\..\..\tests\SharedUITests\**\*.cs">
+            <Link>UITests\%(RecursiveDir)%(Filename).cs</Link>
+        </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Factos.Uno" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <UITesting>true</UITesting>
+        <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;UNO_UI_TESTING</DefineConstants>
+    </PropertyGroup>
 
 </Project>

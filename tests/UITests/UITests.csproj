@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Factos" Version="0.3.3" />
+    <PackageReference Include="Factos" Version="$(FactosVersion)" />
   </ItemGroup>
 
 </Project>

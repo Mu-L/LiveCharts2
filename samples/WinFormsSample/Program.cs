@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using Factos.WinForms;
 using LiveChartsCore; // mark
 using ViewModelsSamples;
 
@@ -17,6 +18,13 @@ static class Program
         _ = Application.SetHighDpiMode(HighDpiMode.SystemAware);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new Form1());
+
+        var form = new Form1();
+
+#if UI_TESTING
+        form.UseFactosApp();
+#endif
+
+        Application.Run(form);
     }
 }
