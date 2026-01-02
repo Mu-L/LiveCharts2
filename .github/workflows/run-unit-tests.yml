@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: windows-2025
     permissions:
       contents: read
       actions: read
@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -28,7 +28,7 @@ jobs:
           dotnet-version: '10.0.100'
 
       - name: Run unit tests
-        run: dotnet test tests/CoreTests/CoreTests.csproj --framework ${{ matrix.framework }} --logger "trx;LogFileName=${{ matrix.framework }}.trx"
+        run: dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} --report-trx
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
