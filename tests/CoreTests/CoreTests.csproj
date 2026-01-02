@@ -11,7 +11,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="$(UseNuGetPackages) == 'true'">
+    <PackageReference Include="LiveChartsCore.SkiaSharpView" Version="$(LiveChartsVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(UsePackages) == ''">
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharp\LiveChartsCore.SkiaSharpView.csproj" />
   </ItemGroup>
 

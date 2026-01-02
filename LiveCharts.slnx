@@ -142,6 +142,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
+    <File Path="nuget.props" />
   </Folder>
   <Folder Name="/Solution Items/MSBuild/">
     <File Path="build/NativeSharedLinks.Build.props" />

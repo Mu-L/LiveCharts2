@@ -7,24 +7,50 @@ on:
     branches: [ master, dev ]
 
 jobs:
-  test:
-    runs-on: windows-2025
 
+  build-packages: 
+    runs-on: windows-2025    
+    steps: 
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+      
+      - name: Setup .NET 
+        uses: actions/setup-dotnet@v5.0.1
+        with: 
+          dotnet-version: '10.0.100'
+      
+      - name: Pack LiveChartsCore 
+        run: dotnet pack src/livechartscore -c Release -o artifacts
+
+      - name: Pack LiveChartsCore.SkiaSharpView 
+        run: dotnet pack src/LiveChartsCore.SkiaSharpView -c Release -o artifacts
+        
+      - name: Publish to GitHub Packages
+        run: dotnet nuget push artifacts/*.nupkg \
+                --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+                --api-key ${{ secrets.GH_TOKEN }}
+
+  run-tests:
+    runs-on: windows-2025
+    needs: build-packages
     strategy:
       matrix:
         framework: [ net8.0, net462 ]
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5.0.1
         with:
           dotnet-version: '10.0.100'
 
       - name: Run unit tests
-        run: dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} --report-trx
+        run: dotnet run \
+          --project tests/CoreTests/CoreTests.csproj \
+          -f ${{ matrix.framework }} \
+          -p:UseNuGetPackages=true \
+          --report-trx
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -34,12 +60,11 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: test
+    needs: run-tests
     permissions:
       contents: read
       actions: read
       checks: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4

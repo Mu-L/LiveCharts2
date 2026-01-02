@@ -1476,10 +1476,13 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         {
             return labeler(value);
         }
+#if DEBUG
         catch (Exception e)
         {
-#if DEBUG
             Trace.WriteLine($"[Error] LiveCharts was not able to get a label from axis {_orientation} with value {value}. {e.Message}");
+#else
+        catch
+        {
 #endif
             return string.Empty;
         }
