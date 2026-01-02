@@ -23,13 +23,15 @@ jobs:
         run: dotnet pack src/LiveChartsCore \
                 -c Release \
                 -o artifacts \
-                -p:LiveChartsVersionSurfix=pr${{ github.event.pull_request.number }}
+                /p:IsPacking=true \
+                /p:LiveChartsVersionSurfix=-pr${{ github.event.pull_request.number }}
 
       - name: Pack LiveChartsCore.SkiaSharpView 
         run: dotnet pack src/skiasharp/LiveChartsCore.SkiaSharp \
                 -c Release \
                 -o artifacts \
-                -p:LiveChartsVersionSurfix=pr${{ github.event.pull_request.number }}
+                /p:IsPacking=true \
+                /p:LiveChartsVersionSurfix=-pr${{ github.event.pull_request.number }}
         
       - name: Publish to GitHub Packages
         run: dotnet nuget push artifacts/*.nupkg \
@@ -56,7 +58,7 @@ jobs:
                 --project tests/CoreTests/CoreTests.csproj \
                 -f ${{ matrix.framework }} \
                 -p:UseNuGetPackages=true \
-                -p:LiveChartsVersionSurfix=pr${{ github.event.pull_request.number }}
+                -p:LiveChartsVersionSurfix=-pr${{ github.event.pull_request.number }}
                 --report-trx
 
       - name: Upload test results
