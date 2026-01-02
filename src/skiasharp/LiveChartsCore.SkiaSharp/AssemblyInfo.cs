@@ -22,7 +22,7 @@
 
 using System.Runtime.CompilerServices;
 
-#if !DEBUG && NET462
+#if STRONG_NAMED_ASSEMBLIES
 using System.Reflection;
 
 [assembly: AssemblyKeyFile("./../../../LiveCharts.snk")]
@@ -45,7 +45,6 @@ using System.Reflection;
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView.Eto")]
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView.Blazor")]
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView.Maui")]
-[assembly: InternalsVisibleTo("LiveChartsCore.BackersPackage")]
 
 #endif
 

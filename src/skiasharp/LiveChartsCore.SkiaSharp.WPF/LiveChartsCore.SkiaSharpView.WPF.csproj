@@ -51,6 +51,10 @@
     <ProjectReference Include="..\LiveChartsCore.SkiaSharp\LiveChartsCore.SkiaSharpView.csproj" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net462'">
+    <DefineConstants>$(DefineConstants);STRONG_NAMED_ASSEMBLIES</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup Condition="$(UseNuGetForGenerator)">
     <PackageReference Include="LiveChartsGenerators" Version="$(LiveChartsCodeGenVersion)">
       <PrivateAssets>all</PrivateAssets>
