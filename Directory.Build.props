@@ -6,9 +6,6 @@
     <LiveChartsAuthors>BetoRodriguez</LiveChartsAuthors>
 
     <GlobalLangVersion>preview</GlobalLangVersion>
-
-    <MSTestVersion>3.11.0</MSTestVersion>
-
     <FactosVersion>0.6.0</FactosVersion>
 
     <!--

@@ -1,31 +1,61 @@
-name: "Unit tests"
+name: Core Unit Tests
 
 on:
   push:
     branches: [ master, dev ]
   pull_request:
     branches: [ master, dev ]
-  schedule:
-    - cron: '35 19 * * 4'
 
 jobs:
-  analyze:
-    name: Analyze
-    runs-on: windows-2022
+  test:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
 
     strategy:
-      fail-fast: false
       matrix:
-        language: [ 'csharp' ]
-        targetplatform: [ x86, x64 ]
+        framework: [ net8.0, net462 ]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.100'
 
-    - name: Run unit tests
-      run: dotnet test ./tests/LiveChartsCore.UnitTesting
+      - name: Run unit tests
+        run: dotnet test tests/CoreTests/CoreTests.csproj --framework ${{ matrix.framework }} --logger "trx;LogFileName=${{ matrix.framework }}.trx"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.framework }}
+          path: "**/*.trx"
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish results
+        uses: dorny/test-reporter@v2.4.0
+        with:
+          name: test-results
+          path: "artifacts/**/*.trx"
+          reporter: dotnet-trx

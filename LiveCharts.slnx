@@ -152,7 +152,7 @@
     <File Path="build/XamlSharedLinks.Build.props" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="tests/LiveChartsCore.UnitTesting/LiveChartsCore.UnitTesting.csproj">
+    <Project Path="tests/CoreTests/CoreTests.csproj">
       <BuildType Solution="Ad-Hoc|*" Project="Release" />
       <BuildType Solution="AppStore|*" Project="Release" />
     </Project>

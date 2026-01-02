@@ -32,6 +32,7 @@ using System.Reflection;
 
 #else
 
+[assembly: InternalsVisibleTo("CoreTests")]
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView")]
 [assembly: InternalsVisibleTo("LiveChartsCore.Behaviours")]
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView.WinForms")]
@@ -45,7 +46,6 @@ using System.Reflection;
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView.Blazor")]
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView.Maui")]
 [assembly: InternalsVisibleTo("LiveChartsCore.BackersPackage")]
-[assembly: InternalsVisibleTo("LiveChartsCore.UnitTesting")]
 [assembly: InternalsVisibleTo("LiveChartsCore.Vortice")]
 
 #endif
