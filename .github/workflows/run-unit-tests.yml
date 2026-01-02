@@ -9,10 +9,6 @@ on:
 jobs:
   test:
     runs-on: windows-2025
-    permissions:
-      contents: read
-      actions: read
-      checks: write
 
     strategy:
       matrix:
