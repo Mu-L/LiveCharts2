@@ -41,9 +41,9 @@ jobs:
   comment-packages:
     runs-on: windows-2025
     needs: build-packages
-    strategy:
-      matrix:
-        framework: [ net8.0, net462 ]
+    permissions: 
+      issues: write 
+      pull-requests: write
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -56,7 +56,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ NuGet packages built for PR #${{ github.event.pull_request.number }} 👉 [Download artifacts here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+              body: `✅ NuGet packages built for commit ${{ github.sha }} 👉 [Download artifacts here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
             })
 
   run-tests:
