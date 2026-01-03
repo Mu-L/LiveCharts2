@@ -21,8 +21,7 @@
   </ItemGroup>
   <PropertyGroup>
     <Description>
-      $(Description) This package contains only the core of the library, you probably need another package that is compatible with you UI framework,
-      unless you are building a custom package.
+      $(Description) This package contains only the core of the library, you probably need another package that is compatible with you UI framework, unless you are building a custom package.
     </Description>
   </PropertyGroup>
 
@@ -45,7 +44,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'netstandard2.0'" Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference
+      Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'netstandard2.0'"
+      Include="System.Text.Json"
+      Version="8.0.5" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 

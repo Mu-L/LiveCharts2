@@ -20,6 +20,8 @@ jobs:
     steps: 
       - name: Checkout 
         uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: 0 # important for deterministic builds?
       
       - name: Setup .NET 
         uses: actions/setup-dotnet@v5.0.1
@@ -58,7 +60,7 @@ jobs:
       - id: upload
         uses: actions/upload-artifact@v6.0.0 
         with:
-          name: nuget-packages-${{ github.sha }}
+          name: livecharts-${{ github.sha }}
           path: flat/**/*.nupkg
 
       - uses: actions/github-script@v8
@@ -146,7 +148,7 @@ jobs:
             - ❌ Failed: ${{ steps.report.outputs.failed }}
             - ⚠️ Skipped: ${{ steps.report.outputs.skipped }}
             - ⏱️ Time: ${{ steps.report.outputs.time }} ms
-            - 🔗 [Check Run Details](${{ steps.report.outputs.url_html }}`;
+            - 🔗 [Check Run Details](${process.env.URL_HTML}`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -154,3 +156,6 @@ jobs:
               repo: context.repo.repo,
               body,
             });
+
+        env: 
+          URL_HTML: ${{ steps.report.outputs.url_html }}

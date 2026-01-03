@@ -21,8 +21,7 @@
   </ItemGroup>
   <PropertyGroup>
     <Description>
-      $(Description) This package renders charts using SkiaSharp, this is enough if you only need to render images otherwise
-      you probably need another package that is compatible with your UI framework.
+      $(Description) This package renders charts using SkiaSharp, this is enough if you only need to render images otherwise you probably need another package that is compatible with your UI framework.
     </Description>
   </PropertyGroup>
 
