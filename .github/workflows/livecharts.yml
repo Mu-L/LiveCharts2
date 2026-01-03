@@ -8,6 +8,16 @@ on:
 
 jobs:
 
+  comment-progress:
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: ./.github/actions/comment-progress
+        id: create-comment
+    outputs: 
+      comment_id: ${{ steps.create-comment.outputs.comment_id }}
+
   pack: 
     runs-on: windows-2025    
     strategy:
@@ -83,11 +93,10 @@ jobs:
             artifacts/*.nupkg
             artifacts/*.snupkg
 
-  comment-packages-link:
+  update-packed-progress:
     runs-on: ubuntu-24.04
-    needs: pack
-    permissions: 
-      issues: write 
+    needs: [pack, comment-progress]
+    permissions:
       pull-requests: write
     steps:
       - uses: actions/download-artifact@v7.0.0
@@ -100,30 +109,18 @@ jobs:
           find collected -type f -name '*.nupkg' -exec cp {} flat/ \;
           find collected -type f -name '*.snupkg' -exec cp {} flat/ \;
 
-      - id: upload
+      - name: Upload packages
+        id: upload
         uses: actions/upload-artifact@v6.0.0 
         with:
           name: livecharts-${{ github.sha }}
           path: flat/*        
 
-      - uses: actions/github-script@v8
+      - name: Update comment progress
+        uses: ./.github/actions/comment-progress
         with:
-          script: |
-            let body = `NuGet packages built successfully! 🥳
-            
-            You can download the NuGet packages with these changes [here](${process.env.ARTIFACT_URL}).
-            
-            While these changes are approved and published to the NuGet Gallery, you can install these packages locally. 
-            If you need help to do so, check out [this guide](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`;
-              
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number, 
-              owner: context.repo.owner, 
-              repo: context.repo.repo, 
-              body
-            });
-        env: 
-          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          comment_id: ${{ needs.comment-progress.outputs.comment_id }}
+          complete_nuget: ${{ steps.upload.outputs.artifact-url }}
 
   test-core:
     runs-on: ubuntu-24.04
@@ -146,7 +143,7 @@ jobs:
       - name: Upload test results
         uses: actions/upload-artifact@v6.0.0
         with:
-          name: test-results-${{ matrix.framework }}
+          name: core-results-${{ matrix.framework }}
           path: "**/*.trx"
 
   ui-test-windows:
@@ -179,12 +176,12 @@ jobs:
       - name: Upload test results
         uses: actions/upload-artifact@v6.0.0
         with:
-          name: test-results-${{ matrix.id }}
+          name: win-results-${{ matrix.id }}
           path: "**/*.trx"
 
-  comment-test-results:
+  results-core-test:
     runs-on: ubuntu-24.04
-    needs: test-core
+    needs: [test-core, comment-progress]
     permissions:
       contents: read
       actions: read
@@ -198,47 +195,53 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v7.0.0
         with:
-          path: artifacts
+          path: core-results
+          pattern: core-results-*
 
       - name: Publish results
         id: report
         uses: dorny/test-reporter@v2.4.0
         with:
-          name: test-results
-          path: "artifacts/**/*.trx"
+          name: core-results
+          path: "core-results/**/*.trx"
           reporter: dotnet-trx
 
-      - name: Comment results
-        uses: actions/github-script@v8
+      - name: Update comment progress
+        uses: ./.github/actions/comment-progress
         with:
-          script: |
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
+          comment_id: ${{ needs.comment-progress.outputs.comment_id }}
+          complete_core_tests: ${{ steps.report.outputs.conclusion }}
 
-            let body = '';
-            
-            if ('${{ steps.report.outputs.conclusion }}' == 'success') {
-              body += `### All tests passed! 🎉\n\n`;
-            } else {
-              body += `### Some tests failed. ❌\n\n`;
-            }
+  results-ui-windows:
+    runs-on: ubuntu-24.04
+    needs: [ui-test-windows, comment-progress]
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      issues: write 
+      pull-requests: write
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
 
-            body += `test results summary:
+      - name: Download artifacts
+        uses: actions/download-artifact@v7.0.0
+        with:
+          path: win-results
+          pattern: win-results-*
 
-            | Name        | Value                             |
-            |-------------|-----------------------------------|
-            | Passed   | ${{ steps.report.outputs.passed }}   |
-            | Failed   | ${{ steps.report.outputs.failed }}   |
-            | Skipped  | ${{ steps.report.outputs.skipped }}  |
-            | Time     | ${{ steps.report.outputs.time }} ms  |
-            | Details  | https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }} |`
+      - name: Publish results
+        id: report
+        uses: dorny/test-reporter@v2.4.0
+        with:
+          name: win-results
+          path: "win-results/**/*.trx"
+          reporter: dotnet-trx
 
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });
+      - name: Update comment progress
+        uses: ./.github/actions/comment-progress
+        with:
+          comment_id: ${{ needs.comment-progress.outputs.comment_id }}
+          complete_win_tests: ${{ steps.report.outputs.conclusion }}
+          
