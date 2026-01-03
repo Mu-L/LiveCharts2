@@ -33,10 +33,15 @@ jobs:
         run: dotnet nuget push **/*.nupkg --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --api-key ${{ secrets.GH_TOKEN }}
 
       - name: Upload test results
+        id: upload
         uses: actions/upload-artifact@v6.0.0
         with:
           name: ${{ matrix.short-name }}-package
-          path: "**/*.nupkg"          
+          path: "**/*.nupkg"
+      
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }} 
+      short-name: ${{ matrix.short-name }}
 
   comment-packages-link:
     runs-on: ubuntu-24.04
@@ -45,26 +50,24 @@ jobs:
       issues: write 
       pull-requests: write
     steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Comment with artifact link
-        uses: actions/github-script@v8
+      - uses: actions/github-script@v8
         with:
           script: |
-            const { data: comments } = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-
-            const body = `✅ NuGet packages built for commit ${context.sha} 👉 [Download artifacts here](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
-
+            // Collect outputs from all matrix jobs 
+            const jobs = context.jobMatrix['build-packages'];
+            let body = `✅ NuGet packages built for commit ${context.sha}\n\n`;
+            
+            for (const job of jobs) {
+              const url = job.outputs['artifact-url'];
+              const name = job.outputs['short-name'];
+              body += `- 📦 **${name}**: [Download here](${url})\n`; 
+            }
+              
             await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body,
+              issue_number: context.issue.number, 
+              owner: context.repo.owner, 
+              repo: context.repo.repo, 
+              body
             });
 
   run-tests:
@@ -98,10 +101,9 @@ jobs:
       contents: read
       actions: read
       checks: write
+      issues: write 
+      pull-requests: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Download artifacts
         uses: actions/download-artifact@v7.0.0
         with:
