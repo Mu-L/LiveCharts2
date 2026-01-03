@@ -32,14 +32,18 @@ jobs:
         run: dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=-${{ github.sha }}
         
       - name: Publish
-        run: dotnet nuget push **/*.nupkg --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --api-key ${{ secrets.GH_TOKEN }}
+        run: |
+          dotnet nuget push **/*.nupkg --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --api-key ${{ secrets.GH_TOKEN }}
+          dotnet nuget push **/*.snupkg --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --api-key ${{ secrets.GH_TOKEN }}
 
       - name: Upload test results
         id: upload
         uses: actions/upload-artifact@v6.0.0
         with:
           name: ${{ matrix.short-name }}-package
-          path: "**/*.nupkg"
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
 
   comment-packages-link:
     runs-on: ubuntu-24.04
@@ -56,12 +60,13 @@ jobs:
         run: | 
           mkdir -p flat 
           find collected -type f -name '*.nupkg' -exec cp {} flat/ \;
+          find collected -type f -name '*.snupkg' -exec cp {} flat/ \;
 
       - id: upload
         uses: actions/upload-artifact@v6.0.0 
         with:
           name: livecharts-${{ github.sha }}
-          path: flat/**/*.nupkg
+          path: flat/**/*.{nupkg,snupkg}
 
       - uses: actions/github-script@v8
         with:
@@ -148,7 +153,7 @@ jobs:
             - ❌ Failed: ${{ steps.report.outputs.failed }}
             - ⚠️ Skipped: ${{ steps.report.outputs.skipped }}
             - ⏱️ Time: ${{ steps.report.outputs.time }} ms
-            - 🔗 [Check Run Details](${process.env.URL_HTML}`;
+            - 🔗 [Check Run Details](${process.env.URL_HTML})`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
