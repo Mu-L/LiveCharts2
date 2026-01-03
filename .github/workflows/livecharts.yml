@@ -28,9 +28,9 @@ jobs:
       - name: Publish
         run: dotnet nuget push **/*.nupkg --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --api-key ${{ secrets.GH_TOKEN }}
 
-      - name: Sanitize artifact name 
-        run: echo "ARTIFACT_NAME=$(basename $MATRIX_PROJECT)" >> $GITHUB_ENV
-        env: 
+      - name: Sanitize artifact name
+        run: echo "ARTIFACT_NAME=${MATRIX_PROJECT//\//-}" >> $GITHUB_ENV
+        env:
           MATRIX_PROJECT: ${{ matrix.project }}
 
       - name: Upload test results
