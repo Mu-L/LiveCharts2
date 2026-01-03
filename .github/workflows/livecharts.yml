@@ -21,6 +21,7 @@ jobs:
 
           - short-name: avalonia-skiasharp
             project: src\skiasharp\LiveChartsCore.SkiaSharp.Avalonia
+            workloads: [ wasm-tools, maui ]
 
           - short-name: blazor-skiasharp
             project: src\skiasharp\LiveChartsCore.SkiaSharpView.Blazor
@@ -34,6 +35,7 @@ jobs:
 
           - short-name: uno-skiasharp
             project: src\skiasharp\LiveChartsCore.SkiaSharpView.Uno.WinUI
+            workloads: [ wasm-tools, maui ]
 
           - short-name: winui-skiasharp
             project: src\skiasharp\LiveChartsCore.SkiaSharpView.WinUI
