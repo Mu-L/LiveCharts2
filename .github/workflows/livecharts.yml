@@ -149,13 +149,13 @@ jobs:
 
             const body = `### 🧪 Test Results (${{ steps.report.outputs.conclusion }})
 
-            | Name        | Value                            |
-            |-------------|----------------------------------|
-            | Passed   | ${{ steps.report.outputs.passed }}  |
-            | Failed   | ${{ steps.report.outputs.failed }}  |
-            | Skipped  | ${{ steps.report.outputs.skipped }} |
-            | Time     | ${{ steps.report.outputs.time }} ms |
-            | Details  | ${{ steps.report.outputs.time }}    |`
+            | Name        | Value                             |
+            |-------------|-----------------------------------|
+            | Passed   | ${{ steps.report.outputs.passed }}   |
+            | Failed   | ${{ steps.report.outputs.failed }}   |
+            | Skipped  | ${{ steps.report.outputs.skipped }}  |
+            | Time     | ${{ steps.report.outputs.time }} ms  |
+            | Details  | ${{ steps.report.outputs.url_html }} |`
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
