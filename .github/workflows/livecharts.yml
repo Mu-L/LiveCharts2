@@ -128,7 +128,7 @@ jobs:
           complete_nuget: ${{ steps.upload.outputs.artifact-url }}
 
   test-core:
-    runs-on: ubuntu-24.04
+    runs-on: windows-2025
     needs: pack
     strategy:
       matrix:
@@ -187,7 +187,7 @@ jobs:
           }
 
       - name: Run tests
-        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }}
+        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsurfix=-${{ github.sha }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v6.0.0

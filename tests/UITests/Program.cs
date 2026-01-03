@@ -37,24 +37,36 @@ var testedApps = new List<TestedApp>();
 
 var avaloniaDir = "AvaloniaSample/Platforms/AvaloniaSample";
 
+MSBuildArg[] msBuildArgs = [];
+
+#if !DEBUG
+// in CI we use the nuget packages for everything
+// we pack and test the nuget packages against the samples
+msBuildArgs = [
+    new("UseNuGetForSamples", "true"),
+    new("LiveChartsVersionSurfix", "[lvcversionsurfix]"),
+]
+#endif
+
 testedApps
     .AddManuallyStartedApp()
-    .Add(project: $"{root}/WpfSample", uid: "wpf")
-    .Add(project: $"{root}/{avaloniaDir}.Android", uid: "avalonia-android")
-    .Add(project: $"{root}/{avaloniaDir}.Browser", appHost: AppHost.HeadlessChrome, uid: "avalonia-browser")
-    .Add(project: $"{root}/{avaloniaDir}.Desktop", uid: "avalonia-desktop")
-    .Add(project: $"{root}/{avaloniaDir}.iOS", uid: "avalonia-ios")
-    .Add(project: $"{root}/BlazorSample", appHost: AppHost.HeadlessChrome, uid: "blazor")
-    .Add(project: $"{root}/MauiSample", targetFramework: "[tf]", uid: "maui")
-    .Add(project: $"{root}/UnoPlatformSample/UnoPlatformSample", targetFramework: "[tf]", uid: "uno")
-    .Add(project: $"{root}/WinFormsSample", uid: "winforms")
+    .Add(project: $"{root}/WpfSample", uid: "wpf", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/{avaloniaDir}.Android", uid: "avalonia-android", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/{avaloniaDir}.Browser", appHost: AppHost.HeadlessChrome, uid: "avalonia-browser", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/{avaloniaDir}.Desktop", uid: "avalonia-desktop", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/{avaloniaDir}.iOS", uid: "avalonia-ios", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/BlazorSample", appHost: AppHost.HeadlessChrome, uid: "blazor", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/MauiSample", targetFramework: "[tf]", uid: "maui", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/UnoPlatformSample/UnoPlatformSample", targetFramework: "[tf]", uid: "uno", msBuildArgs: msBuildArgs)
+    .Add(project: $"{root}/WinFormsSample", uid: "winforms", msBuildArgs: msBuildArgs)
     .Add(project: $"{root}/WinUISample/WinUISample", uid: "winui",
         runtimeIdentifier: "win-x64",
         msBuildArgs: [
+            ..msBuildArgs,
             new("WindowsPackageType", "None"),
             new("WindowsAppSDKSelfContained", "true")
         ])
-    .Add(project: $"{root}/EtoFormsSample", uid: "eto");
+    .Add(project: $"{root}/EtoFormsSample", uid: "eto", msBuildArgs: msBuildArgs);
 
 testsBuilder
     .AddFactos(new FactosSettings()

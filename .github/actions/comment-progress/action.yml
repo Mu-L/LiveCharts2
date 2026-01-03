@@ -53,14 +53,8 @@ runs:
           const macTestsStatus = "${MAC_TESTS_STATUS}";
           const androidTestsStatus = "${ANDROID_TESTS_STATUS}";
           const iosTestsStatus = "${IOS_TESTS_STATUS}";
-          
-          const comment = await github.rest.issues.getComment({ 
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            comment_id: commentId
-          });
 
-          if (!comment || !comment.data || !comment.data.body) {
+          if (!commentId) {
             let firstBody = `Build in progress...
             
             - [ ] Building NuGet packages ⏳...
@@ -83,6 +77,12 @@ runs:
 
             return;
           }
+
+          const comment = await github.rest.issues.getComment({ 
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            comment_id: commentId
+          });
           
           let body = comment.data.body;
 
