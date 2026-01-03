@@ -45,7 +45,7 @@ MSBuildArg[] msBuildArgs = [];
 msBuildArgs = [
     new("UseNuGetForSamples", "true"),
     new("LiveChartsVersionSurfix", "[lvcversionsurfix]"),
-]
+];
 #endif
 
 testedApps

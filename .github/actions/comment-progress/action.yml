@@ -32,27 +32,18 @@ runs:
   using: "composite"
   steps:
     - id: update-comment
-      env:
-          RUN_ID: ${{ github.run_id }}
-          COMMENT_ID: ${{ inputs.comment_id }}
-          NUGET_URL: ${{ inputs.complete_nuget }}
-          CORE_TESTS_STATUS: ${{ inputs.complete_core_tests }}
-          WIN_TESTS_STATUS: ${{ inputs.complete_win_tests }}
-          LINUX_TESTS_STATUS: ${{ inputs.complete_linux_tests }}
-          MAC_TESTS_STATUS: ${{ inputs.complete_mac_tests }}
-          ANDROID_TESTS_STATUS: ${{ inputs.complete_android_tests }}
-          IOS_TESTS_STATUS: ${{ inputs.complete_ios_tests }}          
       uses: actions/github-script@v8
       with:
         script: |
-          const commentId = "${COMMENT_ID}";
-          const nugetUrl = "${NUGET_URL}";          
-          const coreTestsStatus = "${CORE_TESTS_STATUS}";
-          const winTestsStatus = "${WIN_TESTS_STATUS}";
-          const linuxTestsStatus = "${LINUX_TESTS_STATUS}";
-          const macTestsStatus = "${MAC_TESTS_STATUS}";
-          const androidTestsStatus = "${ANDROID_TESTS_STATUS}";
-          const iosTestsStatus = "${IOS_TESTS_STATUS}";
+          const runId = "${{ github.run_id }}";
+          const commentId = "${{ inputs.comment_id }}";
+          const nugetUrl = "${{ inputs.complete_nuget }}";          
+          const coreTestsStatus = "${{ inputs.complete_core_tests }}";
+          const winTestsStatus = "${{ inputs.complete_win_tests }}";
+          const linuxTestsStatus = "${{ inputs.complete_linux_tests }}";
+          const macTestsStatus = "${{ inputs.complete_mac_tests }}";
+          const androidTestsStatus = "${{ inputs.complete_android_tests }}";
+          const iosTestsStatus = "${{ inputs.complete_ios_tests }}";
 
           if (!commentId) {
             let firstBody = `Build in progress...
