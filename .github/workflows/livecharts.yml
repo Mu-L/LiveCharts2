@@ -61,7 +61,7 @@ jobs:
           script: |
             let body = `✅ NuGet packages built for commit ${context.sha}
             
-            Download the packages [here](${{ steps.upload.outputs.artifact_url }}).
+            Download the packages here: ${process.env.ARTIFACT_URL}.
             
             If you need help on how to install the packages locally, check [this](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`;
               
@@ -71,6 +71,8 @@ jobs:
               repo: context.repo.repo, 
               body
             });
+        env: 
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
 
   run-tests:
     runs-on: windows-2025
@@ -110,6 +112,7 @@ jobs:
         uses: actions/download-artifact@v7.0.0
         with:
           path: artifacts
+          pattern: "**/*.trx"
 
       - name: Publish results
         id: report
