@@ -66,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0 
         with:
           name: livecharts-${{ github.sha }}
-          path: flat/**/*.{nupkg,snupkg}
+          path: flat/*        
 
       - uses: actions/github-script@v8
         with:
