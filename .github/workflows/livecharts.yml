@@ -13,26 +13,36 @@ jobs:
     strategy:
       matrix:
         include:
-          - project: src/LiveChartsCore
-            short-name: core
-          - project: src/skiasharp/LiveChartsCore.SkiaSharp
-            short-name: skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharp.Avalonia
-            short-name: avalonia-skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharpView.Blazor
-            short-name: blazor-skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharpView.Eto
-            short-name: eto-skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharpView.Maui
-            short-name: maui-skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharpView.Uno.WinUI
-            short-name: uno-skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharpView.WinUI
-            short-name: winui-skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharp.WinForms
-            short-name: winforms-skiasharp
-          - project: src\skiasharp\LiveChartsCore.SkiaSharp.WPF
-            short-name: wpf-skiasharp
+          - short-name: core
+            project: src/LiveChartsCore
+
+          - short-name: skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharp
+
+          - short-name: avalonia-skiasharp
+            project: src\skiasharp\LiveChartsCore.SkiaSharp.Avalonia
+
+          - short-name: blazor-skiasharp
+            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Blazor
+
+          - short-name: eto-skiasharp
+            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Eto
+
+          - short-name: maui-skiasharp
+            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Maui
+            workloads: [ maui ]
+
+          - short-name: uno-skiasharp
+            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Uno.WinUI
+
+          - short-name: winui-skiasharp
+            project: src\skiasharp\LiveChartsCore.SkiaSharpView.WinUI
+
+          - short-name: winforms-skiasharp            
+            project: src\skiasharp\LiveChartsCore.SkiaSharp.WinForms
+
+          - short-name: wpf-skiasharp
+            project: src\skiasharp\LiveChartsCore.SkiaSharp.WPF
           
     steps: 
       - name: Checkout 
@@ -44,6 +54,14 @@ jobs:
         uses: actions/setup-dotnet@v5.0.1
         with: 
           dotnet-version: '10.0.100'
+
+      - name: Install Workloads 
+        if: ${{ matrix.workloads }} 
+        shell: pwsh 
+        run: | 
+          foreach ($workload in ${{ matrix.workloads }}) {
+            dotnet workload install $workload
+          }
       
       - name: Pack
         run: dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=-${{ github.sha }}
