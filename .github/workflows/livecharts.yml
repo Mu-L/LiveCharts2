@@ -50,20 +50,25 @@ jobs:
         with:
           path: collected
 
+      - name: Flatten packages 
+        run: | 
+          mkdir -p flat 
+          find collected -type f -name '*.nupkg' -exec cp {} flat/ \;
+
       - id: upload
         uses: actions/upload-artifact@v6.0.0 
         with:
           name: all-packages
-          path: collected/**/*.nupkg
+          path: flat/**/*.nupkg
 
       - uses: actions/github-script@v8
         with:
           script: |
-            let body = `✅ NuGet packages built for commit ${context.sha}
+            let body = `NuGet packages built successfully! 🥳
             
             Download the packages here: ${process.env.ARTIFACT_URL}.
             
-            If you need help on how to install the packages locally, check [this](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`;
+            🙏 If you need help on how to install the packages locally, check [this](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`;
               
             await github.rest.issues.createComment({
               issue_number: context.issue.number, 
@@ -112,7 +117,7 @@ jobs:
         uses: actions/download-artifact@v7.0.0
         with:
           path: artifacts
-          pattern: "**/*.trx"
+          pattern: *.trx
 
       - name: Publish results
         id: report
