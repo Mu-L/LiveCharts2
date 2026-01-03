@@ -12,7 +12,7 @@ jobs:
     runs-on: windows-2025    
     strategy:
       matrix:
-        project: [ src/LiveChartsCore, src/LiveChartsCore.SkiaSharp ]
+        project: [ src/LiveChartsCore, src/skiasharp/LiveChartsCore.SkiaSharp ]
     steps: 
       - name: Checkout 
         uses: actions/checkout@v6.0.1
