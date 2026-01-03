@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master, dev ]
 
+env:
+  VERSION_SURFIX: -pr${{ github.event.pull_request.number }}+sha.${{ github.sha }}
+
 jobs:
 
   build-packages: 
@@ -20,10 +23,10 @@ jobs:
           dotnet-version: '10.0.100'
       
       - name: Pack LiveChartsCore 
-        run: dotnet pack src/LiveChartsCore -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=-pr${{ github.event.pull_request.number }}
+        run: dotnet pack src/LiveChartsCore -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=$VERSION_SURFIX
 
       - name: Pack LiveChartsCore.SkiaSharpView 
-        run: dotnet pack src/skiasharp/LiveChartsCore.SkiaSharp -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=-pr${{ github.event.pull_request.number }}
+        run: dotnet pack src/skiasharp/LiveChartsCore.SkiaSharp -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=$VERSION_SURFIX
         
       - name: Publish to GitHub Packages
         run: dotnet nuget push **/*.nupkg --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --api-key ${{ secrets.GH_TOKEN }}
@@ -44,7 +47,7 @@ jobs:
           dotnet-version: '10.0.100'
 
       - name: Run unit tests
-        run: dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} -p:UseNuGetPackages=true -p:LiveChartsVersionSurfix=-pr${{ github.event.pull_request.number }} --report-trx
+        run: dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSurfix=$VERSION_SURFIX
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
