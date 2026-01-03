@@ -38,10 +38,6 @@ jobs:
         with:
           name: ${{ matrix.short-name }}-package
           path: "**/*.nupkg"
-      
-    outputs:
-      artifact-url: ${{ steps.upload.outputs.artifact-url }} 
-      short-name: ${{ matrix.short-name }}
 
   comment-packages-link:
     runs-on: ubuntu-24.04
@@ -50,18 +46,24 @@ jobs:
       issues: write 
       pull-requests: write
     steps:
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          path: collected
+
+      - id: upload
+        uses: actions/upload-artifact@v6.0.0 
+        with:
+          name: all-packages
+          path: collected/**/*.nupkg
+
       - uses: actions/github-script@v8
         with:
           script: |
-            // Collect outputs from all matrix jobs 
-            const jobs = context.jobMatrix['build-packages'];
-            let body = `✅ NuGet packages built for commit ${context.sha}\n\n`;
+            let body = `✅ NuGet packages built for commit ${context.sha}
             
-            for (const job of jobs) {
-              const url = job.outputs['artifact-url'];
-              const name = job.outputs['short-name'];
-              body += `- 📦 **${name}**: [Download here](${url})\n`; 
-            }
+            Download the packages [here](${{ steps.upload.outputs.artifact_url }}).
+            
+            If you need help on how to install the packages locally, check [this](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`;
               
             await github.rest.issues.createComment({
               issue_number: context.issue.number, 
