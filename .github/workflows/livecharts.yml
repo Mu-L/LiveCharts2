@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build-packages: 
+  pack: 
     runs-on: windows-2025    
     strategy:
       matrix:
@@ -20,31 +20,31 @@ jobs:
             project: src/skiasharp/LiveChartsCore.SkiaSharp
 
           - short-name: avalonia-skiasharp
-            project: src\skiasharp\LiveChartsCore.SkiaSharp.Avalonia
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia
             workloads: [ wasm-tools, maui ]
 
           - short-name: blazor-skiasharp
-            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Blazor
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Blazor
 
           - short-name: eto-skiasharp
-            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Eto
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Eto
 
           - short-name: maui-skiasharp
-            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Maui
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Maui
             workloads: [ maui ]
 
           - short-name: uno-skiasharp
-            project: src\skiasharp\LiveChartsCore.SkiaSharpView.Uno.WinUI
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Uno.WinUI
             workloads: [ wasm-tools, maui ]
 
           - short-name: winui-skiasharp
-            project: src\skiasharp\LiveChartsCore.SkiaSharpView.WinUI
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.WinUI
 
           - short-name: winforms-skiasharp            
-            project: src\skiasharp\LiveChartsCore.SkiaSharp.WinForms
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.WinForms
 
           - short-name: wpf-skiasharp
-            project: src\skiasharp\LiveChartsCore.SkiaSharp.WPF
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
           
     steps: 
       - name: Checkout 
@@ -85,7 +85,7 @@ jobs:
 
   comment-packages-link:
     runs-on: ubuntu-24.04
-    needs: build-packages
+    needs: pack
     permissions: 
       issues: write 
       pull-requests: write
@@ -125,9 +125,9 @@ jobs:
         env: 
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
 
-  run-tests:
-    runs-on: windows-2025
-    needs: build-packages
+  test-core:
+    runs-on: ubuntu-24.04
+    needs: pack
     strategy:
       matrix:
         framework: [ net8.0, net462 ]
@@ -149,9 +149,42 @@ jobs:
           name: test-results-${{ matrix.framework }}
           path: "**/*.trx"
 
+  ui-test-windows:
+    runs-on: windows-2025
+    strategy:
+      matrix:
+        include:
+          - id: avalonia-desktop
+          - id: eto
+          - id: maui
+            tf: net10.0-windows10.0.19041.0
+          - id: uno
+            tf: net10.0-desktop
+          - id: winforms
+          - id: winui
+          - id: wpf
+    needs: pack
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5.0.1
+        with:
+          dotnet-version: '10.0.100'
+
+      - name: Run tests
+        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: test-results-${{ matrix.id }}
+          path: "**/*.trx"
+
   comment-test-results:
     runs-on: ubuntu-24.04
-    needs: run-tests
+    needs: test-core
     permissions:
       contents: read
       actions: read
