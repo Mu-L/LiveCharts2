@@ -26,7 +26,7 @@ jobs:
         run: dotnet pack src/skiasharp/LiveChartsCore.SkiaSharp -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=-pr${{ github.event.pull_request.number }}
         
       - name: Publish to GitHub Packages
-        run: dotnet nuget push **/*.nupkg --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key ${{ secrets.GH_TOKEN }}
+        run: dotnet nuget push **/*.nupkg --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --api-key ${{ secrets.GH_TOKEN }}
 
   run-tests:
     runs-on: windows-2025
