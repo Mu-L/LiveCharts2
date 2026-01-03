@@ -147,20 +147,19 @@ jobs:
               repo: context.repo.repo,
             });
 
-            const body = `## 🧪 Test Results
-            - **Conclusion:** ${{ steps.report.outputs.conclusion }}
-            - ✅ Passed: ${{ steps.report.outputs.passed }}
-            - ❌ Failed: ${{ steps.report.outputs.failed }}
-            - ⚠️ Skipped: ${{ steps.report.outputs.skipped }}
-            - ⏱️ Time: ${{ steps.report.outputs.time }} ms
-            - 🔗 [Check Run Details](${process.env.URL_HTML})`;
+            const body = `### 🧪 Test Results (${{ steps.report.outputs.conclusion }})
+
+            | Name        | Value                            |
+            |-------------|----------------------------------|
+            | Passed   | ${{ steps.report.outputs.passed }}  |
+            | Failed   | ${{ steps.report.outputs.failed }}  |
+            | Skipped  | ${{ steps.report.outputs.skipped }} |
+            | Time     | ${{ steps.report.outputs.time }} ms |
+            | Details  | ${{ steps.report.outputs.time }}    |`
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body,
+              body
             });
-
-        env: 
-          URL_HTML: ${{ steps.report.outputs.url_html }}
