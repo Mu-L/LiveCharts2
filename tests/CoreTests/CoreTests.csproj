@@ -11,6 +11,10 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net462'">
+    <DefineConstants>$(DefineConstants);STRONG_NAMED_ASSEMBLIES</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup Condition="$(UseNuGetPackages) == 'true'">
     <PackageReference Include="LiveChartsCore.SkiaSharpView" Version="$(LiveChartsVersion)" />
   </ItemGroup>
