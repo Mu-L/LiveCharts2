@@ -59,7 +59,8 @@ jobs:
         if: ${{ matrix.workloads }} 
         shell: pwsh 
         run: | 
-          foreach ($workload in ${{ matrix.workloads }}) {
+          $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
+          foreach ($workload in $workloads) {
             dotnet workload install $workload
           }
       
