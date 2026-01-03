@@ -8,11 +8,13 @@ on:
 
 jobs:
 
-  comment-progress:
+  report-progress-starting:
     runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1        
       - uses: ./.github/actions/comment-progress
         id: create-comment
     outputs: 
@@ -93,12 +95,15 @@ jobs:
             artifacts/*.nupkg
             artifacts/*.snupkg
 
-  update-packed-progress:
+  report-progress-packed:
     runs-on: ubuntu-24.04
-    needs: [pack, comment-progress]
+    needs: [pack, report-progress-starting]
     permissions:
       pull-requests: write
     steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
       - uses: actions/download-artifact@v7.0.0
         with:
           path: collected
@@ -119,7 +124,7 @@ jobs:
       - name: Update comment progress
         uses: ./.github/actions/comment-progress
         with:
-          comment_id: ${{ needs.comment-progress.outputs.comment_id }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           complete_nuget: ${{ steps.upload.outputs.artifact-url }}
 
   test-core:
@@ -155,8 +160,10 @@ jobs:
           - id: eto
           - id: maui
             tf: net10.0-windows10.0.19041.0
+            workloads: [ maui ]
           - id: uno
             tf: net10.0-desktop
+            workloads: [ maui ]
           - id: winforms
           - id: winui
           - id: wpf
@@ -170,6 +177,15 @@ jobs:
         with:
           dotnet-version: '10.0.100'
 
+      - name: Install Workloads 
+        if: ${{ matrix.workloads }} 
+        shell: pwsh 
+        run: | 
+          $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
+          foreach ($workload in $workloads) {
+            dotnet workload install $workload
+          }
+
       - name: Run tests
         run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }}
 
@@ -179,9 +195,9 @@ jobs:
           name: win-results-${{ matrix.id }}
           path: "**/*.trx"
 
-  results-core-test:
+  report-progress-core-tests:
     runs-on: ubuntu-24.04
-    needs: [test-core, comment-progress]
+    needs: [test-core, report-progress-starting]
     permissions:
       contents: read
       actions: read
@@ -209,12 +225,12 @@ jobs:
       - name: Update comment progress
         uses: ./.github/actions/comment-progress
         with:
-          comment_id: ${{ needs.comment-progress.outputs.comment_id }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           complete_core_tests: ${{ steps.report.outputs.conclusion }}
 
-  results-ui-windows:
+  report-progress-windows-tests:
     runs-on: ubuntu-24.04
-    needs: [ui-test-windows, comment-progress]
+    needs: [ui-test-windows, report-progress-starting]
     permissions:
       contents: read
       actions: read
@@ -242,6 +258,5 @@ jobs:
       - name: Update comment progress
         uses: ./.github/actions/comment-progress
         with:
-          comment_id: ${{ needs.comment-progress.outputs.comment_id }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           complete_win_tests: ${{ steps.report.outputs.conclusion }}
-          
