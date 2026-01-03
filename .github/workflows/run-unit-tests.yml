@@ -7,7 +7,7 @@ on:
     branches: [ master, dev ]
 
 env:
-  VERSION_SURFIX: -pr${{ github.event.pull_request.number }}+sha.${{ github.sha }}
+  VERSION_SURFIX: ${{ format('-pr{0}+sha.{1}', github.event.pull_request.number, github.sha) }}
 
 jobs:
 
