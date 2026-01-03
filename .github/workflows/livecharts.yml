@@ -147,7 +147,15 @@ jobs:
               repo: context.repo.repo,
             });
 
-            const body = `### 🧪 Test Results (${{ steps.report.outputs.conclusion }})
+            let body = '';
+            
+            if ('${{ steps.report.outputs.conclusion }}' == 'success') {
+              body += `### All tests passed! 🎉\n\n`;
+            } else {
+              body += `### Some tests failed. ❌\n\n`;
+            }
+
+            body += `test results summary:
 
             | Name        | Value                             |
             |-------------|-----------------------------------|
@@ -155,7 +163,7 @@ jobs:
             | Failed   | ${{ steps.report.outputs.failed }}   |
             | Skipped  | ${{ steps.report.outputs.skipped }}  |
             | Time     | ${{ steps.report.outputs.time }} ms  |
-            | Details  | ${{ steps.report.outputs.url_html }} |`
+            | Details  | https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }} |`
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
