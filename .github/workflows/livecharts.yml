@@ -161,6 +161,7 @@ jobs:
   ui-test-windows:
     runs-on: windows-2025
     strategy:
+      fail-fast: false
       matrix:
         include:
           - id: avalonia-desktop

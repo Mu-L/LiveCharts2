@@ -87,11 +87,11 @@ runs:
             if (coreTestsStatus == "success") {
               body = body.replace(
                 "- [ ] Test core packages", 
-                `- [x] ~~Test core packages~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test core packages~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             } else {
               body = body.replace(
                 "- [ ] Test core packages", 
-                `- [x] ~~Test core packages~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test core packages~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             }
           }
 
@@ -99,11 +99,11 @@ runs:
             if (winTestsStatus == "success") {
               body = body.replace(
                 "- [ ] Test UI packages on Windows", 
-                `- [x] ~~Test UI packages on Windows~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on Windows~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId`})`);
             } else {
               body = body.replace(
                 "- [ ] Test UI packages on Windows", 
-                `- [x] ~~Test UI packages on Windows~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on Windows~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             }
           }
 
@@ -111,11 +111,11 @@ runs:
             if (linuxTestsStatus == "success") {
               body = body.replace(
                 "- [ ] Test UI packages on Linux", 
-                `- [x] ~~Test UI packages on Linux~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on Linux~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             } else {
               body = body.replace(
                 "- [ ] Test UI packages on Linux", 
-                `- [x] ~~Test UI packages on Linux~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on Linux~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             }
           }
 
@@ -123,11 +123,11 @@ runs:
             if (macTestsStatus == "success") {
               body = body.replace(
                 "- [ ] Test UI packages on MacOs/Catalyst", 
-                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             } else {
               body = body.replace(
                 "- [ ] Test UI packages on MacOs/Catalyst", 
-                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             }
           }
 
@@ -135,11 +135,11 @@ runs:
             if (androidTestsStatus == "success") {
               body = body.replace(
                 "- [ ] Test UI packages on Android", 
-                `- [x] ~~Test UI packages on Android~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on Android~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             } else {
               body = body.replace(
                 "- [ ] Test UI packages on Android", 
-                `- [x] ~~Test UI packages on Android~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Test UI packages on Android~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             }
           }
 
@@ -147,11 +147,11 @@ runs:
             if (iosTestsStatus == "success") {
               body = body.replace(
                 "- [ ] Testing UI packages on iOS ⏳...", 
-                `- [x] ~~Testing UI packages on iOS~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Testing UI packages on iOS~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             } else {
               body = body.replace(
                 "- [ ] Testing UI packages on iOS ⏳...", 
-                `- [x] ~~Testing UI packages on iOS~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                `- [x] ~~Testing UI packages on iOS~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             }
           }
 
