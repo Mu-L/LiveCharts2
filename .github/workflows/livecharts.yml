@@ -146,7 +146,7 @@ jobs:
 
       - name: Restore dependencies
         run: 
-          dotnet restore tests/CoreTests/CoreTests.csproj -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+          dotnet restore tests/CoreTests/CoreTests.csproj -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }} --source ./artifacts --source https://api.nuget.org/v3/index.json
 
       - name: List resolved packages 
         run: 
