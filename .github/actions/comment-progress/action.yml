@@ -99,7 +99,7 @@ runs:
             if (winTestsStatus == "success") {
               body = body.replace(
                 "- [ ] Test UI packages on Windows", 
-                `- [x] ~~Test UI packages on Windows~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId`})`);
+                `- [x] ~~Test UI packages on Windows~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
             } else {
               body = body.replace(
                 "- [ ] Test UI packages on Windows", 
