@@ -1,4 +1,9 @@
 name: LiveCharts
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
 
 on:
   push:
@@ -10,8 +15,6 @@ jobs:
 
   report-progress-starting:
     runs-on: ubuntu-24.04
-    permissions:
-      pull-requests: write
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1        
@@ -81,8 +84,6 @@ jobs:
   report-progress-packed:
     runs-on: ubuntu-24.04
     needs: [pack, report-progress-starting]
-    permissions:
-      pull-requests: write
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
