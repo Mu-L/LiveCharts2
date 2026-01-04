@@ -242,28 +242,28 @@ jobs:
           retention-days: 30
           path: "**/*.trx"
 
-  report-progress-test-core:
+  report-progress-core:
     needs: [test-core, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
     with:
       id: core
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  report-progress-test-windows:
+  report-progress-windows:
     needs: [test-windows, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
     with:
       id: windows
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  report-progress-test-linux:
+  report-progress-linux:
     needs: [test-linux, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
     with:
       id: linux
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  report-progress-test-mac:
+  report-progress-mac:
     needs: [test-mac, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
     with:

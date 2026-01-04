@@ -3,6 +3,7 @@ inputs:
   workloads:
     description: 'The workloads array to install'
     required: false
+    default: ""
   xcode-path:
     description: 'The Xcode path to select'
     required: false
@@ -10,6 +11,7 @@ runs:
   using: "composite"
   steps:
     - name: Select Xcode version
+      shell: pwsh
       if: ${{ inputs.xcode-path }}
       run: sudo xcode-select -s ${{ inputs.xcode-path }}
 
@@ -25,5 +27,6 @@ runs:
         path: ./artifacts
 
     - name: Configure NuGet sources 
+      shell: pwsh
       run:
         dotnet nuget add source ${{ github.workspace }}/artifacts --name local
