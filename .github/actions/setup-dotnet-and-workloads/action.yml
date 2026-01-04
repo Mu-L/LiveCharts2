@@ -12,11 +12,11 @@ runs:
       with:
         dotnet-version: '10.0.100'
 
-    - name: Install Workloads 
-      if: ${{ inputs.workloads }} 
-      shell: pwsh 
-      run: | 
-        $workloads = "${{ join(inputs.workloads, ' ') }}".Split(' ')
+    - name: Install Workloads
+      if: ${{ inputs.workloads != '' }}
+      shell: pwsh
+      run: |
+        $workloads = "${{ inputs.workloads }}".Split(' ')
         foreach ($workload in $workloads) {
           dotnet workload install $workload
         }
