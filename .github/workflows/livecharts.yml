@@ -226,27 +226,30 @@ jobs:
           retention-days: 30
           path: "**/*.trx"
 
-  report-progress-test:
-    runs-on: ubuntu-24.04
-    if: always()
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      pull-requests: write
-    strategy:
-      matrix:
-        include:
-          - id: core
-            needs: [test-core, report-progress-starting]
-          - id: windows
-            needs: [test-windows, report-progress-starting]
-          - id: linux
-            needs: [test-linux, report-progress-starting]
-    needs: ${{ matrix.needs }}
-    steps:
-      - name: Report
-        uses: ./.github/actions/report-progress
-        with:
-          id: ${{ matrix.id }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  report-progress-test-core:
+    needs: [test-core, report-progress-starting]
+    uses: ./.github/workflows/report-progress.yml
+    with:
+      id: core
+      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  report-progress-test-windows:
+    needs: [test-windows, report-progress-starting]
+    uses: ./.github/workflows/report-progress.yml
+    with:
+      id: windows
+      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  report-progress-test-linux:
+    needs: [test-linux, report-progress-starting]
+    uses: ./.github/workflows/report-progress.yml
+    with:
+      id: linux
+      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  report-progress-test-mac:
+    needs: [test-mac, report-progress-starting]
+    uses: ./.github/workflows/report-progress.yml
+    with:
+      id: mac
+      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
