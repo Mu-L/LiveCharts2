@@ -115,9 +115,6 @@ jobs:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
 
-      - name: Setup test environment
-        uses: ./.github/actions/setup-test
-
       - name: Run tests
         uses: ./.github/actions/run-tests
         with:
