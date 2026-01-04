@@ -120,6 +120,7 @@ jobs:
         with:
           id: core
           use-factos: false
+          target-framework: ${{ matrix.framework }}
 
   test-windows:
     runs-on: windows-2025
@@ -150,6 +151,7 @@ jobs:
           use-factos: true
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
 
   test-linux:
     runs-on: ubuntu-24.04
@@ -177,6 +179,7 @@ jobs:
           use-factos: true
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
 
   test-mac:
     runs-on: macos-26
@@ -204,6 +207,7 @@ jobs:
           use-factos: true
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
           xcode-path: /Applications/Xcode_26.2.app
 
   report-progress-core:
