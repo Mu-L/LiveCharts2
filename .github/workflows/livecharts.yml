@@ -31,32 +31,32 @@ jobs:
           - short-name: skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharp
 
-          - short-name: avalonia-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia
-            workloads: [ wasm-tools, maui ]
+          # - short-name: avalonia-skiasharp
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia
+          #   workloads: [ wasm-tools, maui ]
 
-          - short-name: blazor-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Blazor
+          # - short-name: blazor-skiasharp
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Blazor
 
-          - short-name: eto-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Eto
+          # - short-name: eto-skiasharp
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Eto
 
-          - short-name: maui-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Maui
-            workloads: [ maui ]
+          # - short-name: maui-skiasharp
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Maui
+          #   workloads: [ maui ]
 
-          - short-name: uno-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Uno.WinUI
-            workloads: [ wasm-tools, maui ]
+          # - short-name: uno-skiasharp
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Uno.WinUI
+          #   workloads: [ wasm-tools, maui ]
 
-          - short-name: winui-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharpView.WinUI
+          # - short-name: winui-skiasharp
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.WinUI
 
-          - short-name: winforms-skiasharp            
-            project: src/skiasharp/LiveChartsCore.SkiaSharp.WinForms
+          # - short-name: winforms-skiasharp            
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharp.WinForms
 
-          - short-name: wpf-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
+          # - short-name: wpf-skiasharp
+          #   project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
           
     steps: 
       - name: Checkout 
@@ -76,7 +76,7 @@ jobs:
           $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
           foreach ($workload in $workloads) {
             dotnet workload install $workload
-          }    
+          }
 
       - name: Pack
         run: 
@@ -146,6 +146,10 @@ jobs:
       - name: Restore dependencies
         run: 
           dotnet restore tests/CoreTests/CoreTests.csproj -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }} --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --source https://api.nuget.org/v3/index.json -v detailed
+
+      - name: List resolved packages 
+        run: 
+          dotnet list tests/CoreTests/CoreTests.csproj package
 
       - name: Run unit tests
         run: 
