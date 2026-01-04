@@ -30,37 +30,27 @@ jobs:
         include:
           - short-name: core
             project: src/LiveChartsCore
-
           - short-name: skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharp
-
           - short-name: avalonia-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia
             workloads: wasm-tools, maui
-
           - short-name: blazor-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharpView.Blazor
-
           - short-name: eto-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharpView.Eto
-
           - short-name: maui-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharpView.Maui
             workloads: maui
-
           - short-name: uno-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharpView.Uno.WinUI
             workloads: wasm-tools, maui
-
           - short-name: winui-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharpView.WinUI
-
           - short-name: winforms-skiasharp            
             project: src/skiasharp/LiveChartsCore.SkiaSharp.WinForms
-
           - short-name: wpf-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
-          
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF          
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -128,16 +118,11 @@ jobs:
       - name: Setup test environment
         uses: ./.github/actions/setup-test
 
-      - name: Run unit tests
-        run:
-          dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v6.0.0
+      - name: Run tests
+        uses: ./.github/actions/run-tests
         with:
-          name: core-results-${{ matrix.framework }}
-          retention-days: 30
-          path: "**/*.trx"
+          id: core
+          use-factos: false
 
   test-windows:
     runs-on: windows-2025
@@ -161,20 +146,13 @@ jobs:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
 
-      - name: Setup test environment
-        uses: ./.github/actions/setup-test
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
         with:
+          id: windows
+          use-factos: true
+          test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
-
-      - name: Run tests
-        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: win-results-${{ matrix.id }}
-          retention-days: 30
-          path: "**/*.trx"
 
   test-linux:
     runs-on: ubuntu-24.04
@@ -192,20 +170,16 @@ jobs:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
 
-      - name: Setup test environment
-        uses: ./.github/actions/setup-test
+      - name: Setup headless display
+        uses: pyvista/setup-headless-display-action@v4.2
+
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
         with:
+          id: linux
+          use-factos: true
+          test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
-
-      - name: Run tests
-        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: linux-results-${{ matrix.id }}
-          retention-days: 30
-          path: "**/*.trx"
 
   test-mac:
     runs-on: macos-26
@@ -226,25 +200,19 @@ jobs:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
 
-      - name: Setup test environment
-        uses: ./.github/actions/setup-test
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
         with:
+          id: mac
+          use-factos: true
+          test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           xcode-path: /Applications/Xcode_26.2.app
-
-      - name: Run tests
-        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: linux-results-${{ matrix.id }}
-          retention-days: 30
-          path: "**/*.trx"
 
   report-progress-core:
     needs: [test-core, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
+    if: always()
     with:
       id: core
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -252,6 +220,7 @@ jobs:
   report-progress-windows:
     needs: [test-windows, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
+    if: always()
     with:
       id: windows
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -259,6 +228,7 @@ jobs:
   report-progress-linux:
     needs: [test-linux, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
+    if: always()
     with:
       id: linux
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -266,6 +236,7 @@ jobs:
   report-progress-mac:
     needs: [test-mac, report-progress-starting]
     uses: ./.github/workflows/report-progress.yml
+    if: always()
     with:
       id: mac
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
