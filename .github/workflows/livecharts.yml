@@ -145,8 +145,8 @@ jobs:
           path: ./artifacts
 
       - name: Configure NuGet sources 
-        run: 
-          dotnet nuget add source ./artifacts --name local
+        run:
+          dotnet nuget add source ${{ github.workspace }}/artifacts --name local
 
       - name: Restore dependencies
         shell: cmd
