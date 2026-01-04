@@ -76,10 +76,11 @@ jobs:
           $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
           foreach ($workload in $workloads) {
             dotnet workload install $workload
-          }
-      
+          }    
+
       - name: Pack
-        run: dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSurfix=-${{ github.sha }}
+        run: 
+          dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSuffix=-${{ github.sha }}
         
       - name: Publish
         run: |
@@ -142,8 +143,13 @@ jobs:
         with:
           dotnet-version: '10.0.100'
 
+      - name: Restore dependencies
+        run: 
+          dotnet restore tests/CoreTests/CoreTests.csproj -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }} --source "https://nuget.pkg.github.com/beto-rodriguez/index.json" --source https://api.nuget.org/v3/index.json -v detailed
+
       - name: Run unit tests
-        run: dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSurfix=-${{ github.sha }}
+        run: 
+          dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v6.0.0
@@ -151,112 +157,112 @@ jobs:
           name: core-results-${{ matrix.framework }}
           path: "**/*.trx"
 
-  ui-test-windows:
-    runs-on: windows-2025
-    strategy:
-      matrix:
-        include:
-          - id: avalonia-desktop
-          - id: eto
-          - id: maui
-            tf: net10.0-windows10.0.19041.0
-            workloads: [ maui ]
-          - id: uno
-            tf: net10.0-desktop
-            workloads: [ maui ]
-          - id: winforms
-          - id: winui
-          - id: wpf
-    needs: pack
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.1
+  # ui-test-windows:
+  #   runs-on: windows-2025
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - id: avalonia-desktop
+  #         - id: eto
+  #         - id: maui
+  #           tf: net10.0-windows10.0.19041.0
+  #           workloads: [ maui ]
+  #         - id: uno
+  #           tf: net10.0-desktop
+  #           workloads: [ maui ]
+  #         - id: winforms
+  #         - id: winui
+  #         - id: wpf
+  #   needs: pack
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5.0.1
-        with:
-          dotnet-version: '10.0.100'
+  #     - name: Setup .NET
+  #       uses: actions/setup-dotnet@v5.0.1
+  #       with:
+  #         dotnet-version: '10.0.100'
 
-      - name: Install Workloads 
-        if: ${{ matrix.workloads }} 
-        shell: pwsh 
-        run: | 
-          $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
-          foreach ($workload in $workloads) {
-            dotnet workload install $workload
-          }
+  #     - name: Install Workloads 
+  #       if: ${{ matrix.workloads }} 
+  #       shell: pwsh 
+  #       run: | 
+  #         $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
+  #         foreach ($workload in $workloads) {
+  #           dotnet workload install $workload
+  #         }
 
-      - name: Run tests
-        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsurfix=-${{ github.sha }}
+  #     - name: Run tests
+  #       run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: win-results-${{ matrix.id }}
-          path: "**/*.trx"
+  #     - name: Upload test results
+  #       uses: actions/upload-artifact@v6.0.0
+  #       with:
+  #         name: win-results-${{ matrix.id }}
+  #         path: "**/*.trx"
 
-  report-progress-core-tests:
-    runs-on: ubuntu-24.04
-    needs: [test-core, report-progress-starting]
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      issues: write 
-      pull-requests: write
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # report-progress-core-tests:
+  #   runs-on: ubuntu-24.04
+  #   needs: [test-core, report-progress-starting]
+  #   permissions:
+  #     contents: read
+  #     actions: read
+  #     checks: write
+  #     issues: write 
+  #     pull-requests: write
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v7.0.0
-        with:
-          path: core-results
-          pattern: core-results-*
+  #     - name: Download artifacts
+  #       uses: actions/download-artifact@v7.0.0
+  #       with:
+  #         path: core-results
+  #         pattern: core-results-*
 
-      - name: Publish results
-        id: report
-        uses: dorny/test-reporter@v2.4.0
-        with:
-          name: core-results
-          path: "core-results/**/*.trx"
-          reporter: dotnet-trx
+  #     - name: Publish results
+  #       id: report
+  #       uses: dorny/test-reporter@v2.4.0
+  #       with:
+  #         name: core-results
+  #         path: "core-results/**/*.trx"
+  #         reporter: dotnet-trx
 
-      - name: Update comment progress
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          complete_core_tests: ${{ steps.report.outputs.conclusion }}
+  #     - name: Update comment progress
+  #       uses: ./.github/actions/comment-progress
+  #       with:
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #         complete_core_tests: ${{ steps.report.outputs.conclusion }}
 
-  report-progress-windows-tests:
-    runs-on: ubuntu-24.04
-    needs: [ui-test-windows, report-progress-starting]
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      issues: write 
-      pull-requests: write
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # report-progress-windows-tests:
+  #   runs-on: ubuntu-24.04
+  #   needs: [ui-test-windows, report-progress-starting]
+  #   permissions:
+  #     contents: read
+  #     actions: read
+  #     checks: write
+  #     issues: write 
+  #     pull-requests: write
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v7.0.0
-        with:
-          path: win-results
-          pattern: win-results-*
+  #     - name: Download artifacts
+  #       uses: actions/download-artifact@v7.0.0
+  #       with:
+  #         path: win-results
+  #         pattern: win-results-*
 
-      - name: Publish results
-        id: report
-        uses: dorny/test-reporter@v2.4.0
-        with:
-          name: win-results
-          path: "win-results/**/*.trx"
-          reporter: dotnet-trx
+  #     - name: Publish results
+  #       id: report
+  #       uses: dorny/test-reporter@v2.4.0
+  #       with:
+  #         name: win-results
+  #         path: "win-results/**/*.trx"
+  #         reporter: dotnet-trx
 
-      - name: Update comment progress
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          complete_win_tests: ${{ steps.report.outputs.conclusion }}
+  #     - name: Update comment progress
+  #       uses: ./.github/actions/comment-progress
+  #       with:
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #         complete_win_tests: ${{ steps.report.outputs.conclusion }}

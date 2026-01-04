@@ -1,10 +1,14 @@
-﻿<Project Sdk="MSTest.Sdk/4.0.2">
+<Project Sdk="MSTest.Sdk/4.0.2">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <LangVersion>$(GlobalLangVersion)</LangVersion>
     <TargetFrameworks>net462;net8.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);MSTEST0037;MSTEST0023;CS0618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

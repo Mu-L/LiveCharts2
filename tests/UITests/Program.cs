@@ -44,7 +44,7 @@ MSBuildArg[] msBuildArgs = [];
 // we pack and test the nuget packages against the samples
 msBuildArgs = [
     new("UseNuGetForSamples", "true"),
-    new("LiveChartsVersionSurfix", "[lvcversionsurfix]"),
+    new("LiveChartsVersionSuffix", "[lvcversionsuffix]"),
 ];
 #endif
 
