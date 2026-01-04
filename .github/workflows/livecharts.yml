@@ -160,10 +160,10 @@ jobs:
       matrix:
         include:
           - id: avalonia-desktop
-          - id: eto
+          # - id: eto, requires additional setup i think...
           - id: uno
             tf: net10.0-desktop
-            workloads: maui
+            workloads: android
     needs: pack
     steps:
       - name: Checkout 
@@ -180,6 +180,35 @@ jobs:
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
+
+  test-android:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: avalonia-android
+            workloads: android
+          - id: maui
+            tf: net10.0-android
+            workloads: maui-android
+          - id: uno
+            tf: net10.0-android
+            workloads: android
+    needs: pack
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: android
+          use-factos: true
+          test-id: ${{ matrix.id }}
+          workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
+          use-android-emulator: true
 
   test-mac:
     runs-on: macos-26
@@ -204,6 +233,35 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: mac
+          use-factos: true
+          test-id: ${{ matrix.id }}
+          workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
+          xcode-path: /Applications/Xcode_26.2.app
+
+  test-ios:
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: avalonia-ios
+            workloads: ios
+          - id: maui
+            tf: net10.0-ios
+            workloads: maui
+          - id: uno
+            tf: net10.0-ios
+            workloads: ios
+    needs: pack
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: ios
           use-factos: true
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
@@ -240,4 +298,12 @@ jobs:
     if: always()
     with:
       id: mac
+      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  report-progress-android:
+    needs: [test-android, report-progress-starting]
+    uses: ./.github/workflows/report-progress.yml
+    if: always()
+    with:
+      id: android
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
