@@ -61,7 +61,10 @@ jobs:
           - short-name: wpf-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
           
-    steps: 
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
       - name: Setup .NET and Workloads
         uses: ./.github/actions/setup-dotnet-and-workloads
         with:
@@ -119,6 +122,9 @@ jobs:
       matrix:
         framework: [ net8.0, net462 ]
     steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
       - name: Setup test environment
         uses: ./.github/actions/setup-test
 
@@ -152,6 +158,9 @@ jobs:
           - id: wpf
     needs: pack
     steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
       - name: Setup test environment
         uses: ./.github/actions/setup-test
         with:
@@ -180,6 +189,9 @@ jobs:
             workloads: [ maui ]
     needs: pack
     steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
       - name: Setup test environment
         uses: ./.github/actions/setup-test
         with:
@@ -211,6 +223,9 @@ jobs:
             workloads: [ maui ]
     needs: pack
     steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
       - name: Setup test environment
         uses: ./.github/actions/setup-test
         with:
