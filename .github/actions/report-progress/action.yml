@@ -1,0 +1,34 @@
+name: "Report Progress"
+inputs:
+  id:
+    description: 'The identifier for the progress report, options are core, windows, linux, mac, android, ios'
+    required: true
+  comment_id:
+    description: 'The ID of the comment to update'
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout 
+      uses: actions/checkout@v6.0.1
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v7.0.0
+      with:
+        path: ${{ inputs.id }}-results
+        pattern: ${{ inputs.id }}-results-*
+
+    - name: Publish results
+      id: report
+      uses: dorny/test-reporter@v2.4.0
+      with:
+        name: ${{ inputs.id }}-results
+        path: "${{ inputs.id }}-results/**/*.trx"
+        reporter: dotnet-trx
+
+    - name: Update comment progress
+      uses: ./.github/actions/comment-progress
+      with:
+        comment_id: ${{ inputs.comment_id }}
+        complete_tests: ${{ inputs.id }}
+        test_status: ${{ steps.report.outputs.passed }} ${{ steps.report.outputs.failed }}

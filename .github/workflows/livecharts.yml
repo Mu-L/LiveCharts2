@@ -59,24 +59,10 @@ jobs:
             project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
           
     steps: 
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+      - name: Setup .NET and Workloads
+        uses: ./.github/actions/setup-dotnet-and-workloads
         with:
-          fetch-depth: 0 # important for deterministic builds?
-      
-      - name: Setup .NET 
-        uses: actions/setup-dotnet@v5.0.1
-        with: 
-          dotnet-version: '10.0.100'
-
-      - name: Install Workloads 
-        if: ${{ matrix.workloads }} 
-        shell: pwsh 
-        run: | 
-          $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
-          foreach ($workload in $workloads) {
-            dotnet workload install $workload
-          }
+          workloads: ${{ matrix.workloads }}
 
       - name: Pack
         run: 
@@ -87,6 +73,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: ${{ matrix.short-name }}-package
+          retention-days: 30
           path: |
             artifacts/*.nupkg
             artifacts/*.snupkg
@@ -115,6 +102,7 @@ jobs:
         uses: actions/upload-artifact@v6.0.0 
         with:
           name: livecharts-${{ github.sha }}
+          retention-days: 30
           path: flat/*        
 
       - name: Update comment progress
@@ -130,23 +118,8 @@ jobs:
       matrix:
         framework: [ net8.0, net462 ]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.1
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5.0.1
-        with:
-          dotnet-version: '10.0.100'
-
-      - name: Download local packages
-        uses: actions/download-artifact@v7.0.0
-        with: 
-          name: livecharts-${{ github.sha }} 
-          path: ./artifacts
-
-      - name: Configure NuGet sources 
-        run:
-          dotnet nuget add source ${{ github.workspace }}/artifacts --name local
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test
 
       - name: Run unit tests
         run:
@@ -156,42 +129,8 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: core-results-${{ matrix.framework }}
+          retention-days: 30
           path: "**/*.trx"
-
-  report-progress-test-core:
-    runs-on: ubuntu-24.04
-    needs: [test-core, report-progress-starting]
-    if: always()
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      issues: write 
-      pull-requests: write
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v7.0.0
-        with:
-          path: core-results
-          pattern: core-results-*
-
-      - name: Publish results
-        id: report
-        uses: dorny/test-reporter@v2.4.0
-        with:
-          name: core-results
-          path: "core-results/**/*.trx"
-          reporter: dotnet-trx
-
-      - name: Update comment progress
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          complete_tests: core
-          test_status: ${{ steps.report.outputs.conclusion }} ${{ steps.report.outputs.passed }} ${{ steps.report.outputs.failed }}
 
   test-windows:
     runs-on: windows-2025
@@ -212,32 +151,10 @@ jobs:
           - id: wpf
     needs: pack
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6.0.1
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5.0.1
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test
         with:
-          dotnet-version: '10.0.100'
-
-      - name: Install Workloads 
-        if: ${{ matrix.workloads }} 
-        shell: pwsh 
-        run: | 
-          $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
-          foreach ($workload in $workloads) {
-            dotnet workload install $workload
-          }
-
-      - name: Download local packages
-        uses: actions/download-artifact@v7.0.0
-        with: 
-          name: livecharts-${{ github.sha }} 
-          path: ./artifacts
-
-      - name: Configure NuGet sources 
-        run:
-          dotnet nuget add source ${{ github.workspace }}/artifacts --name local
+          workloads: ${{ matrix.workloads }}
 
       - name: Run tests
         run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
@@ -246,39 +163,90 @@ jobs:
         uses: actions/upload-artifact@v6.0.0
         with:
           name: win-results-${{ matrix.id }}
+          retention-days: 30
           path: "**/*.trx"
 
-  report-progress-test-windows:
+  test-linux:
     runs-on: ubuntu-24.04
-    needs: [test-windows, report-progress-starting]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: avalonia-desktop
+          - id: eto
+          - id: uno
+            tf: net10.0-desktop
+            workloads: [ maui ]
+    needs: pack
+    steps:
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test
+        with:
+          workloads: ${{ matrix.workloads }}
+
+      - name: Run tests
+        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: linux-results-${{ matrix.id }}
+          retention-days: 30
+          path: "**/*.trx"
+
+  test-mac:
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: avalonia-desktop
+          - id: eto
+          - id: maui
+            tf: net10.0-maccatalyst
+            workloads: [ maui ]
+          - id: uno
+            tf: net10.0-desktop
+            workloads: [ maui ]
+    needs: pack
+    steps:
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test
+        with:
+          workloads: ${{ matrix.workloads }}
+          xcode-path: /Applications/Xcode_26.2.app
+
+      - name: Run tests
+        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: linux-results-${{ matrix.id }}
+          retention-days: 30
+          path: "**/*.trx"
+
+  report-progress-test:
+    runs-on: ubuntu-24.04
     if: always()
     permissions:
       contents: read
       actions: read
       checks: write
-      issues: write 
       pull-requests: write
+    strategy:
+      matrix:
+        include:
+          - id: core
+            needs: [test-core, report-progress-starting]
+          - id: windows
+            needs: [test-windows, report-progress-starting]
+          - id: linux
+            needs: [test-linux, report-progress-starting]
+    needs: ${{ matrix.needs }}
     steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v7.0.0
+      - name: Report
+        uses: ./.github/actions/report-progress
         with:
-          path: win-results
-          pattern: win-results-*
-
-      - name: Publish results
-        id: report
-        uses: dorny/test-reporter@v2.4.0
-        with:
-          name: win-results
-          path: "win-results/**/*.trx"
-          reporter: dotnet-trx
-
-      - name: Update comment progress
-        uses: ./.github/actions/comment-progress
-        with:
+          id: ${{ matrix.id }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          complete_tests: windows
-          test_status: ${{ steps.report.outputs.conclusion }} ${{ steps.report.outputs.passed }} ${{ steps.report.outputs.failed }}
