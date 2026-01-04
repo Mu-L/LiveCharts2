@@ -144,10 +144,14 @@ jobs:
           name: livecharts-${{ github.sha }} 
           path: ./artifacts
 
+      - name: Configure NuGet sources 
+        run: 
+          dotnet nuget add source ./artifacts --name local
+
       - name: Restore dependencies
         shell: cmd
         run: 
-          dotnet restore tests/CoreTests/CoreTests.csproj -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }} --source ./artifacts --source https://api.nuget.org/v3/index.json
+          dotnet restore tests/CoreTests/CoreTests.csproj -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
       - name: List resolved packages 
         run: 
