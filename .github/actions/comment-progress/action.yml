@@ -46,15 +46,15 @@ runs:
           const iosTestsStatus = "${{ inputs.complete_ios_tests }}";
 
           if (!commentId) {
-            let firstBody = `Build in progress...
+            let firstBody = `One moment, checks are running... 🕰️👀
             
-            - [ ] Building NuGet packages ⏳...
-            - [ ] Testing core packages ⏳...
-            - [ ] Testing UI packages on Linux ⏳...
-            - [ ] Testing UI packages on Windows ⏳...
-            - [ ] Testing UI packages on MacOs/Catalyst ⏳...
-            - [ ] Testing UI packages on Android ⏳...
-            - [ ] Testing UI packages on iOS ⏳...
+            - [ ] Create NuGet packages
+            - [ ] Test core packages
+            - [ ] Test UI packages on Linux
+            - [ ] Test UI packages on Windows
+            - [ ] Test UI packages on MacOs/Catalyst
+            - [ ] Test UI packages on Android
+            - [ ] Test UI packages on iOS
             `;
 
             const newComment = await github.rest.issues.createComment({
@@ -79,67 +79,67 @@ runs:
 
           if (nugetUrl) {
             body = body.replace(
-              "- [ ] Building NuGet packages ⏳...", 
-              `- [x] ~~Building NuGet packages~~. While these changes are approved and published to the NuGet Gallery, you can [download](${nugetUrl}) and install these packages locally. If you need help to do so, check out [this guide](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`);
+              "- [ ] Create NuGet packages", 
+              `- [x] ~~Create NuGet packages~~. While these changes are approved and published to the NuGet Gallery, you can [download](${nugetUrl}) and install these packages locally. If you need help to do so, check out [this guide](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`);
           }
 
           if (coreTestsStatus) {
             if (coreTestsStatus == "success") {
               body = body.replace(
-                "- [ ] Testing core packages ⏳...", 
-                `- [x] ~~Testing core packages~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test core packages", 
+                `- [x] ~~Test core packages~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             } else {
               body = body.replace(
-                "- [ ] Testing core packages ⏳...", 
-                `- [x] ~~Testing core packages~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test core packages", 
+                `- [x] ~~Test core packages~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             }
           }
 
           if (winTestsStatus) {
             if (winTestsStatus == "success") {
               body = body.replace(
-                "- [ ] Testing UI packages on Windows ⏳...", 
-                `- [x] ~~Testing UI packages on Windows~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on Windows", 
+                `- [x] ~~Test UI packages on Windows~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             } else {
               body = body.replace(
-                "- [ ] Testing UI packages on Windows ⏳...", 
-                `- [x] ~~Testing UI packages on Windows~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on Windows", 
+                `- [x] ~~Test UI packages on Windows~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             }
           }
 
           if (linuxTestsStatus) {
             if (linuxTestsStatus == "success") {
               body = body.replace(
-                "- [ ] Testing UI packages on Linux ⏳...", 
-                `- [x] ~~Testing UI packages on Linux~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on Linux", 
+                `- [x] ~~Test UI packages on Linux~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             } else {
               body = body.replace(
-                "- [ ] Testing UI packages on Linux ⏳...", 
-                `- [x] ~~Testing UI packages on Linux~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on Linux", 
+                `- [x] ~~Test UI packages on Linux~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             }
           }
 
           if (macTestsStatus) {
             if (macTestsStatus == "success") {
               body = body.replace(
-                "- [ ] Testing UI packages on MacOs/Catalyst ⏳...", 
-                `- [x] ~~Testing UI packages on MacOs/Catalyst~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on MacOs/Catalyst", 
+                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             } else {
               body = body.replace(
-                "- [ ] Testing UI packages on MacOs/Catalyst ⏳...", 
-                `- [x] ~~Testing UI packages on MacOs/Catalyst~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on MacOs/Catalyst", 
+                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             }
           }
 
           if (androidTestsStatus) {
             if (androidTestsStatus == "success") {
               body = body.replace(
-                "- [ ] Testing UI packages on Android ⏳...", 
-                `- [x] ~~Testing UI packages on Android~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on Android", 
+                `- [x] ~~Test UI packages on Android~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             } else {
               body = body.replace(
-                "- [ ] Testing UI packages on Android ⏳...", 
-                `- [x] ~~Testing UI packages on Android~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
+                "- [ ] Test UI packages on Android", 
+                `- [x] ~~Test UI packages on Android~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${RUN_ID})`);
             }
           }
 

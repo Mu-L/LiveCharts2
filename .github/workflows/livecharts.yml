@@ -31,32 +31,32 @@ jobs:
           - short-name: skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharp
 
-          # - short-name: avalonia-skiasharp
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia
-          #   workloads: [ wasm-tools, maui ]
+          - short-name: avalonia-skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia
+            workloads: [ wasm-tools, maui ]
 
-          # - short-name: blazor-skiasharp
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Blazor
+          - short-name: blazor-skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Blazor
 
-          # - short-name: eto-skiasharp
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Eto
+          - short-name: eto-skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Eto
 
-          # - short-name: maui-skiasharp
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Maui
-          #   workloads: [ maui ]
+          - short-name: maui-skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Maui
+            workloads: [ maui ]
 
-          # - short-name: uno-skiasharp
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.Uno.WinUI
-          #   workloads: [ wasm-tools, maui ]
+          - short-name: uno-skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.Uno.WinUI
+            workloads: [ wasm-tools, maui ]
 
-          # - short-name: winui-skiasharp
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharpView.WinUI
+          - short-name: winui-skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharpView.WinUI
 
-          # - short-name: winforms-skiasharp            
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharp.WinForms
+          - short-name: winforms-skiasharp            
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.WinForms
 
-          # - short-name: wpf-skiasharp
-          #   project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
+          - short-name: wpf-skiasharp
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
           
     steps: 
       - name: Checkout 
@@ -138,7 +138,7 @@ jobs:
         with:
           dotnet-version: '10.0.100'
 
-      - name: Download packages 
+      - name: Download local packages
         uses: actions/download-artifact@v7.0.0
         with: 
           name: livecharts-${{ github.sha }} 
@@ -148,17 +148,8 @@ jobs:
         run:
           dotnet nuget add source ${{ github.workspace }}/artifacts --name local
 
-      - name: Restore dependencies
-        shell: cmd
-        run: 
-          dotnet restore tests/CoreTests/CoreTests.csproj -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
-
-      - name: List resolved packages 
-        run: 
-          dotnet list tests/CoreTests/CoreTests.csproj package
-
       - name: Run unit tests
-        run: 
+        run:
           dotnet run --project tests/CoreTests/CoreTests.csproj -f ${{ matrix.framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
       - name: Upload test results
@@ -167,112 +158,122 @@ jobs:
           name: core-results-${{ matrix.framework }}
           path: "**/*.trx"
 
-  # ui-test-windows:
-  #   runs-on: windows-2025
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - id: avalonia-desktop
-  #         - id: eto
-  #         - id: maui
-  #           tf: net10.0-windows10.0.19041.0
-  #           workloads: [ maui ]
-  #         - id: uno
-  #           tf: net10.0-desktop
-  #           workloads: [ maui ]
-  #         - id: winforms
-  #         - id: winui
-  #         - id: wpf
-  #   needs: pack
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v6.0.1
+  ui-test-windows:
+    runs-on: windows-2025
+    strategy:
+      matrix:
+        include:
+          - id: avalonia-desktop
+          - id: eto
+          - id: maui
+            tf: net10.0-windows10.0.19041.0
+            workloads: [ maui ]
+          - id: uno
+            tf: net10.0-desktop
+            workloads: [ maui ]
+          - id: winforms
+          - id: winui
+          - id: wpf
+    needs: pack
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.1
 
-  #     - name: Setup .NET
-  #       uses: actions/setup-dotnet@v5.0.1
-  #       with:
-  #         dotnet-version: '10.0.100'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5.0.1
+        with:
+          dotnet-version: '10.0.100'
 
-  #     - name: Install Workloads 
-  #       if: ${{ matrix.workloads }} 
-  #       shell: pwsh 
-  #       run: | 
-  #         $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
-  #         foreach ($workload in $workloads) {
-  #           dotnet workload install $workload
-  #         }
+      - name: Install Workloads 
+        if: ${{ matrix.workloads }} 
+        shell: pwsh 
+        run: | 
+          $workloads = "${{ join(matrix.workloads, ' ') }}".Split(' ')
+          foreach ($workload in $workloads) {
+            dotnet workload install $workload
+          }
 
-  #     - name: Run tests
-  #       run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
+      - name: Download local packages
+        uses: actions/download-artifact@v7.0.0
+        with: 
+          name: livecharts-${{ github.sha }} 
+          path: ./artifacts
 
-  #     - name: Upload test results
-  #       uses: actions/upload-artifact@v6.0.0
-  #       with:
-  #         name: win-results-${{ matrix.id }}
-  #         path: "**/*.trx"
+      - name: Configure NuGet sources 
+        run:
+          dotnet nuget add source ${{ github.workspace }}/artifacts --name local
 
-  # report-progress-core-tests:
-  #   runs-on: ubuntu-24.04
-  #   needs: [test-core, report-progress-starting]
-  #   permissions:
-  #     contents: read
-  #     actions: read
-  #     checks: write
-  #     issues: write 
-  #     pull-requests: write
-  #   steps:
-  #     - name: Checkout 
-  #       uses: actions/checkout@v6.0.1
+      - name: Run tests
+        run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ matrix.id }} --test-env tf=${{ matrix.tf }} lvcversionsuffix=-${{ github.sha }}
 
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@v7.0.0
-  #       with:
-  #         path: core-results
-  #         pattern: core-results-*
+      - name: Upload test results
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: win-results-${{ matrix.id }}
+          path: "**/*.trx"
 
-  #     - name: Publish results
-  #       id: report
-  #       uses: dorny/test-reporter@v2.4.0
-  #       with:
-  #         name: core-results
-  #         path: "core-results/**/*.trx"
-  #         reporter: dotnet-trx
+  report-progress-core-tests:
+    runs-on: ubuntu-24.04
+    needs: [test-core, report-progress-starting]
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      issues: write 
+      pull-requests: write
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
 
-  #     - name: Update comment progress
-  #       uses: ./.github/actions/comment-progress
-  #       with:
-  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-  #         complete_core_tests: ${{ steps.report.outputs.conclusion }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v7.0.0
+        with:
+          path: core-results
+          pattern: core-results-*
 
-  # report-progress-windows-tests:
-  #   runs-on: ubuntu-24.04
-  #   needs: [ui-test-windows, report-progress-starting]
-  #   permissions:
-  #     contents: read
-  #     actions: read
-  #     checks: write
-  #     issues: write 
-  #     pull-requests: write
-  #   steps:
-  #     - name: Checkout 
-  #       uses: actions/checkout@v6.0.1
+      - name: Publish results
+        id: report
+        uses: dorny/test-reporter@v2.4.0
+        with:
+          name: core-results
+          path: "core-results/**/*.trx"
+          reporter: dotnet-trx
 
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@v7.0.0
-  #       with:
-  #         path: win-results
-  #         pattern: win-results-*
+      - name: Update comment progress
+        uses: ./.github/actions/comment-progress
+        with:
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+          complete_core_tests: ${{ steps.report.outputs.conclusion }}
 
-  #     - name: Publish results
-  #       id: report
-  #       uses: dorny/test-reporter@v2.4.0
-  #       with:
-  #         name: win-results
-  #         path: "win-results/**/*.trx"
-  #         reporter: dotnet-trx
+  report-progress-windows-tests:
+    runs-on: ubuntu-24.04
+    needs: [ui-test-windows, report-progress-starting]
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      issues: write 
+      pull-requests: write
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
 
-  #     - name: Update comment progress
-  #       uses: ./.github/actions/comment-progress
-  #       with:
-  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-  #         complete_win_tests: ${{ steps.report.outputs.conclusion }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v7.0.0
+        with:
+          path: win-results
+          pattern: win-results-*
+
+      - name: Publish results
+        id: report
+        uses: dorny/test-reporter@v2.4.0
+        with:
+          name: win-results
+          path: "win-results/**/*.trx"
+          reporter: dotnet-trx
+
+      - name: Update comment progress
+        uses: ./.github/actions/comment-progress
+        with:
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+          complete_win_tests: ${{ steps.report.outputs.conclusion }}
