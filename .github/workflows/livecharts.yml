@@ -158,7 +158,42 @@ jobs:
           name: core-results-${{ matrix.framework }}
           path: "**/*.trx"
 
-  ui-test-windows:
+  report-progress-test-core:
+    runs-on: ubuntu-24.04
+    needs: [test-core, report-progress-starting]
+    if: always()
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      issues: write 
+      pull-requests: write
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v7.0.0
+        with:
+          path: core-results
+          pattern: core-results-*
+
+      - name: Publish results
+        id: report
+        uses: dorny/test-reporter@v2.4.0
+        with:
+          name: core-results
+          path: "core-results/**/*.trx"
+          reporter: dotnet-trx
+
+      - name: Update comment progress
+        uses: ./.github/actions/comment-progress
+        with:
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+          complete_tests: core
+          test_status: ${{ steps.report.outputs.conclusion }} ${{ steps.report.outputs.passed }} ${{ steps.report.outputs.failed }}
+
+  test-windows:
     runs-on: windows-2025
     strategy:
       fail-fast: false
@@ -213,42 +248,10 @@ jobs:
           name: win-results-${{ matrix.id }}
           path: "**/*.trx"
 
-  report-progress-core-tests:
+  report-progress-test-windows:
     runs-on: ubuntu-24.04
-    needs: [test-core, report-progress-starting]
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      issues: write 
-      pull-requests: write
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v7.0.0
-        with:
-          path: core-results
-          pattern: core-results-*
-
-      - name: Publish results
-        id: report
-        uses: dorny/test-reporter@v2.4.0
-        with:
-          name: core-results
-          path: "core-results/**/*.trx"
-          reporter: dotnet-trx
-
-      - name: Update comment progress
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          complete_core_tests: ${{ steps.report.outputs.conclusion }}
-
-  report-progress-windows-tests:
-    runs-on: ubuntu-24.04
-    needs: [ui-test-windows, report-progress-starting]
+    needs: [test-windows, report-progress-starting]
+    if: always()
     permissions:
       contents: read
       actions: read
@@ -277,4 +280,5 @@ jobs:
         uses: ./.github/actions/comment-progress
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          complete_win_tests: ${{ steps.report.outputs.conclusion }}
+          complete_tests: windows
+          test_status: ${{ steps.report.outputs.conclusion }} ${{ steps.report.outputs.passed }} ${{ steps.report.outputs.failed }}

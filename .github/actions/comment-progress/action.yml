@@ -6,23 +6,11 @@ inputs:
   complete_nuget:
     description: 'completes the nuget step, the value must be a string containing the url to the artifact'
     required: false
-  complete_core_tests:
-    description: 'completes the core tests step, the value must be a string containing "success" if succeeded'
+  complete_tests:
+    description: 'completes the specified tests, options are core, windows, linux, mac, android, ios'
     required: false
-  complete_win_tests:
-    description: 'completes the windows tests step, the value must be a string containing "success" if succeeded'
-    required: false
-  complete_linux_tests:
-    description: 'completes the linux tests step, the value must be a string containing "success" if succeeded'
-    required: false
-  complete_mac_tests:
-    description: 'completes the macos/catalyst tests step, the value must be a string containing "success" if succeeded'
-    required: false
-  complete_android_tests:
-    description: 'completes the android tests step, the value must be a string containing "success" if succeeded'
-    required: false
-  complete_ios_tests:
-    description: 'completes the ios tests step, the value must be a string containing "success" if succeeded'
+  test_status:
+    description: 'a string indicating "status passedCount failedCount", status can be "success" or "failure", passedCount and failedCount are integers'
     required: false
 outputs: 
   comment_id: 
@@ -37,16 +25,23 @@ runs:
         script: |
           const runId = "${{ github.run_id }}";
           const commentId = "${{ inputs.comment_id }}";
-          const nugetUrl = "${{ inputs.complete_nuget }}";          
-          const coreTestsStatus = "${{ inputs.complete_core_tests }}";
-          const winTestsStatus = "${{ inputs.complete_win_tests }}";
-          const linuxTestsStatus = "${{ inputs.complete_linux_tests }}";
-          const macTestsStatus = "${{ inputs.complete_mac_tests }}";
-          const androidTestsStatus = "${{ inputs.complete_android_tests }}";
-          const iosTestsStatus = "${{ inputs.complete_ios_tests }}";
+          const nugetUrl = "${{ inputs.complete_nuget }}";
+          const completeTests = "${{ inputs.complete_tests }}";
+          const testStatusInput = "${{ inputs.test_status }}";
+
+          let testStatus = null;
+          let succeededTests = 0;
+          let failedTests = 0;
+
+          if (testStatusInput) {
+            const parts = testStatusInput.split(" ");
+            testStatus = parts[0];
+            succeededTests = parts[1];
+            failedTests = parts[2];
+          }
 
           if (!commentId) {
-            let firstBody = `One moment, checks are running... 🕰️👀
+            let firstBody = `Thanks for your contribution! 👌☺️ We need to verify and run tests for your changes. Progress will be updated here:
             
             - [ ] Create NuGet packages
             - [ ] Test core packages
@@ -83,76 +78,44 @@ runs:
               `- [x] ~~Create NuGet packages~~. While these changes are approved and published to the NuGet Gallery, you can [download](${nugetUrl}) and install these packages locally. If you need help to do so, check out [this guide](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio) article.`);
           }
 
-          if (coreTestsStatus) {
-            if (coreTestsStatus == "success") {
-              body = body.replace(
-                "- [ ] Test core packages", 
-                `- [x] ~~Test core packages~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            } else {
-              body = body.replace(
-                "- [ ] Test core packages", 
-                `- [x] ~~Test core packages~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            }
+          let statusString = testStatus == "success" 
+            ? `✅ [${succeededTests} tests succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`
+            : `❌ [${failedTests}/${succeededTests + failedTests} tests failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`;
+
+          if (completeTests == "core") {
+            body = body.replace(
+              "- [ ] Test core packages", 
+              `- [x] ~~Test core packages~~ ${statusString}`);
           }
 
-          if (winTestsStatus) {
-            if (winTestsStatus == "success") {
-              body = body.replace(
-                "- [ ] Test UI packages on Windows", 
-                `- [x] ~~Test UI packages on Windows~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            } else {
-              body = body.replace(
-                "- [ ] Test UI packages on Windows", 
-                `- [x] ~~Test UI packages on Windows~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            }
+          if (completeTests == "linux") {
+            body = body.replace(
+              "- [ ] Test UI packages on Linux", 
+              `- [x] ~~Test UI packages on Linux~~ ${statusString}`);
+          }
+          
+          if (completeTests == "windows") {
+            body = body.replace(
+              "- [ ] Test UI packages on Windows", 
+              `- [x] ~~Test UI packages on Windows~~ ${statusString}`);
           }
 
-          if (linuxTestsStatus) {
-            if (linuxTestsStatus == "success") {
-              body = body.replace(
-                "- [ ] Test UI packages on Linux", 
-                `- [x] ~~Test UI packages on Linux~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            } else {
-              body = body.replace(
-                "- [ ] Test UI packages on Linux", 
-                `- [x] ~~Test UI packages on Linux~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            }
+          if (completeTests == "mac") {
+            body = body.replace(
+              "- [ ] Test UI packages on MacOs/Catalyst", 
+              `- [x] ~~Test UI packages on MacOs/Catalyst~~ ${statusString}`);
           }
 
-          if (macTestsStatus) {
-            if (macTestsStatus == "success") {
-              body = body.replace(
-                "- [ ] Test UI packages on MacOs/Catalyst", 
-                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            } else {
-              body = body.replace(
-                "- [ ] Test UI packages on MacOs/Catalyst", 
-                `- [x] ~~Test UI packages on MacOs/Catalyst~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            }
+          if (completeTests == "android") {
+            body = body.replace(
+              "- [ ] Test UI packages on Android", 
+              `- [x] ~~Test UI packages on Android~~ ${statusString}`);
           }
 
-          if (androidTestsStatus) {
-            if (androidTestsStatus == "success") {
-              body = body.replace(
-                "- [ ] Test UI packages on Android", 
-                `- [x] ~~Test UI packages on Android~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            } else {
-              body = body.replace(
-                "- [ ] Test UI packages on Android", 
-                `- [x] ~~Test UI packages on Android~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            }
-          }
-
-          if (iosTestsStatus) {
-            if (iosTestsStatus == "success") {
-              body = body.replace(
-                "- [ ] Testing UI packages on iOS ⏳...", 
-                `- [x] ~~Testing UI packages on iOS~~ ✅ [succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            } else {
-              body = body.replace(
-                "- [ ] Testing UI packages on iOS ⏳...", 
-                `- [x] ~~Testing UI packages on iOS~~ ❌ [failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`);
-            }
+          if (completeTests == "ios") {
+            body = body.replace(
+              "- [ ] Test UI packages on iOS", 
+              `- [x] ~~Test UI packages on iOS~~ ${statusString}`);
           }
 
           await github.rest.issues.updateComment({
