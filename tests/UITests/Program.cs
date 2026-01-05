@@ -10,6 +10,9 @@ using Microsoft.Testing.Platform.Builder;
 // including desktop, web and mobile platforms.
 
 #if DEBUG
+// notice on Debug the cli args are overridden to make it easier to test locally,
+// on Release the args passed from the CI pipeline are used.
+
 // To select which app to run, set the appToRun variable here, options are:
 // "manual-start",
 // "wpf", "avalonia-desktop", "blazor", "maui", "uno", "winforms", "winui", "eto", "avalonia-android", "avalonia-browser", "avalonia-ios"
@@ -42,6 +45,8 @@ MSBuildArg[] msBuildArgs = [];
 #if !DEBUG
 // in CI we use the nuget packages for everything
 // we pack and test the nuget packages against the samples
+// lvcversionsuffix is a version suffix we pass from the pipeline, it can be something like "-ci-1234"
+// where 1234 is a build number or a commit id which NuGet packages were published with.
 msBuildArgs = [
     new("UseNuGetForSamples", "true"),
     new("LiveChartsVersionSuffix", "[lvcversionsuffix]"),

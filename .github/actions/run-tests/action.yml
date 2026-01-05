@@ -1,4 +1,5 @@
 name: "Run tests"
+description: "Runs the specified tests using factos or core tests"
 inputs:
   use-factos:
     description: 'Whether to use factos for test selection'

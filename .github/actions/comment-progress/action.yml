@@ -1,4 +1,5 @@
 name: "Comment Progress"
+description: "Creates or updates a comment on the PR with the progress of the tests"
 inputs:
   comment_id:
     description: 'The ID of the comment to update'

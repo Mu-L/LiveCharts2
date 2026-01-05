@@ -1,4 +1,5 @@
 name: "Setup .Net and Workloads"
+description: "Sets up .NET SDK 10 and installs the specified workloads"
 inputs:
   workloads:
     description: 'The workloads array to install'

@@ -34,10 +34,12 @@ jobs:
       - name: Publish results
         id: report
         uses: dorny/test-reporter@v2.4.0
+        continue-on-error: true
         with:
             name: ${{ inputs.id }}-results
             path: "${{ inputs.id }}-results/**/*.trx"
             reporter: dotnet-trx
+            fail-on-error: false
 
       - name: Update comment progress
         uses: ./.github/actions/comment-progress
