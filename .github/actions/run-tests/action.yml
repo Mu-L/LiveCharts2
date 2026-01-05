@@ -43,8 +43,7 @@ runs:
 
     - name: Download local packages
       uses: actions/download-artifact@v7.0.0
-      with: 
-        name: livecharts-${{ github.sha }} 
+      with:
         path: ./artifacts
 
     - name: Configure NuGet sources 
