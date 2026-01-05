@@ -74,10 +74,15 @@ runs:
           dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
 
     # use core tests when factos is not used
+    # the Debug config is required a think for a reason...
+    # at the end of the day we are testing the Release packages
+    # but we are only compiling the tests in Debug, becase there is 
+    # a mocked functionality that simulates drawing in the UI..
+    # this maybe needs to be improved and instead run these tests in the UI tests project
     - name: Run tests
       if : ${{ inputs.use-factos != 'true' }}
       shell: pwsh
-      run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Release -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+      run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
     - name: Upload test results
       if: always()
