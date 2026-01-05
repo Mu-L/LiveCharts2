@@ -94,12 +94,11 @@ runs:
           path: "**/*.trx"
           reporter: dotnet-trx
 
-    - name: Comment test results
-      if: always()
-      uses: ./.github/actions/comment-progress
-      with:
-        comment_id: ${{ inputs.comment_id }}
-        content: |
-          ***
-          Tests for `${{ inputs.id }} | ${{ inputs.test-id }} | ${{ inputs.target-framework }}` **${{ steps.report.outputs.conclusion }}**
-          Passed: ${{ steps.report.outputs.passed }}, Failed: ${{ steps.report.outputs.failed }}.
+    # - name: Comment test results
+    #   if: always()
+    #   uses: ./.github/actions/comment-progress
+    #   with:
+    #     comment_id: ${{ inputs.comment_id }}
+    #     content: |
+    #       > Tests results for *${{ inputs.id }} | ${{ inputs.test-id }} | ${{ inputs.target-framework }}*: **${{ steps.report.outputs.conclusion }}**
+    #       Passed: ${{ steps.report.outputs.passed }}, Failed: ${{ steps.report.outputs.failed }}.

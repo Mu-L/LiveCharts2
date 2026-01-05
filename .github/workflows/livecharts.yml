@@ -21,9 +21,7 @@ jobs:
         with:
           content: | 
             Thanks for your contribution! 👍👌
-
-            We are starting the build and test process... this may take a while. Please be patient. ⏳
-            The generated packages will be available only for 30 days after the workflow run, so make sure to download them before they expire; Or just wait for the PR to be merged and published to NuGet.org.
+            We are starting the build and test process... this may take a while. Please be patient. ⏳ You can find more details below as the process continues or at the [actions tab](_https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
     outputs: 
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
 
@@ -79,12 +77,19 @@ jobs:
             artifacts/*.nupkg
             artifacts/*.snupkg
 
-      - name: Update comment progress
-        uses: ./.github/actions/comment-progress
+  report-progress-packed:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1        
+      - uses: ./.github/actions/comment-progress
+        id: create-comment
         with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
-            > ✅ Packing of **${{ matrix.short-name }}** completed. [download](${{ steps.upload.outputs.artifact-url }})
+            All packages have been packed successfully! 📦✅
+            You can download the NuGet packages for this build [here](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}#artifacts).
+
+            The packages will be available for 30 days, you can either use them directly, or wait for this PR to be merged to have them published to NuGet.org.
 
   test-core:
     runs-on: windows-2025
