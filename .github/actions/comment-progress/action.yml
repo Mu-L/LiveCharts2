@@ -19,11 +19,10 @@ runs:
       with:
         script: |
           const commentId = "${{ inputs.comment_id }}";
-          const content = "${{ inputs.content }}";
+          const content = `${{ inputs.content }}`;
 
           if (!commentId) {
             const newComment = await github.rest.issues.createComment({
-              issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: content
@@ -46,7 +45,6 @@ runs:
 
           await github.rest.issues.updateComment({
             comment_id: commentId,
-            issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
             body });
