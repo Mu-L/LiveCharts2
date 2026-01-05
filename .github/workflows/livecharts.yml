@@ -18,11 +18,18 @@ jobs:
         uses: actions/checkout@v6.0.1        
       - uses: ./.github/actions/comment-progress
         id: create-comment
+        with:
+          content: | 
+            Thanks for your contribution! 👍👌
+            We are starting the build and test process... this may take a while. Please be patient. ⏳
+            The generated packages will be available only for 30 days after the workflow run, so make sure to download them before they expire. 📦
+            Or just wait for the PR to be merged and published to NuGet.org./n/n
     outputs: 
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
 
   pack: 
-    runs-on: windows-2025    
+    runs-on: windows-2025
+    needs: report-progress-starting
     strategy:
       matrix:
         include:
@@ -62,7 +69,7 @@ jobs:
         run: 
           dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSuffix=-${{ github.sha }}
 
-      - name: Upload test results
+      - name: Upload packages
         id: upload
         uses: actions/upload-artifact@v6.0.0
         with:
@@ -72,40 +79,16 @@ jobs:
             artifacts/*.nupkg
             artifacts/*.snupkg
 
-  report-progress-packed:
-    runs-on: ubuntu-24.04
-    needs: [pack, report-progress-starting]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - uses: actions/download-artifact@v7.0.0
-        with:
-          path: collected
-
-      - name: Flatten packages 
-        run: | 
-          mkdir -p flat 
-          find collected -type f -name '*.nupkg' -exec cp {} flat/ \;
-          find collected -type f -name '*.snupkg' -exec cp {} flat/ \;
-
-      - name: Upload packages
-        id: upload
-        uses: actions/upload-artifact@v6.0.0 
-        with:
-          name: livecharts-${{ github.sha }}
-          retention-days: 30
-          path: flat/*        
-
       - name: Update comment progress
         uses: ./.github/actions/comment-progress
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          complete_nuget: ${{ steps.upload.outputs.artifact-url }}
+          content: |
+            ✅ Packing of **${{ matrix.short-name }}** completed. | [download](${{ steps.upload.outputs.artifact-url }})
 
   test-core:
     runs-on: windows-2025
-    needs: pack
+    needs: [pack, report-progress-starting]
     strategy:
       fail-fast: false
       matrix:
@@ -120,6 +103,7 @@ jobs:
           id: core
           use-factos: false
           target-framework: ${{ matrix.framework }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-windows:
     runs-on: windows-2025
@@ -138,7 +122,7 @@ jobs:
           - id: winforms
           - id: winui
           - id: wpf
-    needs: pack
+    needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -151,6 +135,7 @@ jobs:
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-linux:
     runs-on: ubuntu-24.04
@@ -163,7 +148,7 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: android
-    needs: pack
+    needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -179,6 +164,7 @@ jobs:
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-android:
     runs-on: ubuntu-24.04
@@ -194,7 +180,7 @@ jobs:
           - id: uno
             tf: net10.0-android
             workloads: android
-    needs: pack
+    needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -208,6 +194,7 @@ jobs:
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           use-android-emulator: true
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-mac:
     runs-on: macos-26
@@ -223,7 +210,7 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: maui
-    needs: pack
+    needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -237,6 +224,7 @@ jobs:
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           xcode-path: /Applications/Xcode_26.2.app
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-ios:
     runs-on: macos-26
@@ -252,7 +240,7 @@ jobs:
           - id: uno
             tf: net10.0-ios
             workloads: ios android
-    needs: pack
+    needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -266,51 +254,4 @@ jobs:
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           xcode-path: /Applications/Xcode_26.2.app
-
-  report-progress-core:
-    needs: [test-core, report-progress-starting]
-    uses: ./.github/workflows/report-progress.yml
-    if: always()
-    with:
-      id: core
-      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  report-progress-windows:
-    needs: [test-windows, report-progress-starting]
-    uses: ./.github/workflows/report-progress.yml
-    if: always()
-    with:
-      id: windows
-      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  report-progress-linux:
-    needs: [test-linux, report-progress-starting]
-    uses: ./.github/workflows/report-progress.yml
-    if: always()
-    with:
-      id: linux
-      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  report-progress-mac:
-    needs: [test-mac, report-progress-starting]
-    uses: ./.github/workflows/report-progress.yml
-    if: always()
-    with:
-      id: mac
-      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  report-progress-ios:
-    needs: [test-ios, report-progress-starting]
-    uses: ./.github/workflows/report-progress.yml
-    if: always()
-    with:
-      id: ios
-      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  report-progress-android:
-    needs: [test-android, report-progress-starting]
-    uses: ./.github/workflows/report-progress.yml
-    if: always()
-    with:
-      id: android
-      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}

@@ -1,18 +1,12 @@
-name: "Comment Progress"
+name: "Comment"
 description: "Creates or updates a comment on the PR with the progress of the tests"
 inputs:
   comment_id:
-    description: 'The ID of the comment to update'
+    description: 'The ID of the comment to append to'
     required: false
-  complete_nuget:
-    description: 'completes the nuget step, the value must be a string containing the url to the artifact'
-    required: false
-  complete_tests:
-    description: 'completes the specified tests, options are core, windows, linux, mac, android, ios'
-    required: false
-  test_status:
-    description: 'passedCount and failedCount separated by comma'
-    required: false
+  content:
+    description: 'The content to add to the comment'
+    required: true
 outputs: 
   comment_id: 
     description: "ID of the comment" 
@@ -24,40 +18,15 @@ runs:
       uses: actions/github-script@v8
       with:
         script: |
-          const runId = "${{ github.run_id }}";
           const commentId = "${{ inputs.comment_id }}";
-          const nugetUrl = "${{ inputs.complete_nuget }}";
-          const completeTests = "${{ inputs.complete_tests }}";
-          const testStatusInput = "${{ inputs.test_status }}";
-
-          let succeededTests = 0;
-          let failedTests = 0;
-
-          if (testStatusInput) {
-            const parts = testStatusInput.split(",");
-            console.log('==test parts== ' + parts);
-            succeededTests = +parts[0];
-            failedTests = +parts[1];
-          }
+          const content = "${{ inputs.content }}";
 
           if (!commentId) {
-            let firstBody = `Hello and thanks for your contribution! 👍👌            
-            Please find below the progress of the automated checks being performed on your pull request:
-            
-            - [ ] Create NuGet packages
-            - [ ] Test core packages
-            - [ ] Test UI on Linux
-            - [ ] Test UI on Windows
-            - [ ] Test UI on MacOs/Catalyst
-            - [ ] Test UI on Android
-            - [ ] Test UI on iOS
-            `;
-
             const newComment = await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: firstBody
+              body: content
             });
 
             core.setOutput("comment_id", newComment.data.id);
@@ -73,51 +42,7 @@ runs:
           
           let body = comment.data.body;
 
-          if (nugetUrl) {
-            body = body.replace(
-              "- [ ] Create NuGet packages", 
-              `- [x] ~~Create NuGet packages~~. You can [download](${nugetUrl}) these packages (30 days retention) and set up a local feed manually in your environment. Alternatively, you may wait until the PR is merged, at which point the updated packages will be available on NuGet.org. For guidance on configuring a local feed, see [this guide](https://stackoverflow.com/questions/10240029/how-do-i-install-a-nuget-package-nupkg-file-locally-to-visual-studio).`);
-          }
-
-          let statusString = failedTests == 0 && succeededTests > 0
-            ? `✅ [${succeededTests} tests succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`
-            : `❌ [${failedTests} tests failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`;
-
-          if (completeTests == "core") {
-            body = body.replace(
-              "- [ ] Test core packages", 
-              `- [x] ~~Test core packages~~ ${statusString}`);
-          }
-
-          if (completeTests == "linux") {
-            body = body.replace(
-              "- [ ] Test UI on Linux", 
-              `- [x] ~~Test UI on Linux~~ ${statusString}`);
-          }
-          
-          if (completeTests == "windows") {
-            body = body.replace(
-              "- [ ] Test UI on Windows", 
-              `- [x] ~~Test UI on Windows~~ ${statusString}`);
-          }
-
-          if (completeTests == "mac") {
-            body = body.replace(
-              "- [ ] Test UI on MacOs/Catalyst", 
-              `- [x] ~~Test UI on MacOs/Catalyst~~ ${statusString}`);
-          }
-
-          if (completeTests == "android") {
-            body = body.replace(
-              "- [ ] Test UI on Android", 
-              `- [x] ~~Test UI on Android~~ ${statusString}`);
-          }
-
-          if (completeTests == "ios") {
-            body = body.replace(
-              "- [ ] Test UI on iOS", 
-              `- [x] ~~Test UI on iOS~~ ${statusString}`);
-          }
+          body += `\n${content}`;
 
           await github.rest.issues.updateComment({
             comment_id: commentId,

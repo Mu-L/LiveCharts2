@@ -25,6 +25,9 @@ inputs:
   use-android-emulator:
     description: 'Whether to use android emulator'
     required: false
+  comment_id:
+    description: 'The ID of the comment to append to'
+    required: false
 runs:
   using: "composite"
   steps:
@@ -84,10 +87,20 @@ runs:
       shell: pwsh
       run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v6.0.0
+    - name: Publish test results
+      id: report
+      uses: dorny/test-reporter@v2.4.0
       with:
-        name: ${{ inputs.id }}-results-${{ inputs.test-id }}-${{ inputs.target-framework }}
-        retention-days: 30
-        path: "**/*.trx"
+          name: ${{ inputs.id }}-${{ inputs.test-id || 'core' }}-${{ inputs.target-framework || 'default' }}-results
+          path: "**/*.trx"
+          reporter: dotnet-trx
+
+    - name: Comment test results
+      if: always()
+      uses: ./.github/actions/comment-progress
+      with:
+        comment_id: ${{ inputs.comment_id }}
+        content: |
+          ***
+          Tests for `${{ inputs.id }} | ${{ inputs.test-id }} | ${{ inputs.target-framework }}` **${{ steps.report.outputs.conclusion }}**
+          Passed: ${{ steps.report.outputs.passed }}, Failed: ${{ steps.report.outputs.failed }}.

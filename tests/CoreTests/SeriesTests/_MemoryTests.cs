@@ -19,7 +19,7 @@ public class _MemoryTests
 
     static _MemoryTests()
     {
-        s_repeatCount = 500; // originally 5000, reduced for faster test runs
+        s_repeatCount = 1500; // originally 5000, reduced for faster test runs
         var threshold = 2 * 1024 * 1024 * (s_repeatCount / 5000d); // 2MB each 5000 repeats
         s_treshold = threshold < 1 * 1024 * 1024
             ? 1 * 1024 * 1024
