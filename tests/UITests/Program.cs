@@ -9,6 +9,11 @@ using Microsoft.Testing.Platform.Builder;
 // it allows us to run the same UI tests against multiple UI frameworks,
 // including desktop, web and mobile platforms.
 
+// how it works:
+// we define tests in the SharedUITests project,
+// then each sample app references the SharedUITests project,
+// finally factos starts each sample app, connects to it and runs the tests defined in SharedUITests.
+
 #if DEBUG
 // notice on Debug the cli args are overridden to make it easier to test locally,
 // on Release the args passed from the CI pipeline are used.

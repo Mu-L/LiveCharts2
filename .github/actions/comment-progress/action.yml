@@ -81,7 +81,7 @@ runs:
 
           let statusString = failedTests == 0 && succeededTests > 0
             ? `✅ [${succeededTests} tests succeeded](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`
-            : `❌ [${failedTests}/${succeededTests + failedTests} tests failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`;
+            : `❌ [${failedTests} tests failed](https://github.com/Live-Charts/LiveCharts2/actions/runs/${runId})`;
 
           if (completeTests == "core") {
             body = body.replace(

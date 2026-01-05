@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoreTests.SeriesTests;
 
-//[TestClass]
+[TestClass]
 public class _MemoryTests
 {
     private static readonly int s_repeatCount;
