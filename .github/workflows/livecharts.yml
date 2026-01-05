@@ -22,7 +22,8 @@ jobs:
           content: | 
             Thanks for your contribution!
 
-            We are starting the build and test process this may take a while. You can find more details below as the process continues or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
+            We are starting the build and test process. This may take a while.
+            You can find more details below as the process continues or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
     outputs: 
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
 
@@ -80,21 +81,26 @@ jobs:
 
   report-progress-packed:
     runs-on: ubuntu-24.04
-    needs: pack
+    needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1        
       - uses: ./.github/actions/comment-progress
         id: create-comment
         with:
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
+            
             ---
+            
             All packages have been packed successfully! 📦✅
             You can download the NuGet packages for this build [here](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}#artifacts).
 
             The packages will be available for 30 days, you can either use them directly, or wait for this PR to be merged to have them published to NuGet.org.
+            
             ---
-            Tests will start now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
+            
+              Tests will start now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
 
   test-core:
     runs-on: windows-2025
