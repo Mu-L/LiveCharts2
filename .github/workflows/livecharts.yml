@@ -23,7 +23,7 @@ jobs:
             Thanks for your contribution! 👍👌
             We are starting the build and test process... this may take a while. Please be patient. ⏳
             The generated packages will be available only for 30 days after the workflow run, so make sure to download them before they expire. 📦
-            Or just wait for the PR to be merged and published to NuGet.org./n/n
+            Or just wait for the PR to be merged and published to NuGet.org.
     outputs: 
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
 
