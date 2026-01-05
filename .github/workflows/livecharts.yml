@@ -107,6 +107,7 @@ jobs:
     runs-on: windows-2025
     needs: pack
     strategy:
+      fail-fast: false
       matrix:
         framework: [ net8.0, net462 ]
     steps:
@@ -250,7 +251,7 @@ jobs:
             workloads: maui
           - id: uno
             tf: net10.0-ios
-            workloads: ios
+            workloads: ios android
     needs: pack
     steps:
       - name: Checkout 
@@ -296,6 +297,14 @@ jobs:
     if: always()
     with:
       id: mac
+      comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  report-progress-ios:
+    needs: [test-ios, report-progress-starting]
+    uses: ./.github/workflows/report-progress.yml
+    if: always()
+    with:
+      id: ios
       comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   report-progress-android:

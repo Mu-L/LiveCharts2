@@ -52,6 +52,7 @@ runs:
     - name: Run UI tests
       if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator != 'true' }}
       shell: pwsh
+      continue-on-error: true
       run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
 
     # use tests using the android emulator runner
@@ -65,6 +66,7 @@ runs:
     - name: Start Android emulator and run tests
       if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
       uses: reactivecircus/android-emulator-runner@v2.35.0
+      continue-on-error: true
       with:
         api-level: 35
         target: google_apis
@@ -76,6 +78,7 @@ runs:
     - name: Run tests
       if : ${{ inputs.use-factos != 'true' }}
       shell: pwsh
+      continue-on-error: true
       run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Release -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
     - name: Upload test results

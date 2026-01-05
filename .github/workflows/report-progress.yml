@@ -44,4 +44,4 @@ jobs:
         with:
             comment_id: ${{ inputs.comment_id }}
             complete_tests: ${{ inputs.id }}
-            test_status: ${{ steps.report.outputs.passed }} ${{ steps.report.outputs.failed }}
+            test_status: ${{ steps.report.outputs.passed }},${{ steps.report.outputs.failed }}
