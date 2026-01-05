@@ -71,7 +71,7 @@ testedApps
 testsBuilder
     .AddFactos(new FactosSettings()
     {
-        ConnectionTimeout = 180,
+        ConnectionTimeout = 600,
         TestedApps = testedApps
     })
     .AddTrxReportProvider(); // optional, add TRX if needed
