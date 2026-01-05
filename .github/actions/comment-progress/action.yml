@@ -23,6 +23,7 @@ runs:
 
           if (!commentId) {
             const newComment = await github.rest.issues.createComment({
+              issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: content
@@ -33,7 +34,8 @@ runs:
             return;
           }
 
-          const comment = await github.rest.issues.getComment({ 
+          const comment = await github.rest.issues.getComment({
+            issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
             comment_id: commentId
