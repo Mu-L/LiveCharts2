@@ -51,13 +51,13 @@ runs:
       run:
         dotnet nuget add source ${{ github.workspace }}/artifacts --name local
 
-    # use tests using the factos selection and the console when no emulator is needed
+    # run tests using the factos selection and the console when no emulator is needed
     - name: Run UI tests
       if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator != 'true' }}
       shell: pwsh
       run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
 
-    # use tests using the android emulator runner
+    # run tests using the factos selection inside the android emulator
     - name: Enable KVM
       if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
       shell: pwsh
@@ -75,12 +75,12 @@ runs:
         script:
           dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
 
-    # use core tests when factos is not used
-    # the Debug config is required a think for a reason...
-    # at the end of the day we are testing the Release packages
-    # but we are only compiling the tests in Debug, becase there is 
-    # a mocked functionality that simulates drawing in the UI..
-    # this maybe needs to be improved and instead run these tests in the UI tests project
+    # run core tests when factos is not used
+    # the Debug config is required even we are testing the nuget packages in Release.
+    # this is because some optimizations in Release make the tests fail, but the code
+    # that fails is not related to the nuget packages but to the test code itself
+    # there is a function that mocks the ui drawing that fails in Release optimizations.
+    # ToDo: fix that, or now that we have ui tests, maybe just run the tests in the ui?.
     - name: Run tests
       if : ${{ inputs.use-factos != 'true' }}
       shell: pwsh
@@ -94,7 +94,8 @@ runs:
           name: ${{ inputs.id }}-${{ inputs.test-id || 'core' }}-${{ inputs.target-framework || 'default' }}-results
           path: "**/*.trx"
           reporter: dotnet-trx
-
+    
+    # omitted for now to reduce comments noise, just check the actions tab for results.
     # - name: Comment test results
     #   if: always()
     #   uses: ./.github/actions/comment-progress
