@@ -6,9 +6,9 @@
     <SharedGUID>730ba90c-a574-4b17-9eeb-c28a4d782449</SharedGUID>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <Import_RootNamespace>ShatedUITests</Import_RootNamespace>
+    <Import_RootNamespace>SharedUITests</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)BasicTests.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)\**\*.cs" />
   </ItemGroup>
 </Project>
