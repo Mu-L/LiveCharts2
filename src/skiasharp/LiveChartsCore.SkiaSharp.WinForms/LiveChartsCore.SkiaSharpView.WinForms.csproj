@@ -1,9 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-    <Nullable>enable</Nullable>
-
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <OutputType>Library</OutputType>

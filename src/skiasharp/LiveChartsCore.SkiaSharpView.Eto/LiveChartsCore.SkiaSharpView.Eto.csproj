@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-    <Nullable>enable</Nullable>
     <TargetFrameworks>netstandard2.0;</TargetFrameworks>
     <AssemblyName>LiveChartsCore.SkiaSharpView.Eto</AssemblyName>
     <RootNamespace>LiveChartsCore.SkiaSharpView.Eto</RootNamespace>

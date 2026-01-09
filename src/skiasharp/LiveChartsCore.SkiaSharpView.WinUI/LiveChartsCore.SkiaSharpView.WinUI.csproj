@@ -1,8 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-    <Nullable>enable</Nullable>
-
     <TargetFrameworks>
       net6.0-windows10.0.19041.0;
       net8.0-windows10.0.19041.0;

@@ -1,9 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Nullable>enable</Nullable>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-
     <TargetFrameworks>
       net462;
       netstandard2.0;

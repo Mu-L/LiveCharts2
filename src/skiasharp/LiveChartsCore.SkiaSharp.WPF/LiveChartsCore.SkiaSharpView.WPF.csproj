@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
-    <Nullable>enable</Nullable>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
     <UseWPF>true</UseWPF>
 
     <TargetFrameworks>

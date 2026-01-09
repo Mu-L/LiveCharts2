@@ -1,8 +1,5 @@
 ﻿<Project Sdk="Uno.Sdk/6.2.29">
   <PropertyGroup>
-    <Nullable>enable</Nullable>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-
     <UnoSingleProject>true</UnoSingleProject>
     <OutputType>Library</OutputType>
     <SkiaSharpVersion>$(LatestSkiaSharpVersion)</SkiaSharpVersion>

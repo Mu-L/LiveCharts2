@@ -6,8 +6,9 @@
     <LiveChartsCodeGenVersion>1.0.1</LiveChartsCodeGenVersion>
     <LiveChartsAuthors>BetoRodriguez</LiveChartsAuthors>
 
-    <GlobalLangVersion>preview</GlobalLangVersion>
-    <FactosVersion>0.6.0</FactosVersion>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
 
     <!--
     This version is the minimum supported version by LiveCharts,
@@ -28,6 +29,9 @@
     "LatestSkiaSharpVersion" is used.
     -->
     <HarfBuzzWASMVersion>8.3.1.1</HarfBuzzWASMVersion>
+
+    <!-- Factos version https://github.com/beto-rodriguez/Factos -->
+    <FactosVersion>0.6.0</FactosVersion>
 
     <!--
     Useful to toggle between using project references or nuget references

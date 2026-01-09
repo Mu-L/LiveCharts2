@@ -2,10 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net8.0</TargetFrameworks>
-
     <IsPackable>false</IsPackable>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-    <Nullable>Enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

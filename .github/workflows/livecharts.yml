@@ -300,5 +300,5 @@ jobs:
           use-factos: true
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
+          # target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}

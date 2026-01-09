@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Factos;
+﻿using Factos;
 using SharedUITests.Helpers;
 using Xunit;
 
