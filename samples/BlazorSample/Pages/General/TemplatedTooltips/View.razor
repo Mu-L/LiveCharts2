@@ -11,7 +11,8 @@
 </CartesianChart>
 
 @code {
-    static TemplatedTooltips()
+    // for simplicity we configure the mapping here
+    static View()
     {
         LiveCharts.Configure(config =>
             config.HasMap<GeometryPoint>((dataPoint, index) => new(index, dataPoint.Value)));

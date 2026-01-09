@@ -15,7 +15,8 @@
         public double Population { get; set; }
     }
 
-    static UserDefinedTypes()
+    // for simplicity we configure the mapping here
+    static View()
     {
         LiveCharts.Configure(config =>
             config.HasMap<City>((city, index) => new(index, city.Population)));
