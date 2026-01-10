@@ -182,6 +182,65 @@ jobs:
           target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
+  test-mac:
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: avalonia-desktop
+          - id: eto
+          - id: maui
+            tf: net10.0-maccatalyst
+            workloads: maui
+          - id: uno
+            tf: net10.0-desktop
+            workloads: maui
+    needs: [pack, report-progress-starting]
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: mac
+          use-factos: true
+          test-id: ${{ matrix.id }}
+          workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
+          xcode-path: /Applications/Xcode_26.2.app
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  test-browser:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: blazor
+            workloads: wasm-tools
+          - id: avalonia-browser
+            workloads: wasm-tools
+          # disabled for now, in this uno version, idk why on wasm no tests are detected.
+          # - id: uno
+          #   tf: net10.0-browserwasm
+          #   workloads: wasm-tools android
+    needs: [pack, report-progress-starting]
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: browser
+          use-factos: true
+          test-id: ${{ matrix.id }}
+          workloads: ${{ matrix.workloads }}
+          # target-framework: ${{ matrix.tf }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
   # test-android:
   #   runs-on: ubuntu-24.04
   #   strategy:
@@ -212,36 +271,6 @@ jobs:
   #         target-framework: ${{ matrix.tf }}
   #         use-android-emulator: true
   #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  test-mac:
-    runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-desktop
-          - id: eto
-          - id: maui
-            tf: net10.0-maccatalyst
-            workloads: maui
-          - id: uno
-            tf: net10.0-desktop
-            workloads: maui
-    needs: [pack, report-progress-starting]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: mac
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   # test-ios:
   #   runs-on: macos-26
@@ -274,35 +303,6 @@ jobs:
   #         xcode-path: /Applications/Xcode_26.2.app
   #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-browser:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: blazor
-            workloads: wasm-tools
-          - id: avalonia-browser
-            workloads: wasm-tools
-          # disabled for now, in this uno version, idk why on wasm no tests are detected.
-          # - id: uno
-          #   tf: net10.0-browserwasm
-          #   workloads: wasm-tools android
-    needs: [pack, report-progress-starting]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: browser
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          # target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
   post-tests:
     runs-on: ubuntu-24.04
     if: always()
@@ -311,10 +311,10 @@ jobs:
       - test-core
       - test-windows
       - test-linux
-      - test-android
       - test-mac
-      - test-ios
       - test-browser
+      # - test-android
+      # - test-ios
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1 
