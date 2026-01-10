@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,9 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using LiveChartsCore.Kernel.Sketches;
+
 namespace LiveChartsGeneratedCode;
 
-public partial class SourceGenCartesianChart : SourceGenChart
+// ===============================================
+// this file contains the Vortice specific code
+// ===============================================
+
+/// <inheritdoc cref="ICartesianChartView" />
+public partial class SourceGenCartesianChart : SourceGenChart, ICartesianChartView
 {
-    // add vortice specific code here
 }
