@@ -28,6 +28,14 @@ using Vortice.Direct2D1;
 
 namespace LiveChartsGeneratedCode;
 
+// ==============================================================================
+// this file is the base class for this UI framework controls, in this file we
+// define the UI framework specific code. 
+// expanding this file in the solution explorer will show 2 more files:
+//    - *.shared.cs:        shared code between all UI frameworks
+//    - *.sgp.cs:           the source generated properties
+// ==============================================================================
+
 public abstract partial class SourceGenChart : IMyUIFrameworkControl
 {
     public IMyUIFrameworkControl[] Children { get; set; }

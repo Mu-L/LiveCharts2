@@ -302,3 +302,42 @@ jobs:
           workloads: ${{ matrix.workloads }}
           # target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  post-tests:
+    runs-on: ubuntu-24.04
+    needs:
+      - report-progress-starting
+      - test-core
+      - test-windows
+      - test-linux
+      - test-android
+      - test-mac
+      - test-ios
+      - test-browser
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1 
+
+      - name: Report tests completion
+        if: success()
+        uses: ./.github/actions/comment-progress
+        with:
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+          content: |
+            ---
+            
+            All tests have completed! ✅
+
+            You can review the detailed results for each platform in the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
+
+      - name: Report tests failure
+        if: failure()
+        uses: ./.github/actions/comment-progress
+        with:
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+          content: |
+            ---
+            
+            Some tests have failed. ❌
+
+            Please review the detailed results for each platform in the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
