@@ -241,69 +241,69 @@ jobs:
           # target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  # test-android:
-  #   runs-on: ubuntu-24.04
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include:
-  #         - id: avalonia-android
-  #           workloads: android
-  #         - id: maui
-  #           tf: net10.0-android
-  #           workloads: maui-android
-  #         # disabled for now, in this uno version, idk why on android no tests are detected.
-  #         # - id: uno
-  #         #   tf: net10.0-android
-  #         #   workloads: android
-  #   needs: [pack, report-progress-starting]
-  #   steps:
-  #     - name: Checkout 
-  #       uses: actions/checkout@v6.0.1
+  test-android:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: avalonia-android
+            workloads: android
+          - id: maui
+            tf: net10.0-android
+            workloads: maui-android
+          # disabled for now, in this uno version, idk why on android no tests are detected.
+          # - id: uno
+          #   tf: net10.0-android
+          #   workloads: android
+    needs: [pack, report-progress-starting]
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
 
-  #     - name: Run UI tests
-  #       uses: ./.github/actions/run-tests
-  #       with:
-  #         id: android
-  #         use-factos: true
-  #         test-id: ${{ matrix.id }}
-  #         workloads: ${{ matrix.workloads }}
-  #         target-framework: ${{ matrix.tf }}
-  #         use-android-emulator: true
-  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: android
+          use-factos: true
+          test-id: ${{ matrix.id }}
+          workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
+          use-android-emulator: true
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  # test-ios:
-  #   runs-on: macos-26
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include:
-  #         - id: avalonia-ios
-  #           workloads: ios
-  #         - id: maui
-  #           tf: net10.0-ios
-  #           workloads: maui
-  #         # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
-  #         # - id: uno
-  #         #   tf: net10.0-ios
-  #         #   workloads: ios android
-  #   needs: [pack, report-progress-starting]
-  #   steps:
-  #     - name: Checkout 
-  #       uses: actions/checkout@v6.0.1
+  test-ios:
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: avalonia-ios
+            workloads: ios
+          - id: maui
+            tf: net10.0-ios
+            workloads: maui
+          # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
+          # - id: uno
+          #   tf: net10.0-ios
+          #   workloads: ios android
+    needs: [pack, report-progress-starting]
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
 
-  #     - name: Run UI tests
-  #       uses: ./.github/actions/run-tests
-  #       with:
-  #         id: ios
-  #         use-factos: true
-  #         test-id: ${{ matrix.id }}
-  #         workloads: ${{ matrix.workloads }}
-  #         target-framework: ${{ matrix.tf }}
-  #         xcode-path: /Applications/Xcode_26.2.app
-  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+      - name: Run UI tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: ios
+          use-factos: true
+          test-id: ${{ matrix.id }}
+          workloads: ${{ matrix.workloads }}
+          target-framework: ${{ matrix.tf }}
+          xcode-path: /Applications/Xcode_26.2.app
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  post-tests:
+  after-tests:
     runs-on: ubuntu-24.04
     if: always()
     needs:
@@ -313,8 +313,8 @@ jobs:
       - test-linux
       - test-mac
       - test-browser
-      # - test-android
-      # - test-ios
+      - test-android
+      - test-ios
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1 
@@ -325,7 +325,6 @@ jobs:
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
-            ---
             
             All tests passed! ✅:partying_face:
 
@@ -335,20 +334,14 @@ jobs:
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
-            ---
-            
+            | test    | Result |
+            |---------|--------|
+            | Core    | ${{ needs.test-core.result }}    |
+            | Windows | ${{ needs.test-windows.result }} |
+            | Linux   | ${{ needs.test-linux.result }}   |
+            | Mac     | ${{ needs.test-mac.result }}     |
+            | Browser | ${{ needs.test-browser.result }} |
+            | Android | ${{ needs.test-android.result }} |
+            | iOS     | ${{ needs.test-ios.result }}     |
+
             Some tests have failed. ❌
-
-            Please review the detailed results for each platform in the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
-
-            | test suite | Result |
-            |------------|--------|
-            | Core       | ${{ needs.test-core.result }} |
-            | Windows UI | ${{ needs.test-windows.result }} |
-            | Linux UI   | ${{ needs.test-linux.result }} |
-            | Mac UI     | ${{ needs.test-mac.result }} |
-            | Browser UI | ${{ needs.test-browser.result }} |
-
-      - name: Fail job
-        if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled')) }}
-        run: exit 1
