@@ -320,19 +320,17 @@ jobs:
         uses: actions/checkout@v6.0.1 
 
       - name: Report tests completion
-        if: success()
+        if: ${{ always() && !contains(join(needs.*.result, ' '), 'failure') && !contains(join(needs.*.result, ' '), 'cancelled') }}
         uses: ./.github/actions/comment-progress
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
             ---
             
-            All tests passed! ✅
-
-            You can review the detailed results for each platform in the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
+            All tests passed! ✅:partying_face:
 
       - name: Report tests failure
-        if: failure()
+        if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled')) }}
         uses: ./.github/actions/comment-progress
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -343,6 +341,14 @@ jobs:
 
             Please review the detailed results for each platform in the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
 
+            | test suite | Result |
+            |------------|--------|
+            | Core       | ${{ needs.test-core.result }} |
+            | Windows UI | ${{ needs.test-windows.result }} |
+            | Linux UI   | ${{ needs.test-linux.result }} |
+            | Mac UI     | ${{ needs.test-mac.result }} |
+            | Browser UI | ${{ needs.test-browser.result }} |
+
       - name: Fail job
-        if: failure()
+        if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled')) }}
         run: exit 1
