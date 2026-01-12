@@ -43,10 +43,14 @@ runs:
           
           let body = comment.data.body;
 
+          // special replacements
+          content = content.replace('#success', '✅ passed').replace('#failure', '❌ failed');
+
           body += `\n${content}`;
 
           await github.rest.issues.updateComment({
             comment_id: commentId,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body });
+            body 
+          });
