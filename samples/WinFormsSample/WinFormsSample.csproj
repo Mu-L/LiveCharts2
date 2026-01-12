@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041</TargetFramework>
+    <TargetFrameworks>net462;net8.0-windows10.0.19041</TargetFrameworks>
     <UseWindowsForms>true</UseWindowsForms>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -30,5 +30,12 @@
     <UITesting>true</UITesting>
     <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;WINFORMS_UI_TESTING</DefineConstants>
   </PropertyGroup>
+
+  <!--
+  The next examples are not included in net462 because they use features not available in .Nfet framework
+  -->
+  <ItemGroup Condition="$(TargetFramework) == 'net462'">
+    <Compile Remove="General\VisualElements\*.cs" />
+  </ItemGroup>
 
 </Project>

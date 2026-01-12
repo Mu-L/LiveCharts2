@@ -49,11 +49,11 @@ public static class UIHelpersExtensions
     {
         public Task WaitUntilChartRenders()
         {
-            var tcs = new TaskCompletionSource();
+            var tcs = new TaskCompletionSource<object>();
 
             if (chartView.CoreCanvas.IsValid)
             {
-                tcs.SetResult();
+                tcs.SetResult(new());
                 return tcs.Task;
             }
 
@@ -67,7 +67,7 @@ public static class UIHelpersExtensions
             void Handler(IChartView chart)
             {
                 chartView.UpdateStarted -= Handler;
-                tcs.SetResult();
+                tcs.SetResult(new());
             }
 
             chartView.UpdateStarted += Handler;
