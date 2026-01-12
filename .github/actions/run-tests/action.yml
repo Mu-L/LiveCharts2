@@ -85,22 +85,3 @@ runs:
       if : ${{ inputs.use-factos != 'true' }}
       shell: pwsh
       run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
-
-    - name: Publish test results
-      if: always()
-      id: report
-      uses: dorny/test-reporter@v2.4.0
-      with:
-          name: ${{ inputs.id }}-${{ inputs.test-id || 'core' }}-${{ inputs.target-framework || 'default' }}-results
-          path: "**/*.trx"
-          reporter: dotnet-trx
-    
-    # omitted for now to reduce comments noise, just check the actions tab for results.
-    # - name: Comment test results
-    #   if: always()
-    #   uses: ./.github/actions/comment-progress
-    #   with:
-    #     comment_id: ${{ inputs.comment_id }}
-    #     content: |
-    #       > Tests results for *${{ inputs.id }} | ${{ inputs.test-id }} | ${{ inputs.target-framework }}*: **${{ steps.report.outputs.conclusion }}**
-    #       Passed: ${{ steps.report.outputs.passed }}, Failed: ${{ steps.report.outputs.failed }}.

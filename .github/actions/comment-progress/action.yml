@@ -43,8 +43,9 @@ runs:
           
           let body = comment.data.body;
 
-          // special replacements
-          content = content.replace('#success', '✅ passed').replace('#failure', '❌ failed');
+          body = body
+            .replace(new RegExp('#success', 'g'), '✅ passed')
+            .replace(new RegExp('#failure', 'g'), '❌ failed');
 
           body += `\n${content}`;
 
