@@ -19,7 +19,7 @@ runs:
       with:
         script: |
           const commentId = "${{ inputs.comment_id }}";
-          const content = `${{ inputs.content }}`;
+          let content = `${{ inputs.content }}`;
 
           if (!commentId) {
             const newComment = await github.rest.issues.createComment({

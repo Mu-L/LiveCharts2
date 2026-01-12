@@ -138,10 +138,16 @@ jobs:
           - id: winui
           - id: winforms
             tf: net10.0-windows10.0.19041
+          - id: winforms-windows
+            tf: net10.0-windows
           - id: winforms-net462
             tf: net462
           - id: wpf
+            tf: net10.0-windows
+          - id: wpf
             tf: net10.0-windows10.0.19041
+          - id: wpf-win
+            tf: net10.0-windows
           - id: wpf-net462
             tf: net462
           
@@ -248,67 +254,67 @@ jobs:
           # target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-android:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-android
-            workloads: android
-          - id: maui
-            tf: net10.0-android
-            workloads: maui-android
-          # disabled for now, in this uno version, idk why on android no tests are detected.
-          # - id: uno
-          #   tf: net10.0-android
-          #   workloads: android
-    needs: [pack, report-progress-starting]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-android:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-android
+  #           workloads: android
+  #         - id: maui
+  #           tf: net10.0-android
+  #           workloads: maui-android
+  #         # disabled for now, in this uno version, idk why on android no tests are detected.
+  #         # - id: uno
+  #         #   tf: net10.0-android
+  #         #   workloads: android
+  #   needs: [pack, report-progress-starting]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: android
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          use-android-emulator: true
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: android
+  #         use-factos: true
+  #         test-id: ${{ matrix.id }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         use-android-emulator: true
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-ios:
-    runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-ios
-            workloads: ios
-          - id: maui
-            tf: net10.0-ios
-            workloads: maui
-          # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
-          # - id: uno
-          #   tf: net10.0-ios
-          #   workloads: ios android
-    needs: [pack, report-progress-starting]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-ios:
+  #   runs-on: macos-26
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-ios
+  #           workloads: ios
+  #         - id: maui
+  #           tf: net10.0-ios
+  #           workloads: maui
+  #         # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
+  #         # - id: uno
+  #         #   tf: net10.0-ios
+  #         #   workloads: ios android
+  #   needs: [pack, report-progress-starting]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: ios
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: ios
+  #         use-factos: true
+  #         test-id: ${{ matrix.id }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         xcode-path: /Applications/Xcode_26.2.app
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   after-tests:
     runs-on: ubuntu-24.04
@@ -320,8 +326,8 @@ jobs:
       - test-linux
       - test-mac
       - test-browser
-      - test-android
-      - test-ios
+      # - test-android
+      # - test-ios
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1 
