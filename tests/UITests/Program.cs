@@ -1,4 +1,7 @@
-﻿using Factos.Server;
+﻿#pragma warning disable IDE0073 // The file header is missing or not located at the top of the file
+#pragma warning disable format
+
+using Factos.Server;
 using Factos.Server.Settings;
 using Factos.Server.Settings.Apps;
 using Microsoft.Testing.Extensions;
@@ -43,8 +46,6 @@ var root = "samples";
 var testsBuilder = await TestApplication.CreateBuilderAsync(args);
 var testedApps = new List<TestedApp>();
 
-var avaloniaDir = "AvaloniaSample/Platforms/AvaloniaSample";
-
 MSBuildArg[] msBuildArgs = [];
 
 #if !DEBUG
@@ -58,25 +59,46 @@ msBuildArgs = [
 ];
 #endif
 
+MSBuildArg tf_var = new("TargetFramework", "[tf]");
+MSBuildArg tf_n8w10 = new("TargetFramework", "net8.0-windows10.0.19041");
+MSBuildArg tf_n462 = new("TargetFramework", "net462");
+MSBuildArg[] winUIArgs = [
+    .. msBuildArgs,
+    new("RuntimeIdentifier", "win-x64"),
+    new("WindowsPackageType", "None"),
+    new("WindowsAppSDKSelfContained", "true")
+];
+
+const string avaloniaDir = "AvaloniaSample/Platforms/AvaloniaSample";
+const string unoDir = "UnoPlatformSample/UnoPlatformSample";
+
+TestRecord[] toTest = [
+    // | projectPath                           | uid                    | msBuildArgs                           | host
+    // ---------------------------------------------------------------------------------------------------------------------------------------
+    new($"{root}/{avaloniaDir}.Android",        "avalonia-android",     msBuildArgs),
+    new($"{root}/{avaloniaDir}.Browser",        "avalonia-browser",     msBuildArgs,                            AppHost.HeadlessChrome),
+    new($"{root}/{avaloniaDir}.Desktop",        "avalonia-desktop",     msBuildArgs),
+    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         msBuildArgs),
+    new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
+    new($"{root}/MauiSample",                   "maui",                 [.. msBuildArgs, tf_var]),
+    new($"{root}/{unoDir}",                     "uno",                  [.. msBuildArgs, tf_var]),
+    new($"{root}/WinFormsSample",               "winforms",             [.. msBuildArgs, tf_n8w10]),
+    new($"{root}/WpfSample",                    "wpf",                  [.. msBuildArgs, tf_n8w10]),
+    new($"{root}/WinFormsSample",               "winforms-net462",      [.. msBuildArgs, tf_n462]),
+    new($"{root}/WpfSample",                    "wpf-net462",           [.. msBuildArgs, tf_n462]),
+    new($"{root}/WinUISample/WinUISample",      "winui",                winUIArgs),
+    new($"{root}/EtoFormsSample",               "eto",                  msBuildArgs)
+];
+
 testedApps
-    .AddManuallyStartedApp()
-    .Add(project: $"{root}/WpfSample", uid: "wpf", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/{avaloniaDir}.Android", uid: "avalonia-android", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/{avaloniaDir}.Browser", appHost: AppHost.HeadlessChrome, uid: "avalonia-browser", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/{avaloniaDir}.Desktop", uid: "avalonia-desktop", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/{avaloniaDir}.iOS", uid: "avalonia-ios", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/BlazorSample", appHost: AppHost.HeadlessChrome, uid: "blazor", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/MauiSample", targetFramework: "[tf]", uid: "maui", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/UnoPlatformSample/UnoPlatformSample", targetFramework: "[tf]", uid: "uno", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/WinFormsSample", uid: "winforms", msBuildArgs: msBuildArgs)
-    .Add(project: $"{root}/WinUISample/WinUISample", uid: "winui",
-        runtimeIdentifier: "win-x64",
-        msBuildArgs: [
-            ..msBuildArgs,
-            new("WindowsPackageType", "None"),
-            new("WindowsAppSDKSelfContained", "true")
-        ])
-    .Add(project: $"{root}/EtoFormsSample", uid: "eto", msBuildArgs: msBuildArgs);
+    .AddManuallyStartedApp();
+
+foreach (var testRecord in toTest)
+    testedApps.Add(
+        project:        testRecord.projectPath,
+        uid:            testRecord.Uid,
+        msBuildArgs:    testRecord.MSBuildArgs,
+        appHost:        testRecord.host);
 
 testsBuilder
     .AddFactos(new FactosSettings()
@@ -84,8 +106,11 @@ testsBuilder
         ConnectionTimeout = 600,
         TestedApps = testedApps
     })
-    .AddTrxReportProvider(); // optional, add TRX if needed
+    .AddTrxReportProvider();
 
 using var testApp = await testsBuilder.BuildAsync();
 
 return await testApp.RunAsync();
+
+public record TestRecord(
+    string projectPath, string Uid, MSBuildArg[]? MSBuildArgs = null, AppHost host = AppHost.Auto);

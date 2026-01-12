@@ -31,7 +31,7 @@
     <HarfBuzzWASMVersion>8.3.1.1</HarfBuzzWASMVersion>
 
     <!-- Factos version https://github.com/beto-rodriguez/Factos -->
-    <FactosVersion>0.7.3</FactosVersion>
+    <FactosVersion>0.7.4</FactosVersion>
 
     <!--
     Useful to toggle between using project references or nuget references

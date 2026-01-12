@@ -20,6 +20,7 @@ public partial class App : Application
             .AddLiveChartsAppSettings()); // mark
 
 #if UI_TESTING
+        System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(Factos.SGTests).TypeHandle);
         this.UseFactosApp();
 #endif
     }
