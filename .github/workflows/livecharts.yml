@@ -135,9 +135,16 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: maui
-          - id: winforms
           - id: winui
+          - id: winforms
+            tf: net10.0-windows10.0.19041
+          - id: winforms-net462
+            tf: net462
           - id: wpf
+            tf: net10.0-windows10.0.19041
+          - id: wpf-net462
+            tf: net462
+          
     needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
