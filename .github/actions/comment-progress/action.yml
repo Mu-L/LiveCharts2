@@ -40,12 +40,12 @@ runs:
             repo: context.repo.repo,
             comment_id: commentId
           });
-          
-          let body = comment.data.body;
 
-          body = body
+          content = content
             .replace(new RegExp('#success', 'g'), '✅ passed')
             .replace(new RegExp('#failure', 'g'), '❌ failed');
+          
+          let body = comment.data.body;
 
           body += `\n${content}`;
 

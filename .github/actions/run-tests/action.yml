@@ -85,3 +85,13 @@ runs:
       if : ${{ inputs.use-factos != 'true' }}
       shell: pwsh
       run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+
+    - name: Publish test results
+      if: always()
+      id: report
+      uses: dorny/test-reporter@v2.4.0
+      with:
+          name: test-results
+          path: "**/*.trx"
+          reporter: dotnet-trx
+
