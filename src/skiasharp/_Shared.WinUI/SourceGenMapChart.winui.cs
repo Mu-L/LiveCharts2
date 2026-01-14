@@ -46,7 +46,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     /// </summary>
     public SourceGenMapChart()
     {
-        Content = new MotionCanvas(false);
+        Content = new MotionCanvas();
 
         InitializeChartControl();
 

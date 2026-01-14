@@ -52,7 +52,7 @@ public abstract partial class SourceGenChart : UserControl, IChartView
     /// <exception cref="Exception">Default colors are not valid</exception>
     protected SourceGenChart()
     {
-        Content = new MotionCanvas(ForceGPU);
+        Content = new MotionCanvas();
 
         SizeChanged += (s, e) =>
             CoreChart.Update();

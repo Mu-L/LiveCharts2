@@ -60,13 +60,6 @@ public interface IChartView : IDrawnView
     bool IsDarkMode { get; }
 
     /// <summary>
-    /// Gets or sets whether the chart should force GPU acceleration, this property will only work
-    /// while globaly <see cref="RenderingSettings.UseGPU"/> is false, when <see cref="RenderingSettings.UseGPU"/> is true,
-    /// all charts will use GPU acceleration.
-    /// </summary>
-    bool ForceGPU { get; set; }
-
-    /// <summary>
     /// Gets or sets the chart theme.
     /// </summary>
     Theme? ChartTheme { get; set; }

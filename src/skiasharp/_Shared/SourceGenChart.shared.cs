@@ -56,9 +56,6 @@ public partial class SourceGenChart : IChartView
     /// </summary>
     public Chart CoreChart { get; private set; } = null!;
 
-    /// <inheritdoc cref="IChartView.ForceGPU" />
-    public bool ForceGPU { get; set; }
-
     /// <inheritdoc cref="IChartView.Tooltip" />
     public IChartTooltip? Tooltip { get; set; }
 

@@ -49,9 +49,9 @@ public class MotionCanvas : AbsoluteLayout
         _ = LiveChartsSkiaSharp
             .EnsureInitialized()
             .HasRenderingFactory(
-                (settings, forceGPU) =>
+                (settings) =>
                 {
-                    IRenderMode renderMode = forceGPU || settings.UseGPU
+                    IRenderMode renderMode = settings.UseGPU
                         ? new GPURenderMode()
                         : new CPURenderMode();
 
@@ -66,9 +66,9 @@ public class MotionCanvas : AbsoluteLayout
     /// <summary>
     /// Initializes a new instance of the <see cref="MotionCanvas"/> class.
     /// </summary>
-    public MotionCanvas(bool forceGPU)
+    public MotionCanvas()
     {
-        _composer = LiveChartsSkiaSharp.MotionCanvasRenderingFactory(LiveCharts.RenderingSettings, forceGPU);
+        _composer = LiveChartsSkiaSharp.MotionCanvasRenderingFactory(LiveCharts.RenderingSettings);
 
         var view = (View)_composer.RenderMode;
         AbsoluteLayout.SetLayoutBounds(view, new(0, 0, 1, 1));

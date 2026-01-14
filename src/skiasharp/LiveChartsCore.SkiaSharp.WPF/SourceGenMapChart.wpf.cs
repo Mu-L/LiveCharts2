@@ -45,7 +45,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     /// <exception cref="Exception">Default colors are not valid</exception>
     protected SourceGenMapChart()
     {
-        Content = new MotionCanvas(false);
+        Content = new MotionCanvas();
 
         SizeChanged += (s, e) =>
             CoreChart.Update();

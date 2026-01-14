@@ -42,7 +42,7 @@ public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
     /// </summary>
     protected SourceGenMapChart()
     {
-        Content = new MotionCanvas(false);
+        Content = new MotionCanvas();
 
         SizeChanged += (s, e) =>
             CoreChart.Update();

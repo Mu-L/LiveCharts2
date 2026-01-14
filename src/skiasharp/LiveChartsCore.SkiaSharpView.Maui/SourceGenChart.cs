@@ -48,7 +48,7 @@ public abstract partial class SourceGenChart : ChartView, IChartView
     /// </summary>
     protected SourceGenChart()
     {
-        Content = new MotionCanvas(ForceGPU);
+        Content = new MotionCanvas();
 
         SizeChanged += (s, e) =>
             CoreChart.Update();
