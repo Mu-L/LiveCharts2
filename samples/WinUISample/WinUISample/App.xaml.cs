@@ -2,7 +2,6 @@
 using LiveChartsCore; // mark
 using ViewModelsSamples;
 using Microsoft.UI.Xaml;
-using Factos.WinUI;
 
 namespace WinUISample;
 
@@ -26,7 +25,7 @@ public partial class App : Application
         m_window.Activate();
 
 #if UI_TESTING
-        this.UseFactosApp();
+        Factos.WinUI.SetupExtensions.UseFactosApp(this);
 #endif
     }
 

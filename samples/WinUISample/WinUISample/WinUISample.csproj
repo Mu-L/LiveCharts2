@@ -60,19 +60,18 @@
   <!-- UI test setup -->
   <!--<Import Project="..\..\build\UITestsLinks.Build.props" />-->
   <!--in winui we do not use the UITestsLinks because the uno folder is different.-->
-  <ItemGroup>
+  <ItemGroup Condition="$(UITesting) == 'true'">
       <Compile Include="..\..\..\tests\SharedUITests\**\*.cs">
           <Link>UITests\%(RecursiveDir)%(Filename).cs</Link>
       </Compile>
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="$(UITesting) == 'true'">
     <PackageReference Include="Factos.WinUI" Version="$(FactosVersion)" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <UITesting>true</UITesting>
-    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;WINUI_UI_TESTING</DefineConstants>
+  <PropertyGroup Condition="$(UITesting) == 'true'">
+    <DefineConstants>$(DefineConstants);UI_TESTING;WINUI_UI_TESTING</DefineConstants>
   </PropertyGroup>
 
 </Project>

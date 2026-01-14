@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Windows.Forms;
-using Factos.WinForms;
 using LiveChartsCore; // mark
 using ViewModelsSamples;
 
@@ -23,7 +22,7 @@ static class Program
 
 #if UI_TESTING
         System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(Factos.SGTests).TypeHandle);
-        form.UseFactosApp();
+        Factos.WinForms.SetupExtensions.UseFactosApp(form);
 #endif
 
         Application.Run(form);

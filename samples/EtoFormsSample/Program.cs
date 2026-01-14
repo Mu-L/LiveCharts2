@@ -1,8 +1,11 @@
 ﻿using System;
 using Eto.Forms;
-using Factos.EtoForms;
 using LiveChartsCore; // mark
 using ViewModelsSamples;
+
+#if UI_TESTING
+using Factos.Eto;
+#endif
 
 namespace EtoFormsSample;
 

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net462;net10.0-windows;net10.0-windows10.0.19041</TargetFrameworks>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -19,20 +19,25 @@
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharp.WinForms\LiveChartsCore.SkiaSharpView.WinForms.csproj" />
   </ItemGroup>
 
-  <!-- UI test setup -->
-  <Import Project="..\..\build\UITestsLinks.Build.props" />
+  <PropertyGroup>
+    <UITesting>true</UITesting>
+  </PropertyGroup>
 
-  <ItemGroup>
+
+  <!-- UI test setup -->
+  <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
+
+  <PropertyGroup Condition="$(UITesting) == 'true'">
+    <TargetFrameworks>net462;net10.0-windows;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <DefineConstants>$(DefineConstants);UI_TESTING;WINFORMS_UI_TESTING</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(UITesting) == 'true'">
     <PackageReference Include="Factos.WinForms" Version="$(FactosVersion)" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <UITesting>true</UITesting>
-    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;WINFORMS_UI_TESTING</DefineConstants>
-  </PropertyGroup>
-
   <!--
-  The next examples are not included in net462 because they use features not available in .Nfet framework
+  The next examples are not included in net462 because they use features not available in .Net framework
   -->
   <ItemGroup Condition="$(TargetFramework) == 'net462'">
     <Compile Remove="General\VisualElements\*.cs" />

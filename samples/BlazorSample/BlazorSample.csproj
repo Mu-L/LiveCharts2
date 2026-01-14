@@ -35,14 +35,13 @@
   </ItemGroup>
 
   <!-- UI test setup -->
-  <Import Project="..\..\build\UITestsLinks.Build.props" />
+  <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
 
-  <ItemGroup>
+  <ItemGroup Condition="$(UITesting) == 'true'">
     <PackageReference Include="Factos.Blazor" Version="$(FactosVersion)" />
   </ItemGroup>
 
   <PropertyGroup>
-    <UITesting>true</UITesting>
     <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;BLAZOR_UI_TESTING</DefineConstants>
   </PropertyGroup>
 

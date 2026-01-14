@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Windows;
 using ViewModelsSamples;
-using LiveChartsCore;
-using Factos.WPF; // mark
+using LiveChartsCore;  // mark
 
 namespace WPFSample;
 
@@ -21,7 +20,7 @@ public partial class App : Application
 
 #if UI_TESTING
         System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(Factos.SGTests).TypeHandle);
-        this.UseFactosApp();
+        Factos.WPF.SetupExtensions.UseFactosApp(this);
 #endif
     }
 }

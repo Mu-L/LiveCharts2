@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net462;net10.0-windows;net10.0-windows10.0.19041</TargetFrameworks>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -29,19 +29,19 @@
   </ItemGroup>
 
   <!-- UI test setup -->
-  <Import Project="..\..\build\UITestsLinks.Build.props" />
+  <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
 
-  <ItemGroup>
+  <PropertyGroup Condition="$(UITesting) == 'true'">
+    <TargetFrameworks>net462;net10.0-windows;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <DefineConstants>$(DefineConstants);UI_TESTING;WPF_UI_TESTING</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(UITesting) == 'true'">
     <PackageReference Include="Factos.WPF" Version="$(FactosVersion)" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <UITesting>true</UITesting>
-    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;WPF_UI_TESTING</DefineConstants>
-  </PropertyGroup>
-
   <!--
-  The next examples are not included in net462 because they use features not available in .Nfet framework
+  The next examples are not included in net462 because they use features not available in .Net framework
   -->
   <ItemGroup Condition="$(TargetFramework) == 'net462'">
     <Page Remove="General\Scrollable\View.xaml" />

@@ -40,5 +40,5 @@ public partial class View : UserControl
         Chart = cartesianChart;
     }
 
-    public CartesianChart Chart { get; set; }
+    public CartesianChart Chart;
 }

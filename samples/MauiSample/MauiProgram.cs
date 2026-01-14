@@ -3,7 +3,10 @@ using SkiaSharp;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using LiveChartsCore;
 using ViewModelsSamples;
+
+#if UI_TESTING
 using Factos.MAUI;
+#endif
 
 namespace MauiSample;
 

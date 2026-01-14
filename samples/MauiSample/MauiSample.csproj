@@ -81,15 +81,14 @@
   </ItemGroup>
 
   <!-- UI test setup -->
-  <Import Project="..\..\build\UITestsLinks.Build.props" />
+  <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
 
-  <ItemGroup>
+  <ItemGroup Condition="$(UITesting) == 'true'">
     <PackageReference Include="Factos.MAUI" Version="$(FactosVersion)" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <UITesting>true</UITesting>
-    <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;MAUI_UI_TESTING</DefineConstants>
+  <PropertyGroup Condition="$(UITesting) == 'true'">
+    <DefineConstants>$(DefineConstants);UI_TESTING;MAUI_UI_TESTING</DefineConstants>
   </PropertyGroup>
 
 </Project>

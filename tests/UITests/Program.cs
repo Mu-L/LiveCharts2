@@ -54,8 +54,9 @@ MSBuildArg[] msBuildArgs = [];
 // lvcversionsuffix is a version suffix we pass from the pipeline, it can be something like "-ci-1234"
 // where 1234 is a build number or a commit id which NuGet packages were published with.
 msBuildArgs = [
+    new("UITesting", "true"),
     new("UseNuGetForSamples", "true"),
-    new("LiveChartsVersionSuffix", "[lvcversionsuffix]"),
+    new("LiveChartsVersionSuffix", "[lvcversionsuffix]")
 ];
 #endif
 

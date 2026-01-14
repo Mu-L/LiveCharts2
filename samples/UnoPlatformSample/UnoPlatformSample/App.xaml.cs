@@ -1,6 +1,9 @@
-using Factos.Uno;
 using LiveChartsCore; // mark
 using ViewModelsSamples;
+
+#if UI_TESTING
+using Factos.Uno;
+#endif
 
 namespace UnoPlatformSample;
 
@@ -97,6 +100,7 @@ public partial class App : Application
                 .UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
 #endif
             );
+
         MainWindow = builder.Window;
 
 #if DEBUG

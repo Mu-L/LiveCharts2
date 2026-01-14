@@ -1,10 +1,10 @@
-using System;
-using System.Net.Http;
 using BlazorSample;
-using Factos.Blazor;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
+
+#if UI_TESTING
+using Factos.Blazor;
+#endif
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
