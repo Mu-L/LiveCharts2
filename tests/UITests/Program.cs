@@ -98,6 +98,7 @@ TestRecord[] toTest = [
     new($"{root}/WinFormsSample",               "winforms-net10",       [.. msBuildArgs, tf_n10w]),
     new($"{root}/WinFormsSample",               "winforms-net10w19041", [.. msBuildArgs, tf_n10w10]),
     new($"{root}/WinFormsSample",               "winforms-net462",      [.. msBuildArgs, tf_n462]),
+
     new($"{root}/WpfSample",                    "wpf-net10",            [.. msBuildArgs, tf_n10w]),
     new($"{root}/WpfSample",                    "wpf-net10w19041",      [.. msBuildArgs, tf_n10w10]),
     new($"{root}/WpfSample",                    "wpf-net462",           [.. msBuildArgs, tf_n462]),];
