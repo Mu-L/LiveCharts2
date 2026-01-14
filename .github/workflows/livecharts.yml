@@ -136,11 +136,11 @@ jobs:
             tf: net10.0-desktop
             workloads: maui
           - id: winui
-          - id: winforms
-          - id: winforms-windows
+          - id: winforms-net10
+          - id: winforms-net10w19041
           - id: winforms-net462          
-          - id: wpf
-          - id: wpf-windows
+          - id: wpf-net10
+          - id: wpf-net10w19041
           - id: wpf-net462
           
     needs: [pack, report-progress-starting]
