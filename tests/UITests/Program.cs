@@ -61,7 +61,8 @@ msBuildArgs = [
 #endif
 
 MSBuildArg tf_var = new("TargetFramework", "[tf]");
-MSBuildArg tf_n10w10 = new("TargetFramework", "net10.0-windows10.0.19041");
+MSBuildArg tf_n10w10 = new("TargetFramework", "net10.0-windows10.0.19041.0");
+MSBuildArg tf_n10w = new("TargetFramework", "net10.0-windows");
 MSBuildArg tf_n462 = new("TargetFramework", "net462");
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
@@ -83,8 +84,10 @@ TestRecord[] toTest = [
     new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
     new($"{root}/MauiSample",                   "maui",                 [.. msBuildArgs, tf_var]),
     new($"{root}/{unoDir}",                     "uno",                  [.. msBuildArgs, tf_var]),
-    new($"{root}/WinFormsSample",               "winforms",             [.. msBuildArgs, tf_n10w10]),
-    new($"{root}/WpfSample",                    "wpf",                  [.. msBuildArgs, tf_n10w10]),
+    new($"{root}/WinFormsSample",               "winforms",             [.. msBuildArgs, tf_n462]),
+    new($"{root}/WpfSample",                    "wpf",                  [.. msBuildArgs, tf_n462]),
+    new($"{root}/WinFormsSample",               "winforms-10.0.19041.0",[.. msBuildArgs, tf_n10w10]),
+    new($"{root}/WpfSample",                    "wpf-10.0.19041.0",     [.. msBuildArgs, tf_n10w10]),
     new($"{root}/WinFormsSample",               "winforms-net462",      [.. msBuildArgs, tf_n462]),
     new($"{root}/WpfSample",                    "wpf-net462",           [.. msBuildArgs, tf_n462]),
     new($"{root}/WinUISample/WinUISample",      "winui",                winUIArgs),

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="$(UITesting) == ''">net10.0-windows10.0.19041.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -18,11 +18,6 @@
   <ItemGroup Condition="!$(UseNuGetForSamples)">
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharp.WinForms\LiveChartsCore.SkiaSharpView.WinForms.csproj" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <UITesting>true</UITesting>
-  </PropertyGroup>
-
 
   <!-- UI test setup -->
   <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
