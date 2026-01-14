@@ -4,7 +4,7 @@ using LiveChartsCore; // mark
 using ViewModelsSamples;
 
 #if UI_TESTING
-using Factos.Eto;
+using Factos.EtoForms;
 #endif
 
 namespace EtoFormsSample;
