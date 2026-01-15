@@ -1,9 +1,12 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Factos.Avalonia;
 using LiveChartsCore; // mark
 using ViewModelsSamples;
+
+#if UI_TESTING
+using Factos.Avalonia;
+#endif
 
 namespace AvaloniaSample;
 
