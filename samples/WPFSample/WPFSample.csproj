@@ -33,7 +33,7 @@
 
   <PropertyGroup Condition="$(UITesting) == 'true'">
     <TargetFrameworks>net462;net10.0-windows;net10.0-windows10.0.19041.0</TargetFrameworks>
-    <DefineConstants>$(DefineConstants);UI_TESTING;WPF_UI_TESTING</DefineConstants>
+    <DefineConstants>$(DefineConstants);UI_TESTING;XAML_UI_TESTING;WPF_UI_TESTING</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup Condition="$(UITesting) == 'true'">

@@ -80,7 +80,7 @@
     </ItemGroup>
 
     <PropertyGroup Condition="$(UITesting) == 'true'">
-        <DefineConstants>$(DefineConstants);UI_TESTING;UNO_UI_TESTING</DefineConstants>
+        <DefineConstants>$(DefineConstants);UI_TESTING;XAML_UI_TESTING;UNO_UI_TESTING</DefineConstants>
     </PropertyGroup>
 
 </Project>
