@@ -73,20 +73,27 @@ jobs:
         id: upload
         uses: actions/upload-artifact@v6.0.0
         with:
-          name: ${{ matrix.short-name }}-package
+          name: nuget-packages
           retention-days: 30
           path: |
             artifacts/*.nupkg
             artifacts/*.snupkg
 
-  report-progress-packed:
+  collect-packages:
     runs-on: ubuntu-24.04
     needs: [pack, report-progress-starting]
     steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1        
-      - uses: ./.github/actions/comment-progress
-        id: create-comment
+      - name: Merge all package artifacts into one 
+        uses: actions/upload-artifact/merge@v6
+        id: merge
+        with: 
+          name: all-packages 
+          pattern: "*-package"
+          retention-days: 30
+          delete-merged: true
+
+      - name: Update Comment
+        uses: ./.github/actions/comment-progress
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
@@ -94,13 +101,13 @@ jobs:
             ---
             
             All packages have been packed successfully! 📦✅
-            You can download the NuGet packages for this build [here](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}#artifacts).
+            You can download the NuGet packages for this build [here](${{ steps.merge.outputs.artifact-url }}).
 
-            The packages will be available for 30 days, you can either use them directly, or wait for this PR to be merged to have them published to NuGet.org.
-            
+            The packages will be available for 30 days, you can either [use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet), or wait for this PR to be merged to have them published to NuGet.org.
+
             ---
             
-              Tests will start now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
+            Tests will start now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
 
   test-core:
     runs-on: windows-2025
@@ -322,7 +329,21 @@ jobs:
       # - test-ios
     steps:
       - name: Checkout 
-        uses: actions/checkout@v6.0.1 
+        uses: actions/checkout@v6.0.1
+
+      - name: Download all test results
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: test-results-*
+          path: ./test-results
+
+      - name: Publish all test results
+        id: report
+        uses: dorny/test-reporter@v2.4.0
+        with:
+          name: all-test-results
+          path: "./test-results/**/*.trx"
+          reporter: dotnet-trx
 
       - name: Report tests completion
         if: ${{ always() && !contains(join(needs.*.result, ' '), 'failure') && !contains(join(needs.*.result, ' '), 'cancelled') }}
@@ -331,7 +352,7 @@ jobs:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
             
-            All tests passed! ✅:partying_face:
+            ${{ steps.report.outputs.passed }} tests passed! ✅:partying_face:
 
       - name: Report tests failure
         if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled')) }}
@@ -344,3 +365,6 @@ jobs:
             | #${{ needs.test-core.result }} | #${{ needs.test-windows.result }} | #${{ needs.test-linux.result }} | #${{ needs.test-mac.result }} | #${{ needs.test-browser.result }} | #${{ needs.test-android.result }} | #${{ needs.test-ios.result }} |
 
             Some tests have failed. ❌
+            
+            ${{ steps.report.outputs.url }}
+            ${{ steps.report.outputs.url_html }}
