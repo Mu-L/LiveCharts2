@@ -127,6 +127,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: core
+          test-id: core-${{ matrix.framework }}
           use-factos: false
           target-framework: ${{ matrix.framework }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -337,7 +338,7 @@ jobs:
       - name: Download all test results
         uses: actions/download-artifact@v7.0.0
         with:
-          name: test-results-*
+          pattern: test-results-*
           path: ./test-results
 
       - name: Publish all test results
