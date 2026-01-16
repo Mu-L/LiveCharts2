@@ -64,6 +64,7 @@ MSBuildArg tf_var = new("TargetFramework", "[tf]");
 MSBuildArg tf_n10w = new("TargetFramework", "net10.0-windows");
 MSBuildArg tf_n10w10 = new("TargetFramework", "net10.0-windows10.0.19041.0");
 MSBuildArg tf_n462 = new("TargetFramework", "net462");
+MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
     new("RuntimeIdentifier", "win-x64"),
@@ -95,13 +96,14 @@ TestRecord[] toTest = [
     // because net framework uses strong named assemblies
     // there is also https://github.com/mono/SkiaSharp/issues/3153, which could cause conflicts when the package is restored
 
-    new($"{root}/WinFormsSample",               "winforms-net10",       [.. msBuildArgs, tf_n10w]),
-    new($"{root}/WinFormsSample",               "winforms-net10w19041", [.. msBuildArgs, tf_n10w10]),
-    new($"{root}/WinFormsSample",               "winforms-net462",      [.. msBuildArgs, tf_n462]),
+    new($"{root}/WinFormsSample",               "winforms-net10",       [.. msBuildArgs, tf_n10w, isTest]),
+    new($"{root}/WinFormsSample",               "winforms-net10w19041", [.. msBuildArgs, tf_n10w10, isTest]),
+    new($"{root}/WinFormsSample",               "winforms-net462",      [..msBuildArgs, tf_n462, isTest]),
 
-    new($"{root}/WpfSample",                    "wpf-net10",            [.. msBuildArgs, tf_n10w]),
-    new($"{root}/WpfSample",                    "wpf-net10w19041",      [.. msBuildArgs, tf_n10w10]),
-    new($"{root}/WpfSample",                    "wpf-net462",           [.. msBuildArgs, tf_n462]),];
+    new($"{root}/WpfSample",                    "wpf-net10",            [..msBuildArgs, tf_n10w, isTest]),
+    new($"{root}/WpfSample",                    "wpf-net10w19041",      [..msBuildArgs, tf_n10w10, isTest]),
+    new($"{root}/WpfSample",                    "wpf-net462",           [.. msBuildArgs, tf_n462, isTest])
+];
 
 testedApps
     .AddManuallyStartedApp();
