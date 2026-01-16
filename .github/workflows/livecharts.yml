@@ -73,7 +73,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@v6.0.0
         with:
-          name: nuget-packages
+          name: ${{ matrix.short-name }}-package
           retention-days: 30
           path: |
             artifacts/*.nupkg
@@ -365,6 +365,6 @@ jobs:
             | #${{ needs.test-core.result }} | #${{ needs.test-windows.result }} | #${{ needs.test-linux.result }} | #${{ needs.test-mac.result }} | #${{ needs.test-browser.result }} | #${{ needs.test-android.result }} | #${{ needs.test-ios.result }} |
 
             Some tests have failed. ❌
-            
+
             ${{ steps.report.outputs.url }}
             ${{ steps.report.outputs.url_html }}
