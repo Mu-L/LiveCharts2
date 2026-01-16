@@ -83,11 +83,14 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [pack, report-progress-starting]
     steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+    
       - name: Merge all package artifacts into one 
         uses: actions/upload-artifact/merge@v6
         id: merge
         with: 
-          name: all-packages 
+          name: nuget-packages 
           pattern: "*-package"
           retention-days: 30
           delete-merged: true
