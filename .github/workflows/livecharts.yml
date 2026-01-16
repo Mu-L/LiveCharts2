@@ -355,8 +355,11 @@ jobs:
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
-            
-            ${{ steps.report.outputs.passed }} tests passed! ✅:partying_face:
+            ### Test Results Summary (Passed) ✅ :partying_face:
+
+            ${{ steps.report.outputs.skipped }} skipped.
+            ${{ steps.report.outputs.failed }} failed.
+            ${{ steps.report.outputs.passed }} passed! ✅
 
       - name: Report tests failure
         if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled')) }}
@@ -364,11 +367,12 @@ jobs:
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
+            ### Test Results Summary (Failure) ❌ :disappointed_relieved:
+
             | Core  | Windows | Linux | Mac | Browser | Android | iOS |
             |-------|---------|-------|-----|---------|---------|-----|
             | #${{ needs.test-core.result }} | #${{ needs.test-windows.result }} | #${{ needs.test-linux.result }} | #${{ needs.test-mac.result }} | #${{ needs.test-browser.result }} | #${{ needs.test-android.result }} | #${{ needs.test-ios.result }} |
 
-            Some tests have failed. ❌
-
-            ${{ steps.report.outputs.url }}
-            ${{ steps.report.outputs.url_html }}
+            ${{ steps.report.outputs.skipped }} skipped.
+            ${{ steps.report.outputs.passed }} passed.
+            ${{ steps.report.outputs.failed }} failed. ❌

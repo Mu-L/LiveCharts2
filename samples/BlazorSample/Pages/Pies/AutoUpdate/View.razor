@@ -11,6 +11,7 @@
 </div>
 
 <PieChart
+    @ref="Chart"
 	Series="Series">
 </PieChart>
 
@@ -55,4 +56,6 @@
     {
         return new[] { _random.Next(1, 10) };
     }
+
+    public PieChart Chart;
 }

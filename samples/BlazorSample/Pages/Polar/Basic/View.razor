@@ -8,6 +8,7 @@
 @using SkiaSharp
 
 <PolarChart
+    @ref="Chart"
 	Series="Series"
     RadiusAxes="RadiusAxes"
     AngleAxes="AngleAxes"
@@ -64,4 +65,6 @@
                 Padding = new LiveChartsCore.Drawing.Padding(15)
             });
     }
+
+    public PolarChart Chart;
 }

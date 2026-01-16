@@ -7,36 +7,18 @@ using Xunit;
 
 namespace SharedUITests;
 
-public class CartesianChartTests
+public class PieChartTests
 {
     public AppController App => AppController.Current;
 
     [AppTestMethod]
     public async Task ShouldLoad()
     {
-        var sut = await App.NavigateTo<Samples.General.FirstChart.View>();
+        var sut = await App.NavigateTo<Samples.Pies.Basic.View>();
         await sut.Chart.WaitUntilChartRenders();
 
         Assert.ChartIsLoaded(sut.Chart);
     }
-
-#if XAML_UI_TESTING
-    [AppTestMethod]
-    public async Task ShouldLoadTemplatedChart()
-    {
-        var sut = await App.NavigateTo<Samples.VisualTest.DataTemplate.View>();
-
-        // to make it simple, wait for some time for the template to load
-        await Task.Delay(2000);
-
-        // now lets find the templated charts
-        foreach (var chart in sut.FindCharts())
-        {
-            await chart.WaitUntilChartRenders();
-            Assert.ChartIsLoaded(chart);
-        }
-    }
-#endif
 
 #if !BLAZOR_UI_TESTING
     // this test makes no sense in blazor.
@@ -44,7 +26,7 @@ public class CartesianChartTests
     [AppTestMethod]
     public async Task ShouldUnloadAndReload()
     {
-        var sut = new Samples.Bars.AutoUpdate.View();
+        var sut = new Samples.Pies.AutoUpdate.View();
 
         await App.NavigateToView(sut);
         await sut.Chart.WaitUntilChartRenders();

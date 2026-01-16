@@ -8,6 +8,7 @@
 @using SkiaSharp
 
 <PieChart
+    @ref="Chart"
 	Series="Series"
     Title="Title">
 </PieChart>
@@ -29,4 +30,6 @@
                 Paint = new SolidColorPaint(SKColors.Black)
             });
     }
+
+    public PieChart Chart;
 }
