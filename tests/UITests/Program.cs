@@ -21,14 +21,13 @@ using Microsoft.Testing.Platform.Builder;
 // notice on Debug the cli args are overridden to make it easier to test locally,
 // on Release the args passed from the CI pipeline are used.
 
-// To select which app to run, set the appToRun variable here, options are:
-// "manual-start",
-// "wpf", "avalonia-desktop", "blazor", "maui", "uno", "winforms", "winui", "eto", "avalonia-android", "avalonia-browser", "avalonia-ios"
+// To select which app to run, set the appToRun variable, options are listed at the toTest table below (uid column)
 // setting appToRun to "manual-start" will wait for you to start the app manually.
+
 // uno and maui require also to pass the target framework, see tf variable below, will be ignored if not required by the tested app.
 // emulators must be running before starting the tests.
 
-var appToRun = "maui";
+var appToRun = "wpf-net462";
 var tf = "net10.0-android";
 
 args = [
@@ -61,9 +60,9 @@ msBuildArgs = [
 #endif
 
 MSBuildArg tf_var = new("TargetFramework", "[tf]");
-MSBuildArg tf_n10w = new("TargetFramework", "net10.0-windows");
-MSBuildArg tf_n10w10 = new("TargetFramework", "net10.0-windows10.0.19041.0");
-MSBuildArg tf_n462 = new("TargetFramework", "net462");
+MSBuildArg tf_n10w = new("TestBuildTargetFramework", "net10.0-windows");
+MSBuildArg tf_n10w10 = new("TestBuildTargetFramework", "net10.0-windows10.0.19041.0");
+MSBuildArg tf_n462 = new("TestBuildTargetFramework", "net462");
 MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
@@ -85,9 +84,9 @@ TestRecord[] toTest = [
 
     new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
 
-    new($"{root}/MauiSample",                   "maui",                 [.. msBuildArgs, tf_var]),
+    new($"{root}/MauiSample",                   "maui",                 [..msBuildArgs, tf_var]),
 
-    new($"{root}/{unoDir}",                     "uno",                  [.. msBuildArgs, tf_var]),
+    new($"{root}/{unoDir}",                     "uno",                  [..msBuildArgs, tf_var]),
 
     new($"{root}/WinUISample/WinUISample",      "winui",                winUIArgs),
     new($"{root}/EtoFormsSample",               "eto",                  msBuildArgs),
@@ -96,13 +95,13 @@ TestRecord[] toTest = [
     // because net framework uses strong named assemblies
     // there is also https://github.com/mono/SkiaSharp/issues/3153, which could cause conflicts when the package is restored
 
-    new($"{root}/WinFormsSample",               "winforms-net10",       [.. msBuildArgs, tf_n10w, isTest]),
-    new($"{root}/WinFormsSample",               "winforms-net10w19041", [.. msBuildArgs, tf_n10w10, isTest]),
+    new($"{root}/WinFormsSample",               "winforms-net10",       [..msBuildArgs, tf_n10w, isTest]),
+    new($"{root}/WinFormsSample",               "winforms-net10w19041", [..msBuildArgs, tf_n10w10, isTest]),
     new($"{root}/WinFormsSample",               "winforms-net462",      [..msBuildArgs, tf_n462, isTest]),
 
     new($"{root}/WpfSample",                    "wpf-net10",            [..msBuildArgs, tf_n10w, isTest]),
     new($"{root}/WpfSample",                    "wpf-net10w19041",      [..msBuildArgs, tf_n10w10, isTest]),
-    new($"{root}/WpfSample",                    "wpf-net462",           [.. msBuildArgs, tf_n462, isTest])
+    new($"{root}/WpfSample",                    "wpf-net462",           [..msBuildArgs, tf_n462, isTest])
 ];
 
 testedApps
