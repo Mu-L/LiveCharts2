@@ -33,7 +33,7 @@
     <!-- turn UITesting to true to include UI tests in the sample projects -->
     <UITesting>false</UITesting>
     <!-- Factos version https://github.com/beto-rodriguez/Factos -->
-    <FactosVersion>0.7.6</FactosVersion>
+    <FactosVersion>0.8.0</FactosVersion>
 
     <!-- Useful to toggle between using project references or nuget references -->
     <UseNuGetForSamples>false</UseNuGetForSamples>
