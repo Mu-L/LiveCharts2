@@ -20,9 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
 using System.ComponentModel;
-using System.Windows.Forms;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Drawing;
@@ -35,6 +33,7 @@ namespace LiveChartsCore.SkiaSharpView.WinForms;
 /// The motion canvas control for windows forms, <see cref="CoreMotionCanvas"/>.
 /// </summary>
 /// <seealso cref="UserControl" />
+[DesignerCategory("")]
 public partial class MotionCanvas : UserControl, IRenderMode
 {
     private IFrameTicker _ticker = null!;

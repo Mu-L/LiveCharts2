@@ -1,9 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-    <Nullable>enable</Nullable>
-
     <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
 
     <ImplicitUsings>enable</ImplicitUsings>
@@ -27,7 +24,7 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
-  <Import Project="..\_Shared\_Shared.projitems" Label="Shared" />
+  <Import Project="..\..\..\build\SharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);BLAZOR_LVC</DefineConstants>
@@ -74,4 +71,5 @@
   <ItemGroup>
     <None Include="images\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
+
 </Project>

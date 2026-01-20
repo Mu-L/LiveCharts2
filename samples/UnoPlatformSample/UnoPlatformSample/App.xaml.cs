@@ -1,6 +1,10 @@
 using LiveChartsCore; // mark
 using ViewModelsSamples;
 
+#if UI_TESTING
+using Factos.Uno;
+#endif
+
 namespace UnoPlatformSample;
 
 public partial class App : Application
@@ -90,8 +94,13 @@ public partial class App : Application
                     // TODO: Register your services
                     //services.AddSingleton<IMyService, MyService>();
                 })
+#if UI_TESTING
+                .UseFactosApp()
+#else
                 .UseNavigation(ReactiveViewModelMappings.ViewModelMappings, RegisterRoutes)
+#endif
             );
+
         MainWindow = builder.Window;
 
 #if DEBUG

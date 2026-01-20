@@ -84,22 +84,13 @@ public class CoreMotionCanvas : IDisposable
     /// <summary>
     /// Gets the clock elapsed time in milliseconds.
     /// </summary>
-    public static long ElapsedMilliseconds
-    {
-        get
-        {
-#if DEBUG
-            if (DebugElapsedMilliseconds > -1)
-                return DebugElapsedMilliseconds;
-#endif
-            return s_clock.ElapsedMilliseconds;
-        }
-    }
+    public static long ElapsedMilliseconds =>
+        DebugElapsedMilliseconds > -1
+            ? DebugElapsedMilliseconds
+            : s_clock.ElapsedMilliseconds;
 
-#if DEBUG
     internal static long DebugElapsedMilliseconds { get; set; } = -1;
     internal static bool IsTesting { get; set; }
-#endif
 
     internal bool DisableAnimations { get; set; }
 

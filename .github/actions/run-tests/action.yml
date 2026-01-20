@@ -1,0 +1,95 @@
+name: "Run tests"
+description: "Runs the specified tests using factos or core tests"
+inputs:
+  use-factos:
+    description: 'Whether to use factos for test selection'
+    required: true
+  id:
+    description: "Identifier for the test target"
+    required: true
+  test-id:
+    description: 'The test id to select for factos'
+    required: false
+    default: ""
+  target-framework:
+    description: 'The target framework to use'
+    required: false
+    default: ""
+  workloads:
+    description: 'The workloads array to install'
+    required: false
+    default: ""
+  xcode-path:
+    description: 'The Xcode path to select'
+    required: false
+  use-android-emulator:
+    description: 'Whether to use android emulator'
+    required: false
+  comment_id:
+    description: 'The ID of the comment to append to'
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Select Xcode version
+      shell: pwsh
+      if: ${{ inputs.xcode-path }}
+      run: sudo xcode-select -s ${{ inputs.xcode-path }}
+
+    - name: Setup .NET and Workloads
+      uses: ./.github/actions/setup-dotnet-and-workloads
+      with:
+        workloads: ${{ inputs.workloads }}
+
+    - name: Download local packages
+      uses: actions/download-artifact@v7.0.0
+      with:
+        path: ./artifacts
+
+    - name: Configure NuGet sources 
+      shell: pwsh
+      run:
+        dotnet nuget add source ${{ github.workspace }}/artifacts --name local
+
+    # run tests using the factos selection and the console when no emulator is needed
+    - name: Run UI tests
+      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator != 'true' }}
+      shell: pwsh
+      run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+
+    # run tests using the factos selection inside the android emulator
+    - name: Enable KVM
+      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
+      shell: pwsh
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+    - name: Start Android emulator and run tests
+      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
+      uses: reactivecircus/android-emulator-runner@v2.35.0
+      with:
+        api-level: 35
+        target: google_apis
+        arch: x86_64
+        script:
+          dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+
+    # run core tests when factos is not used
+    # the Debug config is required even we are testing the nuget packages in Release.
+    # this is because some optimizations in Release make the tests fail, but the code
+    # that fails is not related to the nuget packages but to the test code itself
+    # there is a function that mocks the ui drawing that fails in Release optimizations.
+    # ToDo: fix that, or now that we have ui tests, maybe just run the tests in the ui?.
+    - name: Run tests
+      if : ${{ inputs.use-factos != 'true' }}
+      shell: pwsh
+      run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v6.0.0
+      with:
+          name: test-results-${{ inputs.test-id }}
+          retention-days: 30
+          path: "**/*.trx"

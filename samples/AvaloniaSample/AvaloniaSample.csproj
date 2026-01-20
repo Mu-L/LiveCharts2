@@ -3,9 +3,7 @@
   <Import Project="../../Directory.Build.props" />
   
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
+    <TargetFramework>net10.0</TargetFramework>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
@@ -39,5 +37,16 @@
   <ItemGroup Condition="!$(UseNuGetForSamples)">
     <ProjectReference Include="..\..\src\skiasharp\LiveChartsCore.SkiaSharp.Avalonia\LiveChartsCore.SkiaSharpView.Avalonia.csproj" />
   </ItemGroup>
+
+  <!-- UI test setup -->
+  <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
+
+  <ItemGroup Condition="$(UITesting) == 'true'">
+    <PackageReference Include="Factos.Avalonia" Version="$(FactosVersion)" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="$(UITesting) == 'true'">
+    <DefineConstants>$(DefineConstants);UI_TESTING;XAML_UI_TESTING;AVALONIA_UI_TESTING</DefineConstants>
+  </PropertyGroup>
   
 </Project>

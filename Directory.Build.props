@@ -1,11 +1,14 @@
 <Project>
   <PropertyGroup>
 
-    <LiveChartsVersion>2.0.0-rc6.1</LiveChartsVersion>
+    <LiveChartsVersionSuffix>-rc6.1</LiveChartsVersionSuffix>
+    <LiveChartsVersion>2.0.0$(LiveChartsVersionSuffix)</LiveChartsVersion>
     <LiveChartsCodeGenVersion>1.0.1</LiveChartsCodeGenVersion>
     <LiveChartsAuthors>BetoRodriguez</LiveChartsAuthors>
 
-    <GlobalLangVersion>preview</GlobalLangVersion>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
 
     <!--
     This version is the minimum supported version by LiveCharts,
@@ -27,9 +30,12 @@
     -->
     <HarfBuzzWASMVersion>8.3.1.1</HarfBuzzWASMVersion>
 
-    <!--
-    Useful to toggle between using project references or nuget references
-    -->
+    <!-- turn UITesting to true to include UI tests in the sample projects -->
+    <UITesting>false</UITesting>
+    <!-- Factos version https://github.com/beto-rodriguez/Factos -->
+    <FactosVersion>0.8.0</FactosVersion>
+
+    <!-- Useful to toggle between using project references or nuget references -->
     <UseNuGetForSamples>false</UseNuGetForSamples>
     <UseNuGetForGenerator>true</UseNuGetForGenerator>
 

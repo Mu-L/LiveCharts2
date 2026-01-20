@@ -1,11 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041</TargetFramework>
+
+    <TargetFramework Condition="$(IsTestBuild) == ''">net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="$(IsTestBuild) == 'true'">$(TestBuildTargetFramework)</TargetFramework>
+
     <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +29,28 @@
 
   <ItemGroup>
     <Resource Include="Images\livecharts.png" />
+  </ItemGroup>
+
+  <!-- UI test setup -->
+  <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
+
+  <PropertyGroup Condition="$(UITesting) == 'true'">
+    <DefineConstants>$(DefineConstants);UI_TESTING;XAML_UI_TESTING;WPF_UI_TESTING</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(UITesting) == 'true'">
+    <PackageReference Include="Factos.WPF" Version="$(FactosVersion)" />
+  </ItemGroup>
+
+  <!--
+  The next examples are not included in net462 because they use features not available in .Net framework
+  -->
+  <ItemGroup Condition="$(TargetFramework) == 'net462'">
+    <Page Remove="General\Scrollable\View.xaml" />
+    <Compile Remove="General\Scrollable\View.xaml.cs" />
+
+    <Page Remove="General\VisualElements\View.xaml" />
+    <Compile Remove="General\VisualElements\View.xaml.cs" />
   </ItemGroup>
 
 </Project>

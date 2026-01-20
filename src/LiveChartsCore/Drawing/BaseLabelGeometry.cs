@@ -194,12 +194,7 @@ public abstract partial class BaseLabelGeometry : Animatable, IDrawnElement
     /// </summary>
     public string Text { get; set; } = string.Empty;
 
-#if DEBUG
-    /// <summary>
-    /// This property is only available on debug mode, it indicates if the debug lines should be shown.
-    /// </summary>
-    public static bool ShowDebugLines { get; set; }
-#endif
+    internal static bool ShowDebugLines { get; set; }
 
     Paint? IDrawnElement.Stroke { get; set; }
 

@@ -33,9 +33,8 @@ public class MotionCanvasComposer(IRenderMode renderMode, IFrameTicker ticker)
     /// Defines the motion canvas rendering factory delegate.
     /// </summary>
     /// <param name="settings">The global rendering settings.</param>
-    /// <param name="forceGPU">Indicates whether GPU mode is forced.</param>
     /// <returns>A MotionCanvasComposer instance.</returns>
-    public delegate MotionCanvasComposer MotionCanvasRenderingFactoryDelegate(RenderingSettings settings, bool forceGPU);
+    public delegate MotionCanvasComposer MotionCanvasRenderingFactoryDelegate(RenderingSettings settings);
 
     /// <summary>
     /// Gets the render mode.
