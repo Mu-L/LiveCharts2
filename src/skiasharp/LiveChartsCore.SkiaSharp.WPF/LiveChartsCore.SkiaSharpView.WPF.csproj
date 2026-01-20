@@ -5,8 +5,8 @@
 
     <TargetFrameworks>
       net462;
-      net6.0-windows10.0.19041;
-      net8.0-windows10.0.19041
+      net8.0-windows10.0.19041;
+      net8.0-windows; <!-- https://github.com/Live-Charts/LiveCharts2/issues/1772  -->
     </TargetFrameworks>
     <AssemblyName>LiveChartsCore.SkiaSharpView.WPF</AssemblyName>
     <RootNamespace>LiveChartsCore.SkiaSharpView.WPF</RootNamespace>
