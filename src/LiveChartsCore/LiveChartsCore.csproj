@@ -5,6 +5,7 @@
       net462;
       netstandard2.0;
       net8.0;
+      net8.0-windows; <!-- https://github.com/Live-Charts/LiveCharts2/issues/1772  -->
     </TargetFrameworks>
 
     <AssemblyName>LiveChartsCore</AssemblyName>
