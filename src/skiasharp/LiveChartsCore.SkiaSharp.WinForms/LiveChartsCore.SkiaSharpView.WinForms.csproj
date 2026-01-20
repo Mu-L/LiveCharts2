@@ -29,6 +29,11 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- https://github.com/Live-Charts/LiveCharts2/issues/1772, we should also wanr the user about this, but there should be no issue. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
   <Import Project="..\..\..\build\SharedLinks.Build.props" />
 
   <PropertyGroup>
