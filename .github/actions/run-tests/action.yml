@@ -90,6 +90,6 @@ runs:
       if: always()
       uses: actions/upload-artifact@v6.0.0
       with:
-          name: test-results-${{ inputs.test-id }}
+          name: test-results-${{ inputs.test-id }}-${{ github.job }}
           retention-days: 30
           path: "**/*.trx"
