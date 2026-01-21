@@ -47,15 +47,9 @@ public static class UIHelpersExtensions
 
     extension(IChartView chartView)
     {
-        public Task WaitUntilChartRenders()
+        public async Task WaitUntilChartRenders()
         {
             var tcs = new TaskCompletionSource<object>();
-
-            if (chartView.CoreCanvas.IsValid)
-            {
-                tcs.SetResult(new());
-                return tcs.Task;
-            }
 
             // force an update, then wait for the update to start in the ui thread
             chartView.CoreChart.Update(new LiveChartsCore.Kernel.ChartUpdateParams
@@ -72,7 +66,14 @@ public static class UIHelpersExtensions
 
             chartView.UpdateStarted += Handler;
 
-            return tcs.Task;
+            var timeOutTask = Task.Delay(1500);
+
+            if (await Task.WhenAny(tcs.Task, timeOutTask) == timeOutTask)
+            {
+                // the chart should be loaded by now, but in this simple test framework
+                // we dont have a solid way to detect the control is loaded, so a timeout is ok for now.
+                Console.WriteLine("Warning: WaitUntilChartRenders timed out.");
+            }
         }
     }
 

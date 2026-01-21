@@ -32,8 +32,7 @@
                 <DataTemplate>
                     <lvc:XamlColumnSeries
                         SeriesName="{Binding Name}"
-                        Values="{Binding Values}"
-                        Fill="#000"/>
+                        Values="{Binding Values}"/>
                 </DataTemplate>
             </lvc:CartesianChart.SeriesTemplate>
         </lvc:CartesianChart>
