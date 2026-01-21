@@ -66,7 +66,7 @@ public static class UIHelpersExtensions
 
             chartView.UpdateStarted += Handler;
 
-            var timeOutTask = Task.Delay(1500);
+            var timeOutTask = Task.Delay(10000);
 
             if (await Task.WhenAny(tcs.Task, timeOutTask) == timeOutTask)
             {
