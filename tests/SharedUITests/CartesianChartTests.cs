@@ -55,7 +55,7 @@ public class CartesianChartTests
         await App.NavigateToView(sut);
 
         // ToDo: improve this method? as a workaround for now we just wait for some time
-        //await sut.Chart.WaitUntilChartRenders();
+        // await sut.Chart.WaitUntilChartRenders();
         await Task.Delay(2000);
 
         Assert.ChartIsLoaded(sut.Chart);
