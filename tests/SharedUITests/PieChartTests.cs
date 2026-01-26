@@ -32,8 +32,19 @@ public class PieChartTests
         await sut.Chart.WaitUntilChartRenders();
         Assert.ChartIsLoaded(sut.Chart);
 
-        await App.PopNavigation();
+#if MAUI_UI_TESTING
+        // in maui App.NavigateToView(); uses the Shell navigation,
+        // but in this test we need to unload and reload the control in the same view
 
+        sut.UnloadChart();
+        await Task.Delay(1000);
+
+        sut.ReloadChart();
+        await Task.Delay(1000);
+
+        Assert.ChartIsLoaded(sut.Chart);
+#else
+        await App.PopNavigation();
         await App.NavigateToView(sut);
 
         // ToDo: improve this method? as a workaround for now we just wait for some time
@@ -41,6 +52,7 @@ public class PieChartTests
         await Task.Delay(2000);
 
         Assert.ChartIsLoaded(sut.Chart);
+#endif
     }
 #endif
 }

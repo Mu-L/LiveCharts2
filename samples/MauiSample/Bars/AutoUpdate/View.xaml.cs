@@ -13,5 +13,8 @@ public partial class View : ContentPage
 
 #if UI_TESTING
     public CartesianChart Chart => chart;
+
+    public void UnloadChart() => grid.Children.Remove(chart);
+    public void ReloadChart() => grid.Children.Add(chart);
 #endif
 }
