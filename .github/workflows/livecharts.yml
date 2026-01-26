@@ -229,7 +229,7 @@ jobs:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-browser:
-    runs-on: ubuntu-24.04
+    runs-on: windows-2025 # ubuntu-24.04 .. lets try windows as a workaround
     strategy:
       fail-fast: false
       matrix:
