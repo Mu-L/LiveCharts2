@@ -76,26 +76,25 @@ runs:
         api-level: 35
         target: google_apis
         arch: x86_64
+
         script: |
-          bash -c '
-          n=0
-          until [ "$n" -ge 3 ]
-          do
-            echo "Starting Attempt $((n+1))..."
-            timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
-            EXIT_CODE=$?
+          n=0;
+          while [ $n -lt 3 ]; do
+            echo "Starting Attempt $((n+1))...";
+            
+            timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }};
+            EXIT_CODE=$?;
             
             if [ $EXIT_CODE -eq 0 ]; then
-              echo "Tests passed!"
-              exit 0
-            fi
+              echo "Tests passed!";
+              exit 0;
+            fi;
 
-            n=$((n+1))
-            echo "Attempt $n failed with exit code $EXIT_CODE. Retrying..."
-            sleep 10
-          done
-          exit 1
-          '
+            n=$((n+1));
+            echo "Attempt $n failed. Retrying in 10s...";
+            sleep 10;
+          done;
+          exit 1;
 
     # run core tests when factos is not used
     # the Debug config is required even we are testing the nuget packages in Release.
