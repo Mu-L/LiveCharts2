@@ -43,7 +43,8 @@ runs:
 
           content = content
             .replace(new RegExp('#success', 'g'), '✅ passed')
-            .replace(new RegExp('#failure', 'g'), '❌ failed');
+            .replace(new RegExp('#failure', 'g'), '❌ failed')
+            .replace(new RegExp('#cancelled', 'g'), '⚠️ cancelled');
           
           let body = comment.data.body;
 
