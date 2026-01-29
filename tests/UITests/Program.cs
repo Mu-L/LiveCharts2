@@ -27,8 +27,8 @@ using Microsoft.Testing.Platform.Builder;
 // uno and maui require also to pass the target framework, see tf variable below, will be ignored if not required by the tested app.
 // emulators must be running before starting the tests.
 
-var appToRun = "wpf-net462";
-var tf = "net10.0-android";
+var appToRun = "maui";
+var tf = "net10.0-windows10.0.19041.0";
 
 args = [
     "--select", appToRun,
@@ -45,7 +45,9 @@ var root = "samples";
 var testsBuilder = await TestApplication.CreateBuilderAsync(args);
 var testedApps = new List<TestedApp>();
 
-MSBuildArg[] msBuildArgs = [];
+MSBuildArg[] msBuildArgs = [
+    new("UITesting", "true")
+];
 
 #if !DEBUG
 // in CI we use the nuget packages for everything
@@ -53,7 +55,7 @@ MSBuildArg[] msBuildArgs = [];
 // lvcversionsuffix is a version suffix we pass from the pipeline, it can be something like "-ci-1234"
 // where 1234 is a build number or a commit id which NuGet packages were published with.
 msBuildArgs = [
-    new("UITesting", "true"),
+    .. msBuildArgs,
     new("UseNuGetForSamples", "true"),
     new("LiveChartsVersionSuffix", "[lvcversionsuffix]")
 ];
@@ -117,7 +119,7 @@ foreach (var testRecord in toTest)
 testsBuilder
     .AddFactos(new FactosSettings()
     {
-        ConnectionTimeout = 600,
+        ConnectionTimeout = 300,
         TestedApps = testedApps
     })
     .AddTrxReportProvider();

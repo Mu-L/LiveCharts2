@@ -322,6 +322,7 @@ public abstract class Chart
     /// </summary>
     public virtual void Unload()
     {
+        _lastMeasureTimeStamp = -1;
         IsLoaded = false;
         _everMeasuredElements.Clear();
         _toDeleteElements.Clear();

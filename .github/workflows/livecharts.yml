@@ -22,7 +22,7 @@ jobs:
           content: | 
             Thanks for your contribution!
 
-            We are starting the build and test process. This may take a while.
+            The build and test process is starting. This may take a while.
             You can find more details below as the process continues or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
     outputs: 
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
@@ -114,7 +114,7 @@ jobs:
 
   test-core:
     runs-on: windows-2025
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, collect-packages]
     strategy:
       fail-fast: false
       matrix:
@@ -154,7 +154,7 @@ jobs:
           - id: wpf-net10w19041
           - id: wpf-net462
           
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, collect-packages]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -180,7 +180,7 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: android
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, collect-packages]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -212,7 +212,7 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: maui
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, collect-packages]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -234,15 +234,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: blazor
-            workloads: wasm-tools
+          # not running, blazor issue? factos issue? tests issue?
+          # - id: blazor
+          #   workloads: wasm-tools
           - id: avalonia-browser
             workloads: wasm-tools
-          # disabled for now, in this uno version, idk why on wasm no tests are detected.
+          # not running, uno issue? factos issue? tests issue?
           # - id: uno
           #   tf: net10.0-browserwasm
           #   workloads: wasm-tools android
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, collect-packages]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -272,7 +273,7 @@ jobs:
           # - id: uno
           #   tf: net10.0-android
           #   workloads: android
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, collect-packages]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -303,7 +304,7 @@ jobs:
           # - id: uno
           #   tf: net10.0-ios
           #   workloads: ios android
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, collect-packages]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1

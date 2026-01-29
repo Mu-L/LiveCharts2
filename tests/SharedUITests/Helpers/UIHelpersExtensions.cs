@@ -53,8 +53,7 @@ public static class UIHelpersExtensions
 
             if (chartView.CoreCanvas.IsValid)
             {
-                tcs.SetResult(new());
-                return tcs.Task;
+                return Task.FromResult(new object());
             }
 
             // force an update, then wait for the update to start in the ui thread
