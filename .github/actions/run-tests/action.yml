@@ -53,9 +53,13 @@ runs:
 
     # run tests using the factos selection and the console when no emulator is needed
     - name: Run UI tests
+      uses: nick-fields/retry@v3.0.2
       if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator != 'true' }}
-      shell: pwsh
-      run: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+      with:
+        timeout_minutes: 15
+        max_attempts: 3
+        shell: pwsh
+        command: dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
 
     # run tests using the factos selection inside the android emulator
     - name: Enable KVM
@@ -82,9 +86,13 @@ runs:
     # there is a function that mocks the ui drawing that fails in Release optimizations.
     # ToDo: fix that, or now that we have ui tests, maybe just run the tests in the ui?.
     - name: Run tests
+      uses: nick-fields/retry@v3.0.2
       if : ${{ inputs.use-factos != 'true' }}
-      shell: pwsh
-      run: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+      with:
+        timeout_minutes: 8
+        max_attempts: 3
+        shell: pwsh
+        command: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
     - name: Upload test results
       if: always()

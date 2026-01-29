@@ -119,7 +119,7 @@ foreach (var testRecord in toTest)
 testsBuilder
     .AddFactos(new FactosSettings()
     {
-        ConnectionTimeout = 600,
+        ConnectionTimeout = 300,
         TestedApps = testedApps
     })
     .AddTrxReportProvider();
