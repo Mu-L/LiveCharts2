@@ -69,6 +69,22 @@ runs:
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
+    - name: Create Test Script
+      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
+      shell: bash
+      run: |
+        cat << 'EOF' > run_tests.sh
+        n=0
+        while [ $n -lt 3 ]; do
+          echo "Starting Attempt $((n+1))..."
+          timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+          if [ $? -eq 0 ]; then exit 0; fi
+          n=$((n+1))
+          sleep 10
+        done
+        exit 1
+        EOF
+        chmod +x run_tests.sh
     - name: Start Android emulator and run tests
       if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
       uses: reactivecircus/android-emulator-runner@v2.35.0
@@ -76,20 +92,7 @@ runs:
         api-level: 35
         target: google_apis
         arch: x86_64
-
-        script: |
-          cat << 'EOF' > run_with_retry.sh
-          n=0
-          while [ $n -lt 3 ]; do
-            echo "Starting Attempt $((n+1))..."
-            timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
-            if [ $? -eq 0 ]; then exit 0; fi
-            n=$((n+1))
-            [ $n -lt 3 ] && sleep 10
-          done
-          exit 1
-          EOF
-          bash run_with_retry.sh
+        script: ./run_tests.sh
 
     # run core tests when factos is not used
     # the Debug config is required even we are testing the nuget packages in Release.
