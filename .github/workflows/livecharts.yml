@@ -22,7 +22,7 @@ jobs:
           content: | 
             Thanks for your contribution!
 
-            We are starting the build and test process. This may take a while.
+            The build and test process is starting. This may take a while.
             You can find more details below as the process continues or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
     outputs: 
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
@@ -229,7 +229,7 @@ jobs:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-browser:
-    runs-on: windows-2025 # ubuntu-24.04 .. lets try windows as a workaround
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -238,10 +238,9 @@ jobs:
             workloads: wasm-tools
           - id: avalonia-browser
             workloads: wasm-tools
-          # disabled for now, in this uno version, idk why on wasm no tests are detected.
-          # - id: uno
-          #   tf: net10.0-browserwasm
-          #   workloads: wasm-tools android
+          - id: uno
+            tf: net10.0-browserwasm
+            workloads: wasm-tools android
     needs: [pack, report-progress-starting]
     steps:
       - name: Checkout 
