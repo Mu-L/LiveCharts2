@@ -78,23 +78,18 @@ runs:
         arch: x86_64
 
         script: |
-          n=0;
+          cat << 'EOF' > run_with_retry.sh
+          n=0
           while [ $n -lt 3 ]; do
-            echo "Starting Attempt $((n+1))...";
-            
-            timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }};
-            EXIT_CODE=$?;
-            
-            if [ $EXIT_CODE -eq 0 ]; then
-              echo "Tests passed!";
-              exit 0;
-            fi;
-
-            n=$((n+1));
-            echo "Attempt $n failed. Retrying in 10s...";
-            sleep 10;
-          done;
-          exit 1;
+            echo "Starting Attempt $((n+1))..."
+            timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+            if [ $? -eq 0 ]; then exit 0; fi
+            n=$((n+1))
+            [ $n -lt 3 ] && sleep 10
+          done
+          exit 1
+          EOF
+          bash run_with_retry.sh
 
     # run core tests when factos is not used
     # the Debug config is required even we are testing the nuget packages in Release.
