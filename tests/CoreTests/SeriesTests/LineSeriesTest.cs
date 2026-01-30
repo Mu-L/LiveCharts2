@@ -473,28 +473,50 @@ public class LineSeriesTest
             }
         }
 
+        ChartPoint[] points;
+        int segments;
         _ = chart.GetImage();
-        AssertIsStraightLine([.. series.DataFactory.Fetch(series, chart.CoreChart)]);
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
 
         // if a the first point is removed, it should still be a straight line
         values.RemoveAt(0);
         _ = chart.GetImage();
-        AssertIsStraightLine([.. series.DataFactory.Fetch(series, chart.CoreChart)]);
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 4);
 
         // if we insert a point at the start that keeps the straight line, it should be a straight line
         values.Insert(0, 1);
         _ = chart.GetImage();
-        AssertIsStraightLine([.. series.DataFactory.Fetch(series, chart.CoreChart)]);
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
 
         // if the last point is removed, it should still be a straight line
         values.RemoveAt(values.Count - 1);
         _ = chart.GetImage();
-        AssertIsStraightLine([.. series.DataFactory.Fetch(series, chart.CoreChart)]);
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 4);
 
         // if we add a point that keeps the straight line, it should be a straight line
         values.Add(5);
         _ = chart.GetImage();
-        AssertIsStraightLine([.. series.DataFactory.Fetch(series, chart.CoreChart)]);
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
 
         // if we insert a point in the middle that keeps the straight line, it should be a straight line
         values.RemoveAt(1);
@@ -504,6 +526,10 @@ public class LineSeriesTest
 
         values.Insert(1, 2);
         _ = chart.GetImage();
-        AssertIsStraightLine([.. series.DataFactory.Fetch(series, chart.CoreChart)]);
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
     }
 }
