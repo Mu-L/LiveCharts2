@@ -441,7 +441,7 @@ public class LineSeriesTest
 
         void AssertIsStraightLine(ChartPoint[] points)
         {
-            Assert.That(() => points.Length > 0);
+            Assert.IsTrue(points.Length > 0);
 
             CubicBezierSegment? previous = null;
             var slope = 0f;
