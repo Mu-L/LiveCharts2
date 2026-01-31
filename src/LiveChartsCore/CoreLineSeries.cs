@@ -20,9 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Drawing.Segments;
 using LiveChartsCore.Kernel;
@@ -797,6 +794,14 @@ public abstract class CoreLineSeries<TModel, TVisual, TLabel, TPathGeometry, TEr
             visual.XError.X1 = x;
             visual.XError.RemoveOnCompleted = true;
         }
+
+        foreach (var pathCollection in _strokePathHelperDictionary.Values)
+            foreach (var path in pathCollection)
+                _ = path.Commands.Remove(visual.Segment);
+
+        foreach (var pathCollection in _fillPathHelperDictionary.Values)
+            foreach (var path in pathCollection)
+                _ = path.Commands.Remove(visual.Segment);
 
         DataFactory.DisposePoint(point);
 

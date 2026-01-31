@@ -50,8 +50,8 @@ public abstract class CoreStepLineSeries<TModel, TVisual, TLabel, TPathGeometry,
         where TLabel : BaseLabelGeometry, new()
         where TLineGeometry : BaseLineGeometry, new()
 {
-    private readonly Dictionary<object, List<TPathGeometry>> _fillPathHelperDictionary = [];
-    private readonly Dictionary<object, List<TPathGeometry>> _strokePathHelperDictionary = [];
+    internal readonly Dictionary<object, List<TPathGeometry>> _fillPathHelperDictionary = [];
+    internal readonly Dictionary<object, List<TPathGeometry>> _strokePathHelperDictionary = [];
     private float _geometrySize = 14f;
 
     /// <summary>
@@ -552,6 +552,14 @@ public abstract class CoreStepLineSeries<TModel, TVisual, TLabel, TPathGeometry,
         visual.Geometry.Width = 0;
         visual.Geometry.Opacity = 0;
         visual.Geometry.RemoveOnCompleted = true;
+
+        foreach (var pathCollection in _strokePathHelperDictionary.Values)
+            foreach (var path in pathCollection)
+                _ = path.Commands.Remove(visual.Segment);
+
+        foreach (var pathCollection in _fillPathHelperDictionary.Values)
+            foreach (var path in pathCollection)
+                _ = path.Commands.Remove(visual.Segment);
 
         DataFactory.DisposePoint(point);
 

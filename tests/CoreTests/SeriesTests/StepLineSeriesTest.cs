@@ -1,14 +1,12 @@
-﻿using System;
-using System.Linq;
-using CoreTests.MockedObjects;
+﻿using CoreTests.MockedObjects;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Drawing.Segments;
+using LiveChartsCore.Kernel;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SkiaSharp;
 
 namespace CoreTests.SeriesTests;
@@ -419,5 +417,117 @@ public class StepLineSeriesTest
         _ = chart.GetImage();
 
         Assert.IsTrue(!chart.CoreCanvas.ContainsPaintTask(previousPaint));
+    }
+
+    [TestMethod]
+    public void ShouldScaleBeziersOnAddRemoveOrInsert()
+    {
+        var values = new List<double> { 1, 2, 3, 4, 5 };
+
+        var series = new StepLineSeries<double>
+        {
+            Values = values,
+            GeometrySize = 10
+        };
+
+        var chart = new SKCartesianChart
+        {
+            Width = 1000,
+            Height = 1000,
+            Series = [series]
+        };
+
+        void AssertIsStraightLine(ChartPoint[] points)
+        {
+            Assert.That(() => points.Length > 0);
+
+            Segment? previous = null;
+            var slope = 0f;
+
+            foreach (var p in points)
+            {
+                var tp = series.ConvertToTypedChartPoint(p);
+                var segment = (SegmentVisualPoint?)tp.Context.AdditionalVisuals;
+
+                Assert.IsNotNull(segment);
+
+                if (previous is null)
+                {
+                    previous = segment?.Segment;
+                    continue;
+                }
+
+                if (slope == 0f)
+                {
+                    var dx = segment!.Segment.Xj - previous.Xj;
+                    var dy = segment.Segment.Yj - previous.Yj;
+                    slope = dx / dy;
+                }
+
+                var currentSlope = (segment!.Segment.Xj - previous.Xj) / (segment.Segment.Yj - previous.Yj);
+
+                Assert.IsTrue(Math.Abs(slope - currentSlope) < 0.1);
+                previous = segment.Segment;
+            }
+        }
+
+        ChartPoint[] points;
+        int segments;
+        _ = chart.GetImage();
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
+
+        // if a the first point is removed, it should still be a straight line
+        values.RemoveAt(0);
+        _ = chart.GetImage();
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 4);
+
+        // if we insert a point at the start that keeps the straight line, it should be a straight line
+        values.Insert(0, 1);
+        _ = chart.GetImage();
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
+
+        // if the last point is removed, it should still be a straight line
+        values.RemoveAt(values.Count - 1);
+        _ = chart.GetImage();
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 4);
+
+        // if we add a point that keeps the straight line, it should be a straight line
+        values.Add(5);
+        _ = chart.GetImage();
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
+
+        // if we insert a point in the middle that keeps the straight line, it should be a straight line
+        values.RemoveAt(1);
+        _ = chart.GetImage();
+        // at this point the values are [1,3,4,5] it is not a straight line
+        //AssertIsStraightLine([.. series.DataFactory.Fetch(series, chart.CoreChart)]);
+
+        values.Insert(1, 2);
+        _ = chart.GetImage();
+
+        points = [.. series.DataFactory.Fetch(series, chart.CoreChart)];
+        segments = series._fillPathHelperDictionary.Sum(x => x.Value.Sum(y => y.Commands.Count));
+        AssertIsStraightLine(points);
+        Assert.IsTrue(segments == 5);
     }
 }
