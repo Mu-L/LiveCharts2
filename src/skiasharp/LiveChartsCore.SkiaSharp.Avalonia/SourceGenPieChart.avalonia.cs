@@ -25,7 +25,7 @@ using LiveChartsCore.Kernel.Sketches;
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================
-// this file contains the shared code between all UI frameworks
+// this file contains the Avalonia specific code
 // ==============================================================
 
 /// <inheritdoc cref="IPieChartView" />
