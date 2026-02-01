@@ -1,4 +1,5 @@
 ﻿using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.SkiaSharpView.VisualElements;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoreTests.ChartTests;
@@ -49,6 +50,37 @@ public class ChartTests
         var image = chart.GetImage();
 
         Assert.IsTrue(image is not null);
+    }
+
+    [TestMethod]
+    public void PieShouldResizeAngularTicks()
+    {
+        // https://github.com/Live-Charts/LiveCharts2/issues/2012
+
+        var needle = new NeedleVisual { Value = 45 };
+        var ticks = new AngularTicksVisual
+        {
+            Labeler = value => value.ToString("N1"),
+            LabelsSize = 16,
+            LabelsOuterOffset = 15,
+            OuterOffset = 65,
+            TicksLength = 20
+        };
+
+        var chart = new SKPieChart
+        {
+            Width = 1000,
+            Height = 1000,
+            MaxAngle = 270,
+            MinValue = 0,
+            MaxValue = 100,
+            Series = [],
+            VisualElements = [needle, ticks]
+        };
+
+        _ = chart.GetImage();
+        chart.MaxValue = 10;
+        _ = chart.GetImage();
     }
 
     [TestMethod]
