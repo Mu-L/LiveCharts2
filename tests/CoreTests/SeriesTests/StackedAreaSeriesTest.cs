@@ -355,8 +355,14 @@ public class StackedAreaSeriesTest
     {
         // Regression test for #2086: Verify that stacked values are calculated correctly
         // when there are mixed positive and negative values across multiple series at the same index.
-        // The fix ensures that both End and NegativeEnd are updated together to maintain
-        // proper stacking relationships between series.
+        // 
+        // The fix ensures that both End and NegativeEnd are kept in sync to maintain proper
+        // stacking relationships. This is necessary because:
+        // - When Series2 starts, it needs to know where Series1 ended, regardless of whether
+        //   Series1's last value was positive or negative
+        // - Start is derived from the previous series' End (line 98 in Stacker.cs)
+        // - NegativeStart is derived from the previous series' NegativeEnd (line 99 in Stacker.cs)
+        // - For proper stacking, End and NegativeEnd must represent the same cumulative position
         
         // Series 1: positive at index 0, negative at index 1
         // Series 2: negative at index 0, positive at index 1
@@ -398,35 +404,33 @@ public class StackedAreaSeriesTest
         var point2_1 = points2[1];
 
         // Verify series1 at index 0 (positive value 5)
-        // Start and NegativeStart should both be 0 (first series)
-        // End and NegativeEnd should both be 5 (after adding positive 5)
+        // Both End and NegativeEnd are set to 5 to keep them in sync
         Assert.AreEqual(0, point1_0.StackedValue.Start, 0.001, "Series1[0] Start should be 0");
         Assert.AreEqual(5, point1_0.StackedValue.End, 0.001, "Series1[0] End should be 5");
         Assert.AreEqual(0, point1_0.StackedValue.NegativeStart, 0.001, "Series1[0] NegativeStart should be 0");
-        Assert.AreEqual(5, point1_0.StackedValue.NegativeEnd, 0.001, "Series1[0] NegativeEnd should be 5");
+        Assert.AreEqual(5, point1_0.StackedValue.NegativeEnd, 0.001, "Series1[0] NegativeEnd should be 5 (kept in sync with End)");
 
         // Verify series2 at index 0 (negative value -2)
-        // Start and NegativeStart should both be 5 (from series1's End and NegativeEnd)
-        // End and NegativeEnd should both be 3 (5 + (-2))
-        Assert.AreEqual(5, point2_0.StackedValue.Start, 0.001, "Series2[0] Start should be 5");
-        Assert.AreEqual(3, point2_0.StackedValue.End, 0.001, "Series2[0] End should be 3");
-        Assert.AreEqual(5, point2_0.StackedValue.NegativeStart, 0.001, "Series2[0] NegativeStart should be 5");
-        Assert.AreEqual(3, point2_0.StackedValue.NegativeEnd, 0.001, "Series2[0] NegativeEnd should be 3");
+        // Start and NegativeStart are both derived from series1's End/NegativeEnd (both 5)
+        // After adding -2, both End and NegativeEnd become 3
+        Assert.AreEqual(5, point2_0.StackedValue.Start, 0.001, "Series2[0] Start should be 5 (from Series1 End)");
+        Assert.AreEqual(3, point2_0.StackedValue.End, 0.001, "Series2[0] End should be 3 (5 + (-2))");
+        Assert.AreEqual(5, point2_0.StackedValue.NegativeStart, 0.001, "Series2[0] NegativeStart should be 5 (from Series1 NegativeEnd)");
+        Assert.AreEqual(3, point2_0.StackedValue.NegativeEnd, 0.001, "Series2[0] NegativeEnd should be 3 (kept in sync with End)");
 
         // Verify series1 at index 1 (negative value -3)
-        // Start and NegativeStart should both be 0 (first series)
-        // End and NegativeEnd should both be -3 (after adding negative -3)
+        // Both End and NegativeEnd are set to -3 to keep them in sync
         Assert.AreEqual(0, point1_1.StackedValue.Start, 0.001, "Series1[1] Start should be 0");
         Assert.AreEqual(-3, point1_1.StackedValue.End, 0.001, "Series1[1] End should be -3");
         Assert.AreEqual(0, point1_1.StackedValue.NegativeStart, 0.001, "Series1[1] NegativeStart should be 0");
-        Assert.AreEqual(-3, point1_1.StackedValue.NegativeEnd, 0.001, "Series1[1] NegativeEnd should be -3");
+        Assert.AreEqual(-3, point1_1.StackedValue.NegativeEnd, 0.001, "Series1[1] NegativeEnd should be -3 (kept in sync with End)");
 
         // Verify series2 at index 1 (positive value 4)
-        // Start and NegativeStart should both be -3 (from series1's End and NegativeEnd)
-        // End and NegativeEnd should both be 1 (-3 + 4)
-        Assert.AreEqual(-3, point2_1.StackedValue.Start, 0.001, "Series2[1] Start should be -3");
-        Assert.AreEqual(1, point2_1.StackedValue.End, 0.001, "Series2[1] End should be 1");
-        Assert.AreEqual(-3, point2_1.StackedValue.NegativeStart, 0.001, "Series2[1] NegativeStart should be -3");
-        Assert.AreEqual(1, point2_1.StackedValue.NegativeEnd, 0.001, "Series2[1] NegativeEnd should be 1");
+        // Start and NegativeStart are both derived from series1's End/NegativeEnd (both -3)
+        // After adding 4, both End and NegativeEnd become 1
+        Assert.AreEqual(-3, point2_1.StackedValue.Start, 0.001, "Series2[1] Start should be -3 (from Series1 End)");
+        Assert.AreEqual(1, point2_1.StackedValue.End, 0.001, "Series2[1] End should be 1 (-3 + 4)");
+        Assert.AreEqual(-3, point2_1.StackedValue.NegativeStart, 0.001, "Series2[1] NegativeStart should be -3 (from Series1 NegativeEnd)");
+        Assert.AreEqual(1, point2_1.StackedValue.NegativeEnd, 0.001, "Series2[1] NegativeEnd should be 1 (kept in sync with End)");
     }
 }
