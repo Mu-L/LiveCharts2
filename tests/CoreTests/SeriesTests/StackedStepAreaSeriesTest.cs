@@ -348,4 +348,84 @@ public class StackedStepAreaSeriesTest
 
         Assert.IsTrue(!chart.CoreCanvas.ContainsPaintTask(previousPaint));
     }
+
+    [TestMethod]
+    public void ShouldHandleMixedPositiveNegativeValues()
+    {
+        // Regression test for #2086: Verify that stacked values are calculated correctly
+        // when there are mixed positive and negative values across multiple series at the same index.
+        // The fix ensures that both End and NegativeEnd are updated together to maintain
+        // proper stacking relationships between series.
+        
+        // Series 1: positive at index 0, negative at index 1
+        // Series 2: negative at index 0, positive at index 1
+        var series1 = new StackedStepAreaSeries<double>
+        {
+            Values = [5, -3],
+            GeometrySize = 10
+        };
+
+        var series2 = new StackedStepAreaSeries<double>
+        {
+            Values = [-2, 4],
+            GeometrySize = 10
+        };
+
+        var chart = new SKCartesianChart
+        {
+            Width = 1000,
+            Height = 1000,
+            Series = [series1, series2],
+            XAxes = [new Axis()],
+            YAxes = [new Axis()]
+        };
+
+        _ = chart.GetImage();
+
+        var datafactory1 = series1.DataFactory;
+        var points1 = datafactory1.Fetch(series1, chart.CoreChart).ToArray();
+        
+        var datafactory2 = series2.DataFactory;
+        var points2 = datafactory2.Fetch(series2, chart.CoreChart).ToArray();
+
+        // At index 0: series1 = 5 (positive), series2 = -2 (negative)
+        var point1_0 = points1[0];
+        var point2_0 = points2[0];
+
+        // At index 1: series1 = -3 (negative), series2 = 4 (positive)
+        var point1_1 = points1[1];
+        var point2_1 = points2[1];
+
+        // Verify series1 at index 0 (positive value 5)
+        // Start and NegativeStart should both be 0 (first series)
+        // End and NegativeEnd should both be 5 (after adding positive 5)
+        Assert.AreEqual(0, point1_0.StackedValue.Start, 0.001, "Series1[0] Start should be 0");
+        Assert.AreEqual(5, point1_0.StackedValue.End, 0.001, "Series1[0] End should be 5");
+        Assert.AreEqual(0, point1_0.StackedValue.NegativeStart, 0.001, "Series1[0] NegativeStart should be 0");
+        Assert.AreEqual(5, point1_0.StackedValue.NegativeEnd, 0.001, "Series1[0] NegativeEnd should be 5");
+
+        // Verify series2 at index 0 (negative value -2)
+        // Start and NegativeStart should both be 5 (from series1's End and NegativeEnd)
+        // End and NegativeEnd should both be 3 (5 + (-2))
+        Assert.AreEqual(5, point2_0.StackedValue.Start, 0.001, "Series2[0] Start should be 5");
+        Assert.AreEqual(3, point2_0.StackedValue.End, 0.001, "Series2[0] End should be 3");
+        Assert.AreEqual(5, point2_0.StackedValue.NegativeStart, 0.001, "Series2[0] NegativeStart should be 5");
+        Assert.AreEqual(3, point2_0.StackedValue.NegativeEnd, 0.001, "Series2[0] NegativeEnd should be 3");
+
+        // Verify series1 at index 1 (negative value -3)
+        // Start and NegativeStart should both be 0 (first series)
+        // End and NegativeEnd should both be -3 (after adding negative -3)
+        Assert.AreEqual(0, point1_1.StackedValue.Start, 0.001, "Series1[1] Start should be 0");
+        Assert.AreEqual(-3, point1_1.StackedValue.End, 0.001, "Series1[1] End should be -3");
+        Assert.AreEqual(0, point1_1.StackedValue.NegativeStart, 0.001, "Series1[1] NegativeStart should be 0");
+        Assert.AreEqual(-3, point1_1.StackedValue.NegativeEnd, 0.001, "Series1[1] NegativeEnd should be -3");
+
+        // Verify series2 at index 1 (positive value 4)
+        // Start and NegativeStart should both be -3 (from series1's End and NegativeEnd)
+        // End and NegativeEnd should both be 1 (-3 + 4)
+        Assert.AreEqual(-3, point2_1.StackedValue.Start, 0.001, "Series2[1] Start should be -3");
+        Assert.AreEqual(1, point2_1.StackedValue.End, 0.001, "Series2[1] End should be 1");
+        Assert.AreEqual(-3, point2_1.StackedValue.NegativeStart, 0.001, "Series2[1] NegativeStart should be -3");
+        Assert.AreEqual(1, point2_1.StackedValue.NegativeEnd, 0.001, "Series2[1] NegativeEnd should be 1");
+    }
 }
