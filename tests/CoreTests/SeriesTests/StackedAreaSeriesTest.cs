@@ -360,8 +360,8 @@ public class StackedAreaSeriesTest
         // stacking relationships. This is necessary because:
         // - When Series2 starts, it needs to know where Series1 ended, regardless of whether
         //   Series1's last value was positive or negative
-        // - Start is derived from the previous series' End (line 98 in Stacker.cs)
-        // - NegativeStart is derived from the previous series' NegativeEnd (line 99 in Stacker.cs)
+        // - Start is derived from the previous series' End in the stacker logic
+        // - NegativeStart is derived from the previous series' NegativeEnd in the stacker logic
         // - For proper stacking, End and NegativeEnd must represent the same cumulative position
         
         // Series 1: positive at index 0, negative at index 1
@@ -395,13 +395,13 @@ public class StackedAreaSeriesTest
         var datafactory2 = series2.DataFactory;
         var points2 = datafactory2.Fetch(series2, chart.CoreChart).ToArray();
 
-        // At index 0: series1 = 5 (positive), series2 = -2 (negative)
-        var point1_0 = points1[0];
-        var point2_0 = points2[0];
+        // For SecondaryValue = 0: series1 = 5 (positive), series2 = -2 (negative)
+        var point1_0 = points1.Single(p => p.Coordinate.SecondaryValue == 0);
+        var point2_0 = points2.Single(p => p.Coordinate.SecondaryValue == 0);
 
-        // At index 1: series1 = -3 (negative), series2 = 4 (positive)
-        var point1_1 = points1[1];
-        var point2_1 = points2[1];
+        // For SecondaryValue = 1: series1 = -3 (negative), series2 = 4 (positive)
+        var point1_1 = points1.Single(p => p.Coordinate.SecondaryValue == 1);
+        var point2_1 = points2.Single(p => p.Coordinate.SecondaryValue == 1);
 
         // Verify series1 at index 0 (positive value 5)
         // Both End and NegativeEnd are set to 5 to keep them in sync
