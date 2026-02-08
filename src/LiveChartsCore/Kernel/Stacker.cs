@@ -125,16 +125,22 @@ public class Stacker
         if (value >= 0)
         {
             currentStack.End += value;
+            currentStack.NegativeEnd += value;
             var positiveTotal = _totals[index].Positive + value;
             _totals[index].Positive = positiveTotal;
+            var negativeTotal = _totals[index].Negative + value;
+            _totals[index].Negative = negativeTotal;
 
             return positiveTotal;
         }
         else
         {
+            currentStack.End += value;
             currentStack.NegativeEnd += value;
             var negativeTotal = _totals[index].Negative + value;
             _totals[index].Negative = negativeTotal;
+            var positiveTotal = _totals[index].Positive + value;
+            _totals[index].Positive = positiveTotal;
 
             return negativeTotal;
         }
