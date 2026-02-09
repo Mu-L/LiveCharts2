@@ -14,7 +14,7 @@ public class AvaloniaTests
     // https://github.com/Live-Charts/LiveCharts2/issues/1986
     // ensure charts load when avalonia virtualization is on.
     [AppTestMethod]
-    public async Task ShouldLoadTemplatedChart()
+    public async Task TabControlScrollViewerRendersAfterTabSwitch()
     {
         var sut = await App.NavigateTo<Samples.VisualTest.VirtualizationTest.View>();
 
