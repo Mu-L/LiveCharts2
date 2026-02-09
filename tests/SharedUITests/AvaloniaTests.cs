@@ -20,14 +20,16 @@ public class AvaloniaTests
 
         // open the second tab, scroll to end and ensure the chart is loaded.
         sut.OpenTab2();
+        await Task.Delay(1000);
         sut.ScrollToChart();
-        await Task.Delay(2000);
+        await Task.Delay(1000);
         Assert.ChartIsLoaded(sut.Chart2);
 
         // now open the first tab, scroll to end and ensure the chart is loaded.
         sut.OpenTab1();
+        await Task.Delay(1000);
         sut.ScrollToChart();
-        await Task.Delay(2000);
+        await Task.Delay(1000);
         Assert.ChartIsLoaded(sut.Chart1);
     }
 }
