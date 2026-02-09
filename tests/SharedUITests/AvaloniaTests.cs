@@ -19,19 +19,15 @@ public class AvaloniaTests
         var sut = await App.NavigateTo<Samples.VisualTest.VirtualizationTest.View>();
 
         // open the second tab, scroll to end and ensure the chart is loaded.
-        await Task.Delay(1000);
         sut.OpenTab2();
-        await Task.Delay(1000);
         sut.ScrollToChart();
-        await Task.Delay(1000);
+        await Assert.WaitUntilChartRenders(sut.Chart2);
         Assert.ChartIsLoaded(sut.Chart2);
 
         // now open the first tab, scroll to end and ensure the chart is loaded.
-        await Task.Delay(1000);
         sut.OpenTab1();
-        await Task.Delay(1000);
         sut.ScrollToChart();
-        await Task.Delay(1000);
+        await Assert.WaitUntilChartRenders(sut.Chart1);
         Assert.ChartIsLoaded(sut.Chart1);
     }
 }
