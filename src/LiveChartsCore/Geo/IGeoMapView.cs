@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.Collections.Generic;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Painting;
 
@@ -32,6 +30,11 @@ namespace LiveChartsCore.Geo;
 /// </summary>
 public interface IGeoMapView : IDrawnView
 {
+    /// <summary>
+    /// Gets the core chart.
+    /// </summary>
+    GeoMapChart CoreChart { get; }
+
     /// <summary>
     /// Gets or sets the active map.
     /// </summary>
