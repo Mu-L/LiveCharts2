@@ -21,6 +21,8 @@
 // SOFTWARE.
 
 using Factos;
+using LiveChartsCore;
+using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
 using Xunit;
 
@@ -75,6 +77,21 @@ public static class UIHelpersExtensions
         }
     }
 
+    extension(IGeoMapView chartView)
+    {
+        public async Task WaitUntilChartRenders()
+        {
+            // force an update, then wait for the update to start in the ui thread
+            chartView.CoreChart.Update(new LiveChartsCore.Kernel.ChartUpdateParams
+            {
+                IsAutomaticUpdate = false,
+                Throttling = false
+            });
+
+            await Task.Delay(1000);
+        }
+    }
+
     extension(Assert)
     {
         public static void ChartIsLoaded(IChartView chartView)
@@ -97,6 +114,14 @@ public static class UIHelpersExtensions
                 Assert.True(v.X > 0);
                 Assert.True(v.Y > 0);
             });
+        }
+
+        public static void ChartIsLoaded(IGeoMapView chartView)
+        {
+            var strokeHasContent = chartView.Stroke != null && !chartView.Stroke.IsEmpty;
+            var fillHasContent = chartView.Fill != null && !chartView.Fill.IsEmpty;
+
+            Assert.True(strokeHasContent || fillHasContent);
         }
     }
 }
