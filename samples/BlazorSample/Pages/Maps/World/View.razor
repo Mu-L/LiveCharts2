@@ -5,11 +5,14 @@
 @using LiveChartsCore.SkiaSharpView.Drawing.Geometries
 
 <GeoMap
+    @ref="Chart"
     Series="@series"
     MapProjection="LiveChartsCore.Geo.MapProjection.Mercator">
 </GeoMap>
 
 @code {
+    public GeoMap Chart;
+
     private HeatLand[] lands = new HeatLand[]
     {
         new() { Name = "bra", Value = 13 },
