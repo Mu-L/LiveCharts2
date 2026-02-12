@@ -2,6 +2,17 @@
 
 This document helps coding agents work efficiently with the LiveCharts2 repository.
 
+## ⚠️ IMPORTANT: Branch Structure
+
+**The `dev` branch contains the most complete and up-to-date structure**, including:
+- UI Testing infrastructure (`tests/UITests` and `tests/SharedUITests`)
+- More complete test coverage (`tests/CoreTests` - renamed from `LiveChartsCore.UnitTesting`)
+- Latest features and improvements
+
+**The `master` branch** may be behind `dev` and missing some directories/features mentioned in this document.
+
+**When working on this repository**: Always check which branch you're on and prefer the `dev` branch for the most complete view of the codebase.
+
 ## Repository Overview
 
 LiveCharts2 is a flexible, cross-platform charting library for .NET. It follows a layered architecture where:
@@ -37,12 +48,20 @@ LiveCharts2/
 │   ├── VorticeSample/                     # DirectX sample (core without SkiaSharp)
 │   └── [other platforms]/
 ├── tests/
-│   └── LiveChartsCore.UnitTesting/        # Core unit tests using MSTest
-│       ├── ChartTests/                    # High-level chart tests
-│       ├── SeriesTests/                   # Series-specific tests
-│       ├── LayoutTests/                   # Layout tests
-│       ├── CoreObjectsTests/              # Core objects tests
-│       └── OtherTests/                    # Axes, events, etc.
+│   ├── CoreTests/                         # Core unit tests using MSTest (dev branch)
+│   │   ├── ChartTests/                    # High-level chart tests
+│   │   ├── SeriesTests/                   # Series-specific tests
+│   │   ├── LayoutTests/                   # Layout tests
+│   │   ├── CoreObjectsTests/              # Core objects tests
+│   │   └── OtherTests/                    # Axes, events, etc.
+│   ├── LiveChartsCore.UnitTesting/        # Core unit tests (master branch - older name)
+│   ├── UITests/                           # UI testing orchestrator (dev branch)
+│   │   └── Program.cs                     # Factos-based multi-platform test runner
+│   └── SharedUITests/                     # Shared UI tests (dev branch)
+│       ├── CartesianChartTests.cs
+│       ├── PieChartTests.cs
+│       ├── PolarChartTests.cs
+│       └── MapChartTests.cs
 ├── docs/                                  # Documentation
 ├── generators/                            # Code generators
 └── build/                                 # Build scripts
@@ -132,21 +151,26 @@ When building fails for specific targets, you can:
 
 ## Testing
 
-### Unit Tests
-Location: `tests/LiveChartsCore.UnitTesting/`
+### Unit Tests (Core Library)
+
+**Location (dev branch)**: `tests/CoreTests/`
+**Location (master branch)**: `tests/LiveChartsCore.UnitTesting/`
 
 **Framework**: MSTest with coverlet for code coverage
 
 **Run Tests:**
 ```bash
-# Run all tests
+# On dev branch
+dotnet test tests/CoreTests/
+
+# On master branch
 dotnet test tests/LiveChartsCore.UnitTesting/
 
 # Run for specific framework
-dotnet test tests/LiveChartsCore.UnitTesting/ --framework net8.0
+dotnet test tests/CoreTests/ --framework net8.0
 
 # Run with coverage
-dotnet test tests/LiveChartsCore.UnitTesting/ --collect:"XPlat Code Coverage"
+dotnet test tests/CoreTests/ --collect:"XPlat Code Coverage"
 ```
 
 **Test Structure:**
@@ -160,14 +184,48 @@ dotnet test tests/LiveChartsCore.UnitTesting/ --collect:"XPlat Code Coverage"
 
 **Important**: Tests use `CoreMotionCanvas.IsTesting = true` to disable animations during testing.
 
-### UI Testing
-**Note**: The problem statement mentions `tests/UITests` with multi-environment testing, but this directory was not found in the current repository structure. This may be:
-- Planned but not yet implemented
-- In a different branch
-- Performed through external CI/CD processes
-- Referenced in the original documentation but deprecated
+### UI Testing (dev branch only)
 
-When UI testing is needed, sample applications serve as integration tests across platforms.
+**Location**: `tests/UITests/` (orchestrator) and `tests/SharedUITests/` (shared tests)
+
+**Framework**: [Factos](https://github.com/beto-rodriguez/Factos) - A multi-platform UI testing framework
+
+**How it works:**
+1. Shared UI tests are defined in `tests/SharedUITests/` (shared project)
+2. Each sample application references `SharedUITests` 
+3. The `tests/UITests/Program.cs` orchestrator:
+   - Starts various sample applications (Avalonia, WPF, MAUI, Blazor, etc.)
+   - Connects to them via Factos
+   - Runs the shared UI tests against each platform
+4. Tests ensure charts render correctly across all supported UI frameworks
+
+**Test Coverage:**
+- `CartesianChartTests.cs`: Cartesian chart rendering and behavior
+- `PieChartTests.cs`: Pie/Doughnut chart tests
+- `PolarChartTests.cs`: Polar chart tests  
+- `MapChartTests.cs`: Map chart tests
+- `AvaloniaTests.cs`: Avalonia-specific tests
+
+**Running UI Tests:**
+```bash
+# Run UI tests (requires sample apps to be built)
+dotnet run --project tests/UITests/
+
+# Run against specific platform (see Program.cs for options)
+dotnet run --project tests/UITests/ -- --select wpf
+dotnet run --project tests/UITests/ -- --select avalonia-desktop
+dotnet run --project tests/UITests/ -- --select maui --test-env "tf=net10.0-windows10.0.19041.0"
+```
+
+**Important Notes:**
+- UI testing requires the Factos package
+- Each platform may need specific prerequisites (emulators for mobile, browsers for web)
+- In Debug mode, tests use project references; in Release mode, they use NuGet packages
+- The orchestrator supports testing against multiple target frameworks
+- Mobile platforms (Android, iOS) require running emulators
+
+**Build Configuration for UI Tests:**
+The `build/UITestsLinks.Build.props` file links SharedUITests to sample applications. When `UITesting=true` is set, samples include the shared UI test project.
 
 ## Running Samples
 
@@ -256,6 +314,20 @@ In `Directory.Build.props`:
 
 ## Common Development Workflows
 
+### Working with Branches
+```bash
+# Check current branch
+git branch
+
+# Switch to dev branch for latest features
+git checkout dev
+
+# Create feature branch from dev
+git checkout -b feature/my-feature dev
+```
+
+**Recommendation**: Start development from the `dev` branch to access the latest features and testing infrastructure.
+
 ### Adding a New Series Type
 1. Create series class in `src/LiveChartsCore/[SeriesType]/`
 2. Implement series interfaces (`ISeries`, etc.)
@@ -303,23 +375,218 @@ Documentation in `docs/` folder is auto-generated from:
 ## Quick Reference Commands
 
 ```bash
-# Build core library (requires workloads)
+# === Branch Management ===
+# Check current branch
+git branch
+
+# Switch to dev branch (recommended)
+git checkout dev
+
+# === Building ===
+# Build core library (requires workloads OR see workarounds above)
 dotnet build src/LiveChartsCore/LiveChartsCore.csproj
 
-# Build SkiaSharp core (requires workloads) 
+# Build SkiaSharp core (requires workloads OR see workarounds above)
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj
 
-# Run unit tests
-dotnet test tests/LiveChartsCore.UnitTesting/ --framework net8.0
-
-# Run WPF sample
-dotnet run --project samples/WPFSample/WPFSample.csproj
+# Build platform-specific projects (no workload required)
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia/LiveChartsCore.SkiaSharpView.Avalonia.csproj
 
 # Build all Windows platform views
 .\build\build-windows.ps1 -configuration Debug
 
+# === Install Workloads ===
+# Install Android workload
+dotnet workload install android --skip-sign-check
+
+# Install all mobile workloads
+dotnet workload install android ios maccatalyst maui --skip-sign-check
+
+# Check installed workloads
+dotnet workload list
+
+# === Testing ===
+# Run core unit tests (dev branch)
+dotnet test tests/CoreTests/ --framework net8.0
+
+# Run core unit tests (master branch)
+dotnet test tests/LiveChartsCore.UnitTesting/ --framework net8.0
+
+# Run UI tests (dev branch only)
+dotnet run --project tests/UITests/
+
+# Run UI tests for specific platform
+dotnet run --project tests/UITests/ -- --select wpf
+dotnet run --project tests/UITests/ -- --select avalonia-desktop
+
+# === Running Samples ===
+# Run WPF sample
+dotnet run --project samples/WPFSample/WPFSample.csproj
+
+# Run Avalonia sample
+dotnet run --project samples/AvaloniaSample/AvaloniaSample.csproj
+
+# Run Console sample (no UI)
+dotnet run --project samples/ConsoleSample/ConsoleSample.csproj
+
+# === Troubleshooting ===
+# Clean build artifacts
+dotnet clean
+find . -type d -name "bin" -o -name "obj" | xargs rm -rf
+
+# Restore packages
+dotnet restore
+
 # Check for workload issues
-dotnet workload restore
+dotnet workload restore --skip-sign-check
+```
+
+## Documented Errors and Workarounds
+
+This section documents actual errors encountered when working with this repository and their solutions.
+
+### Error 1: NETSDK1147 - Missing Workloads
+
+**Error Message:**
+```
+error NETSDK1147: To build this project, the following workloads must be installed: android
+To install these workloads, run the following command: dotnet workload restore
+```
+
+**Context**: This occurs when trying to build `LiveChartsCore` or `LiveChartsCore.SkiaSharp` projects because they multi-target mobile platforms (Android, iOS, macOS Catalyst).
+
+**Why it happens**: The core library supports multiple platforms including:
+- `net8.0-android`
+- `net8.0-ios`
+- `net8.0-maccatalyst`
+- `net8.0-windows10.0.19041.0`
+
+Even when building with `-f netstandard2.0`, MSBuild evaluates all target frameworks.
+
+**Workarounds:**
+
+**Option 1: Install Required Workloads** (Recommended for full development)
+```bash
+# Install Android workload
+dotnet workload install android --skip-sign-check
+
+# Install iOS workload (macOS only)
+dotnet workload install ios --skip-sign-check
+
+# Install macOS workload (macOS only)
+dotnet workload install maccatalyst --skip-sign-check
+
+# Or install all at once
+dotnet workload install android ios maccatalyst maui --skip-sign-check
+```
+
+**Note**: After running `dotnet workload restore`, you still need to explicitly install workloads with `dotnet workload install`.
+
+**Option 2: Build Platform-Specific Projects** (For focused development)
+```bash
+# Build only WPF (Windows only)
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
+
+# Build only Avalonia (cross-platform)
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia/LiveChartsCore.SkiaSharpView.Avalonia.csproj
+
+# Use platform-specific solution files
+dotnet build LiveCharts.WPF.slnx
+```
+
+**Option 3: Modify Target Frameworks Temporarily** (Not recommended for commits)
+Edit the `.csproj` file to remove platforms you don't need:
+```xml
+<!-- Before -->
+<TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net8.0-android;net8.0-ios;net8.0-maccatalyst;</TargetFrameworks>
+
+<!-- After (for desktop-only development) -->
+<TargetFrameworks>netstandard2.0;netstandard2.1;net8.0</TargetFrameworks>
+```
+
+### Error 2: Visual Studio Component Required
+
+**Error Message:**
+```
+Unhandled exception: The imported file "$(MSBuildExtensionsPath32)/Microsoft/VisualStudio/v$(VisualStudioVersion)/CodeSharing/Microsoft.CodeSharing.Common.Default.props" does not exist and appears to be part of a Visual Studio component.
+```
+
+**Context**: Appears when running `dotnet workload restore` on non-Windows systems or when Visual Studio is not installed.
+
+**Why it happens**: The `src/skiasharp/_Shared.WinUI/_Shared.WinUI.shproj` shared project requires Visual Studio components that are Windows-specific.
+
+**Workaround**: This error can be ignored if you're not building WinUI projects. The workload installation succeeds despite this error. If you need to build WinUI:
+- Use Windows with Visual Studio 2022 installed
+- Use `msbuild` instead of `dotnet build` for WinUI projects (see `build/build-windows.ps1`)
+
+### Error 3: Ambiguous Argument with Git
+
+**Error Message:**
+```
+fatal: ambiguous argument 'origin/dev': unknown revision or path not in the working tree.
+```
+
+**Context**: After fetching a branch with `git fetch origin dev`, trying to reference it as `origin/dev`.
+
+**Why it happens**: Git fetch stores the ref as `FETCH_HEAD`, not as a trackable remote branch.
+
+**Solution**: Use `FETCH_HEAD` or create a local tracking branch:
+```bash
+# Option 1: Use FETCH_HEAD directly
+git log FETCH_HEAD
+
+# Option 2: Create tracking branch
+git fetch origin dev
+git checkout -b dev --track origin/dev
+
+# Option 3: Fetch with branch creation
+git fetch origin dev:dev
+```
+
+### Error 4: Package Not Found During Build
+
+**Context**: Sample applications may fail to build if NuGet packages are not found.
+
+**Why it happens**: `UseNuGetForSamples` flag in `Directory.Build.props` controls whether samples use project references or NuGet packages.
+
+**Solution**: Ensure you're using project references during development:
+```xml
+<!-- In Directory.Build.props -->
+<UseNuGetForSamples>false</UseNuGetForSamples>
+```
+
+Or restore NuGet packages if building from packages:
+```bash
+dotnet restore
+```
+
+### Error 5: Strong Name Assembly Conflicts
+
+**Context**: When building for .NET Framework 4.6.2, you may encounter assembly version conflicts.
+
+**Why it happens**: .NET Framework uses strong-named assemblies, and SkiaSharp has different versioning.
+
+**Referenced Issue**: https://github.com/mono/SkiaSharp/issues/3153
+
+**Solution**: The project is configured to handle this, but if you encounter issues:
+1. Clean the solution: `dotnet clean`
+2. Delete `bin` and `obj` folders
+3. Restore and rebuild: `dotnet restore && dotnet build`
+
+### Error 6: Test Build Failures on CI
+
+**Context**: UI tests may fail with target framework mismatches in CI.
+
+**Solution**: The UI test infrastructure uses special MSBuild properties:
+- `TestBuildTargetFramework`: Override target framework for test builds
+- `IsTestBuild`: Flag to indicate test build
+- `UITesting`: Flag to include shared UI tests
+
+Example from `tests/UITests/Program.cs`:
+```csharp
+MSBuildArg tf_n10w = new("TestBuildTargetFramework", "net10.0-windows");
+MSBuildArg isTest = new("IsTestBuild", "true");
 ```
 
 ## Troubleshooting
