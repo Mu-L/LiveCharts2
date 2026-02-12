@@ -1,4 +1,5 @@
 ﻿using Factos;
+using LiveChartsCore;
 using SharedUITests.Helpers;
 using Xunit;
 
@@ -17,7 +18,23 @@ public class PieChartTests
         var sut = await App.NavigateTo<Samples.Pies.Basic.View>();
         await sut.Chart.WaitUntilChartRenders();
 
+        Assert.DoesNotContain(sut.Chart.CoreCanvas.RendererName, "GPU");
         Assert.ChartIsLoaded(sut.Chart);
+    }
+
+    [AppTestMethod]
+    public async Task ShouldLoadHardwareAcceleratedView()
+    {
+        LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = true));
+
+        var sut = await App.NavigateTo<Samples.Pies.Basic.View>();
+        await sut.Chart.WaitUntilChartRenders();
+
+        Assert.Contains(sut.Chart.CoreCanvas.RendererName, "GPU");
+        Assert.ChartIsLoaded(sut.Chart);
+
+        // restore default settings for other tests
+        LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = false));
     }
 
 #if !BLAZOR_UI_TESTING
