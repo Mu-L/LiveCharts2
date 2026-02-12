@@ -102,7 +102,7 @@ public class CartesianChartTests
     }
 #endif
 
-#if (WPF_UI_TESTING && NET6_0_OR_GREATER) || MAUI_UI_TESTING || WINUI_UI_TESTING || (UNO_UI_TESTING && HAS_OS_LVC)
+#if (WPF_UI_TESTING && TEST_HA_VIEWS) || MAUI_UI_TESTING || WINUI_UI_TESTING || (UNO_UI_TESTING && HAS_OS_LVC)
     // native platforms where gpu is supported
 
     [AppTestMethod]
