@@ -75,9 +75,10 @@ LiveCharts2/
 │   ├── cartesianChart/                    # Cartesian chart docs
 │   ├── piechart/                          # Pie chart docs
 │   └── polarchart/                        # Polar chart docs
-├── generators/                            # Code generators
-└── build/                                 # Build scripts
+└── generators/                            # Code generators
 ```
+
+**Note**: The `build/` folder is obsolete and will be removed soon.
 
 ## Key Architecture Concepts
 
@@ -137,9 +138,13 @@ dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia/LiveChartsCore.Skia
 
 #### Full Build (Windows)
 ```bash
-# Uses build/build-windows.ps1
-.\build\build-windows.ps1 -configuration Debug
+# Build platform-specific projects individually
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WinForms/LiveChartsCore.SkiaSharpView.WinForms.csproj
+# Or use platform-specific solution files (see below)
 ```
+
+**Note**: The `build/build-windows.ps1` script is obsolete and will be removed soon.
 
 #### Build with Solution Files
 ```bash
@@ -255,7 +260,9 @@ dotnet run --project tests/UITests/ -- --select maui --test-env "tf=net10.0-wind
 - Mobile platforms (Android, iOS) require running emulators
 
 **Build Configuration for UI Tests:**
-The `build/UITestsLinks.Build.props` file links SharedUITests to sample applications. When `UITesting=true` is set, samples include the shared UI test project.
+UI test configuration is managed through MSBuild properties. When `UITesting=true` is set, samples include the shared UI test project.
+
+**Note**: The `build/UITestsLinks.Build.props` file is obsolete and will be removed soon.
 
 ## Running Samples
 
@@ -312,13 +319,15 @@ Defined in `Directory.Build.props`:
 ## Build Configuration Properties
 
 ### Rendering Settings
-Configurable in `build/RenderSettings.Build.props`:
+Rendering settings are configured via MSBuild properties:
 - `GPU`: Enable/disable GPU acceleration
 - `VSYNC`: Enable/disable vertical sync
 - `FPS`: Frame rate (10, 20, 30, 45, 60, 75, 90, 120)
 - `Diagnose`: Enable diagnostic mode
 
 These create conditional compilation symbols for testing different rendering modes.
+
+**Note**: The `build/RenderSettings.Build.props` file is obsolete and will be removed soon.
 
 ### Development Flags
 In `Directory.Build.props`:
@@ -337,7 +346,6 @@ In `Directory.Build.props`:
 #### 2. Compile All Views (`compile-all-views.yml`)
 - Runs on: `windows-2022`
 - Installs MAUI workload
-- Executes: `./build/build-windows.ps1 -configuration "Debug"`
 - Tests compilation of all platform views
 
 **Note**: Both workflows require Windows runners due to platform-specific dependencies (WPF, WinUI, etc.)
@@ -475,9 +483,6 @@ dotnet build src/LiveChartsCore/LiveChartsCore.csproj -f net8.0
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia/LiveChartsCore.SkiaSharpView.Avalonia.csproj
 
-# Build all Windows platform views
-.\build\build-windows.ps1 -configuration Debug
-
 # === Install Workloads (master branch only) ===
 # Install Android workload
 dotnet workload install android --skip-sign-check
@@ -610,7 +615,7 @@ Unhandled exception: The imported file "$(MSBuildExtensionsPath32)/Microsoft/Vis
 
 **Workaround**: This error can be ignored if you're not building WinUI projects. The workload installation succeeds despite this error. If you need to build WinUI:
 - Use Windows with Visual Studio 2022 installed
-- Use `msbuild` instead of `dotnet build` for WinUI projects (see `build/build-windows.ps1`)
+- Use `msbuild` instead of `dotnet build` for WinUI projects
 
 ### Error 3: Ambiguous Argument with Git
 
