@@ -52,9 +52,14 @@ public class MotionCanvas : Canvas
 
                     return new MotionCanvasComposer(renderMode, ticker);
 #else
-                    IRenderMode renderMode = settings.UseGPU
-                        ? throw new System.Exception("LiveCharts does not support hardware acceleration in WPF .Net Framework.")
-                        : new CPURenderMode();
+                    if (settings.UseGPU)
+                    {
+                        System.Diagnostics.Trace.WriteLine(
+                            "LiveCharts does not support hardware acceleration in WPF .Net Framework. " +
+                            "Falling back to CPU rendering. To use GPU rendering, please migrate your project to .Net 6 or later.");
+                    }
+
+                    IRenderMode renderMode = new CPURenderMode();
 
                     IFrameTicker ticker = settings.TryUseVSync
                         ? new CompositionTargetTicker()
