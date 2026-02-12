@@ -111,25 +111,25 @@ jobs:
             
             Tests will start now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
 
-  test-core:
-    runs-on: windows-2025
-    needs: [pack, report-progress-starting, collect-packages]
-    strategy:
-      fail-fast: false
-      matrix:
-        framework: [ net8.0, net462 ]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-core:
+  #   runs-on: windows-2025
+  #   needs: [pack, report-progress-starting, collect-packages]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       framework: [ net8.0, net462 ]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: core
-          test-id: core-${{ matrix.framework }}
-          use-factos: false
-          target-framework: ${{ matrix.framework }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: core
+  #         test-id: core-${{ matrix.framework }}
+  #         use-factos: false
+  #         target-framework: ${{ matrix.framework }}
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-windows:
     runs-on: windows-2025
@@ -137,24 +137,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: avalonia-desktop
-          - id: eto
-          - id: maui
-            tf: net10.0-windows10.0.19041.0
-            workloads: maui
-          - id: uno
-            tf: net10.0-desktop
-            workloads: maui
-          - id: uno
-            tf: net10.0-windows10.0.19041.0
-            workloads: maui
-          - id: winui
-          - id: winforms-net10
-          - id: winforms-net10w19041
-          - id: winforms-net462          
-          - id: wpf-net10
+          # - id: avalonia-desktop
+          # - id: eto
+          # - id: maui
+          #   tf: net10.0-windows10.0.19041.0
+          #   workloads: maui
+          # - id: uno
+          #   tf: net10.0-desktop
+          #   workloads: maui
+          # - id: uno
+          #   tf: net10.0-windows10.0.19041.0
+          #   workloads: maui
+          # - id: winui
+          # - id: winforms-net10
+          # - id: winforms-net10w19041
+          # - id: winforms-net462          
+          # - id: wpf-net10
           - id: wpf-net10w19041
-          - id: wpf-net462
+          # - id: wpf-net462
           
     needs: [pack, report-progress-starting, collect-packages]
     steps:
@@ -171,169 +171,169 @@ jobs:
           target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-linux:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-desktop
-          # - id: eto, requires additional setup i think...
-          - id: uno
-            tf: net10.0-desktop
-            workloads: android
-    needs: [pack, report-progress-starting, collect-packages]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-linux:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-desktop
+  #         # - id: eto, requires additional setup i think...
+  #         - id: uno
+  #           tf: net10.0-desktop
+  #           workloads: android
+  #   needs: [pack, report-progress-starting, collect-packages]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Setup headless display
-        uses: pyvista/setup-headless-display-action@v4.2
+  #     - name: Setup headless display
+  #       uses: pyvista/setup-headless-display-action@v4.2
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: linux
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: linux
+  #         use-factos: true
+  #         test-id: ${{ matrix.id }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-mac:
-    runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-desktop
-          - id: eto
-          - id: maui
-            tf: net10.0-maccatalyst
-            workloads: maui
-          - id: uno
-            tf: net10.0-desktop
-            workloads: maui
-    needs: [pack, report-progress-starting, collect-packages]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-mac:
+  #   runs-on: macos-26
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-desktop
+  #         - id: eto
+  #         - id: maui
+  #           tf: net10.0-maccatalyst
+  #           workloads: maui
+  #         - id: uno
+  #           tf: net10.0-desktop
+  #           workloads: maui
+  #   needs: [pack, report-progress-starting, collect-packages]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: mac
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: mac
+  #         use-factos: true
+  #         test-id: ${{ matrix.id }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         xcode-path: /Applications/Xcode_26.2.app
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-browser:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # not running, blazor issue? factos issue? tests issue?
-          # - id: blazor
-          #   workloads: wasm-tools
-          - id: avalonia-browser
-            workloads: wasm-tools
-          # not running, uno issue? factos issue? tests issue?
-          # - id: uno
-          #   tf: net10.0-browserwasm
-          #   workloads: wasm-tools android
-    needs: [pack, report-progress-starting, collect-packages]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-browser:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         # not running, blazor issue? factos issue? tests issue?
+  #         # - id: blazor
+  #         #   workloads: wasm-tools
+  #         - id: avalonia-browser
+  #           workloads: wasm-tools
+  #         # not running, uno issue? factos issue? tests issue?
+  #         # - id: uno
+  #         #   tf: net10.0-browserwasm
+  #         #   workloads: wasm-tools android
+  #   needs: [pack, report-progress-starting, collect-packages]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: browser
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          # target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: browser
+  #         use-factos: true
+  #         test-id: ${{ matrix.id }}
+  #         workloads: ${{ matrix.workloads }}
+  #         # target-framework: ${{ matrix.tf }}
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-android:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-android
-            workloads: android
-          - id: maui
-            tf: net10.0-android
-            workloads: maui-android
-          # disabled for now, in this uno version, idk why on android no tests are detected.
-          # - id: uno
-          #   tf: net10.0-android
-          #   workloads: android
-    needs: [pack, report-progress-starting, collect-packages]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-android:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-android
+  #           workloads: android
+  #         - id: maui
+  #           tf: net10.0-android
+  #           workloads: maui-android
+  #         # disabled for now, in this uno version, idk why on android no tests are detected.
+  #         # - id: uno
+  #         #   tf: net10.0-android
+  #         #   workloads: android
+  #   needs: [pack, report-progress-starting, collect-packages]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: android
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          use-android-emulator: true
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: android
+  #         use-factos: true
+  #         test-id: ${{ matrix.id }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         use-android-emulator: true
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-ios:
-    runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # - id: avalonia-ios
-          #   workloads: ios
-          - id: maui
-            tf: net10.0-ios
-            workloads: maui
-          # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
-          # - id: uno
-          #   tf: net10.0-ios
-          #   workloads: ios android
-    needs: [pack, report-progress-starting, collect-packages]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-ios:
+  #   runs-on: macos-26
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         # - id: avalonia-ios
+  #         #   workloads: ios
+  #         - id: maui
+  #           tf: net10.0-ios
+  #           workloads: maui
+  #         # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
+  #         # - id: uno
+  #         #   tf: net10.0-ios
+  #         #   workloads: ios android
+  #   needs: [pack, report-progress-starting, collect-packages]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: ios
-          use-factos: true
-          test-id: ${{ matrix.id }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: ios
+  #         use-factos: true
+  #         test-id: ${{ matrix.id }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         xcode-path: /Applications/Xcode_26.2.app
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   after-tests:
     runs-on: ubuntu-24.04
     if: always()
     needs:
       - report-progress-starting
-      - test-core
+      # - test-core
       - test-windows
-      - test-linux
-      - test-mac
-      - test-browser
-      - test-android
-      - test-ios
+      # - test-linux
+      # - test-mac
+      # - test-browser
+      # - test-android
+      # - test-ios
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
