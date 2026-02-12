@@ -62,7 +62,12 @@ LiveCharts2/
 │       ├── PieChartTests.cs
 │       ├── PolarChartTests.cs
 │       └── MapChartTests.cs
-├── docs/                                  # Documentation
+├── docs/                                  # Documentation (Scriban templates)
+│   ├── samples/                           # Sample documentation templates
+│   ├── shared/                            # Reusable template fragments
+│   ├── cartesianChart/                    # Cartesian chart docs
+│   ├── piechart/                          # Pie chart docs
+│   └── polarchart/                        # Polar chart docs
 ├── generators/                            # Code generators
 └── build/                                 # Build scripts
 ```
@@ -345,9 +350,59 @@ git checkout -b feature/my-feature dev
 6. Add platform-specific solution file
 
 ### Updating Documentation
-Documentation in `docs/` folder is auto-generated from:
-- XML comments in code
-- Template files in `docs/samples/[category]/[name]/template.md`
+
+**Important**: Documentation files in the `docs/` folder are **Scriban templates**, not final markdown files.
+
+**How it works:**
+1. Template files are compiled by an external (non-open-source) repository
+2. Templates use [Scriban](https://github.com/scriban/scriban) - a fast, powerful, and lightweight text templating language
+3. Scriban supports custom functions and expressions embedded in the markdown
+
+**Common Scriban expressions you'll find:**
+
+**File inclusion** - Renders content from source files:
+```
+{{~ render "~/../samples/ViewModelsSamples/Events/Cartesian/ViewModel.cs" ~}}
+{{~ render "~/../samples/MauiSample/MauiProgram.cs" ~}}
+{{~ render "~/../samples/{samples_folder}/Events/Cartesian{view_extension}" ~}}
+```
+
+**Conditionals** - Platform-specific content:
+```
+{{~ if xaml ~}}
+  Content for XAML platforms (WPF, Avalonia, UNO, WinUI, MAUI)
+{{~ end ~}}
+
+{{~ if winforms ~}}
+  Content specific to WinForms
+{{~ end ~}}
+```
+
+**Variables** - Dynamic content:
+```
+{{ website_url }}/docs/{{ platform }}/{{ version }}/About
+{{ assets_url }}/docs/{{ unique_name }}/result.gif
+{{ name | to_title_case }}
+{{ edit_source | replace_local_to_server }}
+```
+
+**Loops** - Iterate over collections:
+```
+{{~ for r in related_to ~}}
+  <a href="{{ compile this r.url }}">{{ r.name }}</a>
+{{~ end ~}}
+```
+
+**Template structure:**
+- `docs/samples/[category]/[name]/template.md` - Sample documentation templates
+- `docs/shared/*.md` - Reusable template fragments included via `{{ render "~/shared/..." }}`
+- `docs/piechart/`, `docs/cartesianChart/`, etc. - Feature documentation with templates
+
+**When editing docs:**
+- Always edit the `.md` files as Scriban templates
+- Test template syntax (though final compilation happens externally)
+- Use `{{~ ~}}` syntax to strip whitespace around expressions
+- File paths in `render` are relative to the template location (use `~/../` for repo root)
 
 ## Important Notes for Coding Agents
 
