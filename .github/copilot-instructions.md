@@ -8,8 +8,15 @@ This document helps coding agents work efficiently with the LiveCharts2 reposito
 - UI Testing infrastructure (`tests/UITests` and `tests/SharedUITests`)
 - More complete test coverage (`tests/CoreTests` - renamed from `LiveChartsCore.UnitTesting`)
 - Latest features and improvements
+- **Simplified target frameworks** - Core and SkiaSharp projects do NOT require mobile workloads
 
-**The `master` branch** may be behind `dev` and missing some directories/features mentioned in this document.
+**The `master` branch** may be behind `dev` and missing some directories/features mentioned in this document. Additionally:
+- Core and SkiaSharp projects include mobile platform targets (Android, iOS, MacCatalyst)
+- These mobile targets require workloads to be installed
+
+**Critical Build Difference**:
+- **Dev branch**: `LiveChartsCore` and `LiveChartsCore.SkiaSharp` target only `net462`, `netstandard2.0`, `net8.0`, `net8.0-windows` - NO workloads required
+- **Master branch**: Same projects include `net8.0-android`, `net8.0-ios`, `net8.0-maccatalyst` - workloads ARE required
 
 **When working on this repository**: Always check which branch you're on and prefer the `dev` branch for the most complete view of the codebase.
 
@@ -80,11 +87,16 @@ LiveCharts2/
 - **Platform Views**: WPF/Avalonia/MAUI/etc. specific controls that host the renderer
 
 ### 2. Multi-Platform Targeting
-Projects target multiple frameworks including:
-- `netstandard2.0`, `netstandard2.1`
-- `net462`, `net6.0`, `net8.0`
+
+**Dev branch** - Core projects (`LiveChartsCore`, `LiveChartsCore.SkiaSharp`) target:
+- `net462`, `netstandard2.0`, `net8.0`, `net8.0-windows`
+- **No mobile workloads required**
+
+**Master branch** - Core projects include additional mobile targets:
 - `net8.0-android`, `net8.0-ios`, `net8.0-maccatalyst`
-- `net8.0-windows10.0.19041.0`
+- **Requires Android/iOS/MacCatalyst workloads**
+
+**Platform-specific view projects** (WPF, Avalonia, MAUI, etc.) have their own target framework requirements based on the platform.
 
 ### 3. Sample Structure
 - **ViewModelsSamples**: Contains shared ViewModels used across all UI frameworks
@@ -98,7 +110,8 @@ A special sample demonstrating how to use LiveChartsCore without SkiaSharp, usin
 
 ### Prerequisites
 - .NET SDK 9.0.101 or later (see `global.json`)
-- Required workloads for multi-platform builds:
+- **Dev branch**: No workloads required for core projects
+- **Master branch or platform-specific projects**: Required workloads for multi-platform builds:
   ```bash
   dotnet workload install android
   dotnet workload install ios
@@ -108,7 +121,14 @@ A special sample demonstrating how to use LiveChartsCore without SkiaSharp, usin
 
 ### Build Methods
 
-#### Quick Build (Specific Projects)
+#### Quick Build - Core Projects (Dev Branch)
+```bash
+# Dev branch - no workloads needed!
+dotnet build src/LiveChartsCore/LiveChartsCore.csproj
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj
+```
+
+#### Quick Build - Platform Views
 ```bash
 # Build specific platform views (recommended for development)
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
@@ -136,11 +156,16 @@ dotnet build LiveCharts.Maui.slnx
 error NETSDK1147: To build this project, the following workloads must be installed: android
 ```
 
+**Context**: This error occurs in the **master branch** when building `LiveChartsCore` or `LiveChartsCore.SkiaSharp` because they multi-target mobile platforms.
+
+**In dev branch**: Core and SkiaSharp projects do NOT require workloads - they only target desktop/standard frameworks.
+
 **Workaround Options:**
-1. Install the required workload: `dotnet workload install android`
-2. Build only the platform you need (e.g., WPF on Windows)
-3. Use platform-specific solution files that don't include all targets
-4. Temporarily remove platform targets from .csproj if only working on desktop platforms
+1. **Switch to dev branch** (recommended if you don't need mobile targets)
+2. Install the required workload: `dotnet workload install android`
+3. Build only the platform you need (e.g., WPF on Windows)
+4. Use platform-specific solution files that don't include all targets
+5. Temporarily remove platform targets from .csproj if only working on desktop platforms
 
 #### Issue: SkiaSharp version conflicts
 The project supports multiple SkiaSharp versions:
@@ -438,11 +463,13 @@ git branch
 git checkout dev
 
 # === Building ===
-# Build core library (requires workloads OR see workarounds above)
+# Build core library (dev branch - NO workloads needed!)
 dotnet build src/LiveChartsCore/LiveChartsCore.csproj
-
-# Build SkiaSharp core (requires workloads OR see workarounds above)
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj
+
+# Build core library (master branch - requires workloads OR see workarounds)
+# Use -f to target specific framework if workloads not installed
+dotnet build src/LiveChartsCore/LiveChartsCore.csproj -f net8.0
 
 # Build platform-specific projects (no workload required)
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
@@ -451,7 +478,7 @@ dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia/LiveChartsCore.Skia
 # Build all Windows platform views
 .\build\build-windows.ps1 -configuration Debug
 
-# === Install Workloads ===
+# === Install Workloads (master branch only) ===
 # Install Android workload
 dotnet workload install android --skip-sign-check
 
@@ -509,9 +536,11 @@ error NETSDK1147: To build this project, the following workloads must be install
 To install these workloads, run the following command: dotnet workload restore
 ```
 
-**Context**: This occurs when trying to build `LiveChartsCore` or `LiveChartsCore.SkiaSharp` projects because they multi-target mobile platforms (Android, iOS, macOS Catalyst).
+**Context**: This occurs in the **master branch** when trying to build `LiveChartsCore` or `LiveChartsCore.SkiaSharp` projects because they multi-target mobile platforms (Android, iOS, macOS Catalyst).
 
-**Why it happens**: The core library supports multiple platforms including:
+**IMPORTANT**: This error does NOT occur in the **dev branch** where core projects only target desktop/standard frameworks.
+
+**Why it happens (master branch only)**: The core library includes mobile platform targets:
 - `net8.0-android`
 - `net8.0-ios`
 - `net8.0-maccatalyst`
@@ -521,7 +550,15 @@ Even when building with `-f netstandard2.0`, MSBuild evaluates all target framew
 
 **Workarounds:**
 
-**Option 1: Install Required Workloads** (Recommended for full development)
+**Option 0: Switch to Dev Branch** (Recommended - no workloads needed!)
+```bash
+git checkout dev
+# Core projects build without any workloads
+dotnet build src/LiveChartsCore/LiveChartsCore.csproj
+dotnet build src/skiasharp/LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj
+```
+
+**Option 1: Install Required Workloads** (For master branch development)
 ```bash
 # Install Android workload
 dotnet workload install android --skip-sign-check
@@ -646,8 +683,10 @@ MSBuildArg isTest = new("IsTestBuild", "true");
 
 ## Troubleshooting
 
-### Problem: Can't build any projects
-**Solution**: Install required workloads or build platform-specific projects only
+### Problem: Can't build core projects - workload errors
+**Solution**: 
+- **Dev branch**: No workloads needed - projects should build directly
+- **Master branch**: Install required workloads OR switch to dev branch OR build platform-specific projects only
 
 ### Problem: SkiaSharp errors
 **Solution**: Check SkiaSharp version in `Directory.Build.props`, ensure NuGet restore succeeded
