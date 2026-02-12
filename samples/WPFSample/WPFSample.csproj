@@ -3,9 +3,8 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
 
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <!--<TargetFramework Condition="$(IsTestBuild) == ''">net10.0-windows10.0.19041.0</TargetFramework>
-    <TargetFramework Condition="$(IsTestBuild) == 'true'">$(TestBuildTargetFramework)</TargetFramework>-->
+    <TargetFramework Condition="$(IsTestBuild) == ''">net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework Condition="$(IsTestBuild) == 'true'">$(TestBuildTargetFramework)</TargetFramework>
 
     <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
