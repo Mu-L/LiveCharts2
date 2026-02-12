@@ -1,5 +1,4 @@
 ﻿using Factos;
-using LiveChartsCore;
 using SharedUITests.Helpers;
 using Xunit;
 
@@ -18,23 +17,7 @@ public class PieChartTests
         var sut = await App.NavigateTo<Samples.Pies.Basic.View>();
         await sut.Chart.WaitUntilChartRenders();
 
-        Assert.DoesNotContain(sut.Chart.CoreCanvas.RendererName, "GPU");
         Assert.ChartIsLoaded(sut.Chart);
-    }
-
-    [AppTestMethod]
-    public async Task ShouldLoadHardwareAcceleratedView()
-    {
-        LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = true));
-
-        var sut = await App.NavigateTo<Samples.Pies.Basic.View>();
-        await sut.Chart.WaitUntilChartRenders();
-
-        Assert.Contains(sut.Chart.CoreCanvas.RendererName, "GPU");
-        Assert.ChartIsLoaded(sut.Chart);
-
-        // restore default settings for other tests
-        LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = false));
     }
 
 #if !BLAZOR_UI_TESTING
@@ -70,6 +53,25 @@ public class PieChartTests
 
         Assert.ChartIsLoaded(sut.Chart);
 #endif
+    }
+#endif
+
+#if WPF_UI_TESTING || MAUI_UI_TESTING || WINUI_UI_TESTING || (UNO_UI_TESTING && HAS_OS_LVC)
+    // native platforms where gpu is supported
+
+    [AppTestMethod]
+    public async Task ShouldLoadHardwareAcceleratedView()
+    {
+        LiveChartsCore.LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = true));
+
+        var sut = await App.NavigateTo<Samples.Pies.Basic.View>();
+        await sut.Chart.WaitUntilChartRenders();
+
+        Assert.Contains("GPU", sut.Chart.CoreCanvas.RendererName);
+        Assert.ChartIsLoaded(sut.Chart);
+
+        // restore default settings for other tests
+        LiveChartsCore.LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = false));
     }
 #endif
 }
