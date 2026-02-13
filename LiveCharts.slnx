@@ -158,6 +158,10 @@
       <BuildType Solution="AppStore|*" Project="Release" />
     </Project>
     <Project Path="tests/SharedUITests/SharedUITests.shproj" Id="730ba90c-a574-4b17-9eeb-c28a4d782449" />
+    <Project Path="tests/SnapshotTests/SnapshotTests.csproj" Id="12006a54-fa9e-4c2c-8e52-a53eb02cb45b">
+      <BuildType Solution="Ad-Hoc|*" Project="Release" />
+      <BuildType Solution="AppStore|*" Project="Release" />
+    </Project>
     <Project Path="tests/UITests/UITests.csproj" Id="78f0491c-c08c-406c-ae95-7af7ccdcfdca">
       <BuildType Solution="Ad-Hoc|*" Project="Release" />
       <BuildType Solution="AppStore|*" Project="Release" />
