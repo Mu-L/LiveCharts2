@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <NoWarn>$(NoWarn);MSTEST0037;MSTEST0023;CS0618</NoWarn>
+    <NoWarn>$(NoWarnUITests);MSTEST0037;MSTEST0023;CS0618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
