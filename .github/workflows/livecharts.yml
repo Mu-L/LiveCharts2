@@ -367,7 +367,7 @@ jobs:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
           
-            core #${{ needs.test-core.result }}, windows #${{ needs.test-windows.result }}, linux #${{ needs.test-linux.result }}, mac #${{ needs.test-mac.result }}, browser #${{ needs.test-browser.result }}, android #${{ needs.test-android.result }}, ios #${{ needs.test-ios.result }}
+            Core #${{ needs.test-core.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
             ### Test Results Summary (Failure) ❌ (4 / 4)
             
