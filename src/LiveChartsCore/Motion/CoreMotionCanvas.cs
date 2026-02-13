@@ -121,6 +121,11 @@ public class CoreMotionCanvas : IDisposable
     public object Sync { get; internal set => field = value ?? new object(); } = new();
 
     /// <summary>
+    /// Gets the name of the renderer associated with the current canvas instance.
+    /// </summary>
+    public string RendererName => s_rendererName ?? "unknown renderer";
+
+    /// <summary>
     /// Draws the frame.
     /// </summary>
     /// <param name="context">The context.</param>

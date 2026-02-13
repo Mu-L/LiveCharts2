@@ -32,6 +32,7 @@
 
     <!-- turn UITesting to true to include UI tests in the sample projects -->
     <UITesting>false</UITesting>
+    <NoWarnUITests>$(NoWarn);NETSDK1198;NU1701;XC0022;XA0141;XAAADB0000;CS0067;CS0414;CS0108;CS0618;CS4014;CS8600;CS8601;CS8602;CS8603;CS8612;CS8618;CS8622;CS8625;CS8629;CS9264;</NoWarnUITests>
     <!-- Factos version https://github.com/beto-rodriguez/Factos -->
     <FactosVersion>0.8.0</FactosVersion>
 
@@ -42,14 +43,14 @@
   </PropertyGroup>
 
   <!--
-  used to test the library on multiple render modes,
+  used to test the library on multiple render modes, this config overrides the the settings defined by the user.
   the IsPacking check ensures that this config is not used in the NuGet packages.
   -->
   <PropertyGroup Condition="'$(IsPacking)' != 'true'">
-    <GPU>false</GPU>
-    <VSYNC>true</VSYNC>
-    <FPS>30</FPS>
-    <Diagnose>false</Diagnose>
+    <GPU>default</GPU>            <!-- false, true, default (ignore ms build symbols) -->
+    <VSYNC>default</VSYNC>        <!-- false, true, default (ignore ms build symbols) -->
+    <FPS>30</FPS>                 <!-- see RenderSettings.Build, but this is normally not used. -->
+    <Diagnose>false</Diagnose>    <!-- false, true -->
   </PropertyGroup>
 
   <PropertyGroup Condition="

@@ -21,6 +21,8 @@ public class CartesianChartTests
     }
 
 #if XAML_UI_TESTING
+    // xaml platforms tests.
+
     [AppTestMethod]
     public async Task ShouldLoadTemplatedChart()
     {
@@ -71,6 +73,51 @@ public class CartesianChartTests
 
         Assert.ChartIsLoaded(sut.Chart);
 #endif
+    }
+#endif
+
+#if AVALONIA_UI_TESTING
+    // based on:
+    // https://github.com/Live-Charts/LiveCharts2/issues/1986
+    // ensure charts load when avalonia virtualization is on.
+
+    [AppTestMethod]
+    public async Task TabControlScrollViewerRendersAfterTabSwitch()
+    {
+        var sut = await App.NavigateTo<Samples.VisualTest.VirtualizationTest.View>();
+
+        // open the second tab, scroll to end and ensure the chart is loaded.
+        sut.OpenTab2();
+        await Task.Delay(1000);
+        sut.ScrollToChart();
+        await Task.Delay(1000);
+        Assert.ChartIsLoaded(sut.Chart2);
+
+        // now open the first tab, scroll to end and ensure the chart is loaded.
+        sut.OpenTab1();
+        await Task.Delay(1000);
+        sut.ScrollToChart();
+        await Task.Delay(1000);
+        Assert.ChartIsLoaded(sut.Chart1);
+    }
+#endif
+
+#if (WPF_UI_TESTING && TEST_HA_VIEWS) || MAUI_UI_TESTING || WINUI_UI_TESTING || (UNO_UI_TESTING && HAS_OS_LVC)
+    // native platforms where gpu is supported
+
+    [AppTestMethod]
+    public async Task ShouldLoadHardwareAcceleratedView()
+    {
+        LiveChartsCore.LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = true));
+
+        var sut = await App.NavigateTo<Samples.General.FirstChart.View>();
+        await sut.Chart.WaitUntilChartRenders();
+
+        Assert.Contains("GPU", sut.Chart.CoreCanvas.RendererName);
+        Assert.ChartIsLoaded(sut.Chart);
+
+        // restore default settings for other tests
+        LiveChartsCore.LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = false));
     }
 #endif
 }

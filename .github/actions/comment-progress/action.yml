@@ -42,9 +42,9 @@ runs:
           });
 
           content = content
-            .replace(new RegExp('#success', 'g'), '✅ passed')
-            .replace(new RegExp('#failure', 'g'), '❌ failed')
-            .replace(new RegExp('#cancelled', 'g'), '⚠️ cancelled');
+            .replace(new RegExp('#success', 'g'), '✅')
+            .replace(new RegExp('#failure', 'g'), '❌')
+            .replace(new RegExp('#cancelled', 'g'), '⚠️');
           
           let body = comment.data.body;
 

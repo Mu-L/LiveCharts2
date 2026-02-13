@@ -19,7 +19,7 @@ jobs:
         id: create-comment
         with:
           content: | 
-            Thanks for your contribution!
+            ### Thanks for your contribution! 🤗 (1 / 4)
 
             The build and test process is starting. This may take a while.
             You can find more details below as the process continues or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
@@ -100,16 +100,14 @@ jobs:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
             
-            ---
-            
-            All packages have been packed successfully! 📦✅
-            You can download the NuGet packages for this build [here](${{ steps.merge.outputs.artifact-url }}).
+            ### Packing complete! 📦 (2 / 4)
 
+            You can download the NuGet packages for this build [here](${{ steps.merge.outputs.artifact-url }}).
             The packages will be available for 30 days, you can either [use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet), or wait for this PR to be merged to have them published to NuGet.org.
 
-            ---
+            ### Running tests 🧪 (3 / 4)
             
-            Tests will start now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
+            Tests are running now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
 
   test-core:
     runs-on: windows-2025
@@ -236,12 +234,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # not running, blazor issue? factos issue? tests issue?
+          # ToDo: find why not running.
           # - id: blazor
           #   workloads: wasm-tools
           - id: avalonia-browser
             workloads: wasm-tools
-          # not running, uno issue? factos issue? tests issue?
+          # ToDo: find why not running.
           # - id: uno
           #   tf: net10.0-browserwasm
           #   workloads: wasm-tools android
@@ -257,7 +255,7 @@ jobs:
           use-factos: true
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
-          # target-framework: ${{ matrix.tf }}
+          target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-android:
@@ -271,7 +269,7 @@ jobs:
           - id: maui
             tf: net10.0-android
             workloads: maui-android
-          # disabled for now, in this uno version, idk why on android no tests are detected.
+          # ToDo: find why not running.
           # - id: uno
           #   tf: net10.0-android
           #   workloads: android
@@ -297,8 +295,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - id: avalonia-ios
-          #   workloads: ios
+          - id: avalonia-ios
+            workloads: ios
           - id: maui
             tf: net10.0-ios
             workloads: maui
@@ -358,11 +356,9 @@ jobs:
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
-            ### Test Results Summary (Passed) ✅ :partying_face:
+            core #${{ needs.test-core.result }}, windows #${{ needs.test-windows.result }}, linux #${{ needs.test-linux.result }}, mac #${{ needs.test-mac.result }}, browser #${{ needs.test-browser.result }}, android #${{ needs.test-android.result }}, ios #${{ needs.test-ios.result }}
 
-            ${{ steps.report.outputs.skipped }} skipped.
-            ${{ steps.report.outputs.failed }} failed.
-            ${{ steps.report.outputs.passed }} passed! ✅
+            ### Test Results Summary (Passed) ✅ (4 / 4)
 
       - name: Report tests failure
         if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled')) }}
@@ -370,12 +366,8 @@ jobs:
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
-            ### Test Results Summary (Failure) ❌ :disappointed_relieved:
+          
+            Core #${{ needs.test-core.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
-            | Core  | Windows | Linux | Mac | Browser | Android | iOS |
-            |-------|---------|-------|-----|---------|---------|-----|
-            | #${{ needs.test-core.result }} | #${{ needs.test-windows.result }} | #${{ needs.test-linux.result }} | #${{ needs.test-mac.result }} | #${{ needs.test-browser.result }} | #${{ needs.test-android.result }} | #${{ needs.test-ios.result }} |
-
-            ${{ steps.report.outputs.skipped }} skipped.
-            ${{ steps.report.outputs.passed }} passed.
-            ${{ steps.report.outputs.failed }} failed. ❌
+            ### Test Results Summary (Failure) ❌ (4 / 4)
+            

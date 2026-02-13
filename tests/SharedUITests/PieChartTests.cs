@@ -55,4 +55,23 @@ public class PieChartTests
 #endif
     }
 #endif
+
+#if (WPF_UI_TESTING && TEST_HA_VIEWS) || MAUI_UI_TESTING || WINUI_UI_TESTING || (UNO_UI_TESTING && HAS_OS_LVC)
+    // native platforms where gpu is supported
+
+    [AppTestMethod]
+    public async Task ShouldLoadHardwareAcceleratedView()
+    {
+        LiveChartsCore.LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = true));
+
+        var sut = await App.NavigateTo<Samples.Pies.Basic.View>();
+        await sut.Chart.WaitUntilChartRenders();
+
+        Assert.Contains("GPU", sut.Chart.CoreCanvas.RendererName);
+        Assert.ChartIsLoaded(sut.Chart);
+
+        // restore default settings for other tests
+        LiveChartsCore.LiveCharts.Configure(config => config.HasRenderingSettings(builder => builder.UseGPU = false));
+    }
+#endif
 }

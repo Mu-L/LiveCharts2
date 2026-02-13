@@ -26,6 +26,7 @@
   <Import Condition="$(UITesting) == 'true'" Project="..\..\build\UITestsLinks.Build.props" />
 
   <PropertyGroup Condition="$(UITesting) == 'true'">
+    <NoWarn>$(NoWarnUITests)</NoWarn>
     <DefineConstants>$(DefineConstants);UI_TESTING;WINFORMS_UI_TESTING</DefineConstants>
   </PropertyGroup>
 
