@@ -42,6 +42,7 @@
   </ItemGroup>
 
   <PropertyGroup>
+    <NoWarn>$(NoWarnUITests)</NoWarn>
     <DefineConstants Condition="$(UITesting) == 'true'">$(DefineConstants);UI_TESTING;BLAZOR_UI_TESTING</DefineConstants>
   </PropertyGroup>
 

@@ -32,6 +32,7 @@
 
     <!-- turn UITesting to true to include UI tests in the sample projects -->
     <UITesting>false</UITesting>
+    <NoWarnUITests>$(NoWarn);NU1701;CS0108;CS0618;CS4014;CS8600;CS8602;CS8618;CS8622;CS8625;</NoWarnUITests>
     <!-- Factos version https://github.com/beto-rodriguez/Factos -->
     <FactosVersion>0.8.0</FactosVersion>
 

@@ -88,6 +88,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition="$(UITesting) == 'true'">
+    <NoWarn>$(NoWarnUITests)</NoWarn>
     <DefineConstants>$(DefineConstants);UI_TESTING;XAML_UI_TESTING;MAUI_UI_TESTING</DefineConstants>
   </PropertyGroup>
 
