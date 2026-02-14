@@ -2,7 +2,7 @@
 
 {{~ if name != "Pie series" ~}}
 :::info
-The the following block uses the `PieChart` class as an example but all labels in polar series work the same way.
+The following block uses the `PieChart` class as an example but all labels in polar series work the same way.
 :::
 {{~ end ~}}
 

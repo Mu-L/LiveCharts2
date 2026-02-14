@@ -56,7 +56,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 public partial class ViewModel : ObservableObject
 {
     [ObservableProperty]
-    public ISeries[] _series;
+    private ISeries[] _series;
 }
 ```
 

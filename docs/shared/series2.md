@@ -18,8 +18,8 @@ Indicates if the series is visible in the user interface.
 
 ## DataPadding
 
-The data padding is the minimum distance from the edges of the series to the axis limits, it is of type `System.Drawing.PointF` 
-both coordinates (X and Y) goes from 0 to 1, where 0 is nothing and 1 is the axis tick an axis tick is the separation between
+The data padding is the minimum distance from the edges of the series to the axis limits. It is of type `System.Drawing.PointF`. 
+Both coordinates (X and Y) go from 0 to 1, where 0 is nothing and 1 is the axis tick. An axis tick is the separation between
 every label or separator (even if they are not visible).
 
 If this property is not set, the library will set it according to the series type, take a look at the following samples:

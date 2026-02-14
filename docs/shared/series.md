@@ -5,10 +5,10 @@ explore the full object checkout the [API explorer]({{ website_url }}/api/{{ ver
 
 ## Name property
 
-The name property is a string identifier that is normally used in tooltips and legends to display the data name,
-if this property is not set, then the library will generate a name for the series that by default is called 
+The name property is a string identifier that is normally used in tooltips and legends to display the data name. 
+If this property is not set, then by default the library will generate a name for the series called 
 "Series 1" when it is the first series in the series collection, "Series 2" when it is the second series in the 
-series collection, "Series 3" when it is the third series in the series collection, and so on a series *n* will be 
+series collection, "Series 3" when it is the third series in the series collection, and so on—a series *n* will be 
 named "Series *n*".
 
 ```csharp
@@ -31,10 +31,10 @@ SeriesCollection = new ISeries[]
 
 ## Values property
 
-The `Values` property is of type `IEnumerable<T>`, this means that you can use any object that implements the `IEnumerable<T>` interface, 
-such as `Array`, `List<T>` or `ObservableCollection<T>`, this property contains the data to plot, you can use any type as the
-generic argument (`<T>`) as soon as you let the library how to handle it, the library already knows how to handle multiple types, 
-but you can register any type and teach the library how to handle any object in a chart, for more information please see the 
+The `Values` property is of type `IEnumerable<T>`. This means that you can use any object that implements the `IEnumerable<T>` interface, 
+such as `Array`, `List<T>` or `ObservableCollection<T>`. This property contains the data to plot. You can use any type as the
+generic argument (`<T>`) as long as you let the library know how to handle it. The library already knows how to handle multiple types, 
+but you can register any type and teach the library how to handle any object in a chart. For more information please see the 
 [mappers article]({{ website_url }}/docs/{{ platform }}/{{ version }}/Overview.Mappers).
 
 ```csharp
@@ -51,7 +51,7 @@ var series2 = new {{ name  | to_title_case_no_spaces }}<double>
 {
     Values = new ObservableCollection<double> { 2, 1, 3 }
 }
-series2.add(4); // and the chart will animate the change!
+((ObservableCollection<double>)series2.Values).Add(4); // and the chart will animate the change!
 
 // == Update the chart when a property in our collection changes  == // mark
 // if the object implements INotifyPropertyChanged, then the chart will
@@ -106,7 +106,7 @@ var citiesSeries = new {{ name  | to_title_case_no_spaces }}<City>
         // in this case, we return the index as the X coordinate
         // and the Population as the Y value.
         
-        return new Coordinate(index, city.Population.Value);
+        return new Coordinate(index, city.Population);
     }
 };
 ```

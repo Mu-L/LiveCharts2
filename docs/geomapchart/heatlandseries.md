@@ -110,9 +110,9 @@ geoMap1.Series = new HeatLandSeries[]
 
 ## HeatMap property
 
-This property defines the gradient colors, it is an array of [`LvcColor`]({{ website_url }}/api/{{ version }}/LiveChartsCore.Drawing.LvcColor) 
-where the first element in the array is the the smallest or coldest and the last item in the array  is the greatest or hottest, 
-any value between the chart limits will be interpolated lineally to create a new color, you can add as many colors as you need 
+This property defines the gradient colors. It is an array of [`LvcColor`]({{ website_url }}/api/{{ version }}/LiveChartsCore.Drawing.LvcColor) 
+where the first element in the array is the smallest or coldest and the last item in the array is the greatest or hottest. 
+Any value between the chart limits will be interpolated linearly to create a new color. You can add as many colors as you need 
 to define the gradient.
 
 When this property is not specified, then it is assigned automatically based on the theme of the library.
@@ -276,7 +276,7 @@ namespace ViewModelsSamples.Maps.World
 <GeoMap Series="series"></GeoMap>
 
 @code {
-    private HeatLandSeries[] series= new HeatLandSeries[]
+    private HeatLandSeries[] series = new HeatLandSeries[]
     {
         new HeatLandSeries
         {
