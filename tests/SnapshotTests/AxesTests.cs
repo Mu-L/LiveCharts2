@@ -43,7 +43,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(ColorsAndPositions)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(ColorsAndPositions)}");
     }
 
     [TestMethod]
@@ -90,7 +90,7 @@ public sealed class AxesTests
         _ = chart.GetImage();
 
         chart.PointerAt(320, 300);
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(Crosshairs)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(Crosshairs)}");
     }
 
     [TestMethod]
@@ -119,7 +119,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(CustomSeparatorsInterval)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(CustomSeparatorsInterval)}");
     }
 
     [TestMethod]
@@ -136,7 +136,7 @@ public sealed class AxesTests
             new() { DateTime = new DateTime(2021, 1, 7), Value = 6 }
         };
 
-        static string Formatter(DateTime date) => date.ToString("mm dd yy");
+        static string Formatter(DateTime date) => date.ToString("MM dd");
 
         var chart = new SKCartesianChart
         {
@@ -156,7 +156,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(DateTimeScaled)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(DateTimeScaled)}");
     }
 
     [TestMethod]
@@ -185,7 +185,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(LabelsFormat)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(LabelsFormat)}");
     }
 
     [TestMethod]
@@ -213,7 +213,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(NonLatinLabels)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(NonLatinLabels)}");
     }
 
     [TestMethod]
@@ -242,7 +242,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(LabelsRotation)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(LabelsRotation)}");
     }
 
     [TestMethod]
@@ -281,7 +281,7 @@ public sealed class AxesTests
             Width = 600,
             Height = 600
         };
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(LogarithmicScale)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(LogarithmicScale)}");
     }
 
     [TestMethod]
@@ -323,7 +323,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(MatchScale)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(MatchScale)}");
     }
 
     [TestMethod]
@@ -355,7 +355,7 @@ public sealed class AxesTests
             Width = 600,
             Height = 600
         };
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(MultipleYAxes)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(MultipleYAxes)}");
     }
 
     [TestMethod]
@@ -387,7 +387,7 @@ public sealed class AxesTests
             Width = 600,
             Height = 600
         };
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(MultipleXAxes)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(MultipleXAxes)}");
     }
 
     [TestMethod]
@@ -468,7 +468,7 @@ public sealed class AxesTests
             Height = 600
         };
 
-        chart.Snapshot($"{nameof(AxesTests)}_{nameof(StyledAxes)}");
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(StyledAxes)}");
     }
 
     private class LogarithmicPoint(double x, double y) : IChartEntity
