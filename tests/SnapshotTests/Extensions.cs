@@ -144,7 +144,7 @@ public static class Extensions
         {
             using var img = SKImage.FromBitmap(diffBitmap);
             using var data = img.Encode(SKEncodedImageFormat.Png, 100);
-            File.WriteAllBytes(diffOutputPath, data.ToArray());
+            File.WriteAllBytes(diffOutputPath!, data.ToArray());
         }
 
         var ratio = (double)differentPixels / totalPixels;
