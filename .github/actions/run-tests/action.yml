@@ -112,6 +112,13 @@ runs:
         shell: pwsh
         command: dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
+    - name: Upload snapshot diffs
+      if: failure() && inputs.test-type == 'snapshot'
+      uses: actions/upload-artifact@v6.0.0
+      with:
+        name: snapshot-diffs
+        path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsDiff/**/*
+
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v6.0.0

@@ -24,32 +24,31 @@ public static class Extensions
             if (!Directory.Exists("SnapshotsDiff")) _ = Directory.CreateDirectory("SnapshotsDiff");
 
             chart.SaveImage(Path.Combine("SnapshotsNew", $"{name}.png"));
+            ImageComparisonResult result;
 
-            // Load expected baseline
-            using var data = SKData.Create(Path.Combine("Snapshots", $"{name}.png"));
-            using var expectedEncoded = SKImage.FromEncodedData(data);
+            using (var data = SKData.Create(Path.Combine("Snapshots", $"{name}.png")))
+            using (var expectedEncoded = SKImage.FromEncodedData(data))
+            using (var resultData = SKData.Create(Path.Combine("SnapshotsNew", $"{name}.png")))
+            using (var resultImage = SKImage.FromEncodedData(resultData))
+            using (var expectedBitmap = SKBitmap.FromImage(expectedEncoded))
+            using (var expectedCpu = SKImage.FromBitmap(expectedBitmap))
+            using (var actualBitmap = SKBitmap.FromImage(resultImage))
+            using (var actualCpu = SKImage.FromBitmap(actualBitmap))
+            {
+                result = Compare(
+                    expectedCpu, actualCpu, perChannelTolerance: 2, maxDifferentPixelsRatio: 0.001);
+            }
 
-            // Load actual result
-            using var resultData = SKData.Create(Path.Combine("SnapshotsNew", $"{name}.png"));
-            using var resultImage = SKImage.FromEncodedData(resultData);
+            if (!result.IsSuccessful)
+            {
+                File.Copy(
+                    Path.Combine("Snapshots", $"{name}.png"),
+                    Path.Combine("SnapshotsDiff", $"{name}[EXPECTED].png"));
 
-            // Convert expected to raster-backed
-            using var expectedBitmap = SKBitmap.FromImage(expectedEncoded);
-            using var expectedCpu = SKImage.FromBitmap(expectedBitmap);
-
-            // Convert actual to raster-backed (just to be safe)
-            using var actualBitmap = SKBitmap.FromImage(resultImage);
-            using var actualCpu = SKImage.FromBitmap(actualBitmap);
-
-            // Compare
-
-            var result = Compare(
-                expectedCpu,
-                actualCpu,
-                perChannelTolerance: 2,
-                maxDifferentPixelsRatio: 0.001
-                //diffOutputPath: $"SnapshotsDiff/{name}.png" // is this useful?
-            );
+                File.Copy(
+                    Path.Combine("SnapshotsNew", $"{name}.png"),
+                    Path.Combine("SnapshotsDiff", $"{name}[RESULT].png"));
+            }
 
             Assert.IsTrue(result.IsSuccessful, result.Message);
         }
