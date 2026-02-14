@@ -55,7 +55,7 @@ public abstract class InMemorySkiaSharpChart(IDrawnView? drawnView = null)
     /// <value>
     /// The background.
     /// </value>
-    public SKColor Background { get; set; } = SKColors.White;
+    public SKColor Background { get; set; } = SKColors.Empty;
 
     /// <summary>
     /// Gets or sets the height.
@@ -151,7 +151,9 @@ public abstract class InMemorySkiaSharpChart(IDrawnView? drawnView = null)
         if (coreChart is null || coreChart is not Chart skiaChart)
             throw new Exception("Something is missing :(");
 
-        var bg = coreChart.GetTheme().VirtualBackroundColor.AsSKColor();
+        var bg = Background == SKColors.Empty
+            ? coreChart.GetTheme().VirtualBackroundColor.AsSKColor()
+            : Background;
 
         if (_drawnView is not null)
         {

@@ -125,8 +125,25 @@ jobs:
         with:
           id: core
           test-id: core-${{ matrix.framework }}
-          use-factos: false
+          test-type: core
           target-framework: ${{ matrix.framework }}
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+
+  test-snapshot:
+    runs-on: windows-2025
+    needs: [pack, report-progress-starting, collect-packages]
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
+
+      - name: Run tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: snapshot
+          test-id: snapshot
+          test-type: snapshot
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-windows:
@@ -163,7 +180,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: windows
-          use-factos: true
+          test-type: factos
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
@@ -192,7 +209,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: linux
-          use-factos: true
+          test-type: factos
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
@@ -221,7 +238,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: mac
-          use-factos: true
+          test-type: factos
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
@@ -252,7 +269,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: browser
-          use-factos: true
+          test-type: factos
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
@@ -282,7 +299,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: android
-          use-factos: true
+          test-type: factos
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
@@ -313,7 +330,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: ios
-          use-factos: true
+          test-type: factos
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
@@ -326,6 +343,7 @@ jobs:
     needs:
       - report-progress-starting
       - test-core
+      - test-snapshot
       - test-windows
       - test-linux
       - test-mac
@@ -356,7 +374,7 @@ jobs:
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
-            core #${{ needs.test-core.result }}, windows #${{ needs.test-windows.result }}, linux #${{ needs.test-linux.result }}, mac #${{ needs.test-mac.result }}, browser #${{ needs.test-browser.result }}, android #${{ needs.test-android.result }}, ios #${{ needs.test-ios.result }}
+            Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
             ### Test Results Summary (Passed) ✅ (4 / 4)
 
@@ -367,7 +385,7 @@ jobs:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
           
-            Core #${{ needs.test-core.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
+            Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
             ### Test Results Summary (Failure) ❌ (4 / 4)
             
