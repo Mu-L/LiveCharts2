@@ -70,7 +70,7 @@ public sealed class ColumnSeriesTests
             Series = [
                 new ColumnSeries<int>
                 {
-                    Values = [6, 3, 5 ],
+                    Values = [6, 3, 5],
                     Padding = 0,
                     MaxBarWidth = 999999
                 }

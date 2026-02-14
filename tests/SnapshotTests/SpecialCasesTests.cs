@@ -52,7 +52,7 @@ public sealed class SpecialCasesTests
             Height = 600
         };
 
-        chart.AssertSnapshotMatches($"{nameof(ColumnSeriesTests)}_{nameof(CustomPoints)}");
+        chart.AssertSnapshotMatches($"{nameof(SpecialCasesTests)}_{nameof(CustomPoints)}");
     }
 
     [TestMethod]

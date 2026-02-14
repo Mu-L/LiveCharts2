@@ -85,6 +85,6 @@ public sealed class StackedColumnsTests
             Height = 600
         };
 
-        chart.AssertSnapshotMatches($"{nameof(BoxSeriesTests)}_{nameof(StackGroup)}");
+        chart.AssertSnapshotMatches($"{nameof(StackedColumnsTests)}_{nameof(StackGroup)}");
     }
 }
