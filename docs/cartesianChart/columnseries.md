@@ -118,7 +118,7 @@ Series = new ISeries[]
 };
 ```
 
-Finally we could aso set the padding to `0`.
+Finally we could also set the padding to `0`.
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/_assets/columnmwmaxp0.png)
 

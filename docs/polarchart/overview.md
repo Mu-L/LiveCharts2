@@ -191,7 +191,7 @@ Defines the total circumference angle in degrees, from 0 to 360, default is 360.
 ```xml
 <PolarChart
     Series="Series"
-    TotalAngle="50">
+    TotalAngle="270">
 </PolarChart>
 ```
 

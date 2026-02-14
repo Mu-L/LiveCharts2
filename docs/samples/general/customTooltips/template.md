@@ -6,7 +6,7 @@ content is normally pulled from the examples in the repository.
 # Customize default tooltips
 
 :::tip
-The next article is a quick guide on how to customize the default tooltip,if you want to learn more you can read the full
+The next article is a quick guide on how to customize the default tooltip. If you want to learn more, you can read the full
 article:
 
 <a href="{{ website_url }}/docs/{{ platform }}/{{ version }}/CartesianChart.Tooltips" class="btn btn-outline-primary mb-3">

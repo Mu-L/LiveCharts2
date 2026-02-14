@@ -117,8 +117,7 @@ Finally you can also build your own function:
 <pre><code>cartesianChart1.EasingFunction = time => time * time;</code></pre>
 {{~ end ~}}
 
-The library also provides some builders based on [d3-ease](https://github.com/d3/d3-ease) easing curves, 
-the builders.
+The library also provides some builders based on [d3-ease](https://github.com/d3/d3-ease) easing curves.
 
 <pre><code>Func<float, float> easingCurve = LiveChartsCore.EasingFunctions.BuildCustomBackOut(0.8f);
 Func<float, float> easingCurve = LiveChartsCore.EasingFunctions.BuildCustomElasticOut(0.8f, 1.1f);
@@ -132,7 +131,7 @@ This section uses the `CartesianChart` control, but it works the same in the `{{
 :::
 {{~ end ~}}
 
-Settings the `EasingFunction` to `null` disables animations.
+Setting the `EasingFunction` to `null` disables animations.
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:CartesianChart
