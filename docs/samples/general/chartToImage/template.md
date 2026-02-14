@@ -52,8 +52,8 @@ view is loaded.
 
 ## Build an image in the server side or console app
 
-LiveCharts can render images without the need of any UI framework, you can build images in the server side or in a console 
-application as far as you install the SkiaSharp view package, it is available from NuGet:
+LiveCharts can render images without the need of any UI framework. You can build images in the server side or in a console 
+application as long as you install the SkiaSharp view package, it is available from NuGet:
 
 {{ "LiveChartsCore.SkiaSharpView" | from_nuget }}
 
@@ -80,7 +80,7 @@ Finally build the images in the `Program.cs` file.
 ```
 
 :::tip
-Notice that the previous code also works in an `ASP.net` project, as far as you are using .NET core 3.1 or greater
+Notice that the previous code also works in an `ASP.net` project, as long as you are using .NET core 3.1 or greater
 :::
 
 {{ render "~/shared/relatedTo.md" }}

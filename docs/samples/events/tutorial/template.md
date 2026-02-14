@@ -51,7 +51,7 @@ When running that example on the `FindingStrategy.Automatic` we get:
     <img src="{{ assets_url }}/docs/{{ unique_name }}/events-auto.gif" alt="sample image" />
 </div>
 
-But changing the strategy to `FindingStrategy.ExactMatch`, will only trigger only the points whose drawn column contains the pointer:
+But changing the strategy to `FindingStrategy.ExactMatch` will only trigger the points whose drawn column contains the pointer:
 
 <div class="text-center sample-img">
     <img src="{{ assets_url }}/docs/{{ unique_name }}/events-ex.gif" alt="sample image" />

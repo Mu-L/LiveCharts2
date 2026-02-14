@@ -14,8 +14,8 @@ When the `ICartesianChartView`.`MatchAxesScreenDataRatio` is `true`,  both axes 
 {{ full_name | get_vm_from_docs }}
 ```
 
-Now both axes use the same scale, we can easily notice this in the grid drawn by the axes separators, this grid is composed by perfect rectangles,
-no mater if we zoom in/out (or use the panning feature).
+Now both axes use the same scale. We can easily notice this in the grid drawn by the axes separators. This grid is composed of perfect rectangles,
+no matter if we zoom in/out (or use the panning feature).
 
 <div class="text-center sample-img">
     <img src="{{ assets_url }}/docs/{{ unique_name }}/matchsdr.gif" alt="sample image" />

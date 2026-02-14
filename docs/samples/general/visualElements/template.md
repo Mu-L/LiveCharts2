@@ -113,8 +113,8 @@ then it sets the `Geometry.Fill` to define the background of the tooltip.
 
 ### Absolute Layout
 
-Used to place children on its own coordinate system, all the children X and Y coordinates are relative to the Layout position, the layout takes
-the size of the largest element in the children collection. For example in the next case, we place the place the RectangleGeometry` in the 0,0
+Used to place children on its own coordinate system. All the children X and Y coordinates are relative to the Layout position. The layout takes
+the size of the largest element in the children collection. For example, in the next case, we place the `RectangleGeometry` in the 0,0
 coordinate [in the layout system] and the `LabelGeometry` in the 10,0 coordinate.
 
 <div class="text-center sample-img">
