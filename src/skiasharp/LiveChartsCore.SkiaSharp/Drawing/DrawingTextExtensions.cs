@@ -20,10 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
@@ -36,6 +33,7 @@ internal static class DrawingTextExtensions
 {
     internal static readonly PositionedBlob s_newLine = new(SKTextBlob.Create(string.Empty, new()), -1);
     private static readonly Dictionary<string, SKShaper> s_knownShapers = [];
+    private static readonly object s_lock = new();
 
     internal static void DrawLabel(this SKCanvas canvas, LabelGeometry label, float opacity = 1)
     {
@@ -288,10 +286,15 @@ internal static class DrawingTextExtensions
             var typeface = font.Typeface ??
                 throw new Exception("A Typeface is required at this point.");
 
-            if (!s_knownShapers.TryGetValue(typeface.FamilyName, out var shaper))
+            SKShaper? shaper = null;
+
+            lock (s_lock)
             {
-                shaper = new SKShaper(typeface);
-                s_knownShapers[typeface.FamilyName] = shaper;
+                if (!s_knownShapers.TryGetValue(typeface.FamilyName, out shaper))
+                {
+                    shaper = new SKShaper(typeface);
+                    s_knownShapers[typeface.FamilyName] = shaper;
+                }
             }
 
             var result = shaper.Shape(text, paint);

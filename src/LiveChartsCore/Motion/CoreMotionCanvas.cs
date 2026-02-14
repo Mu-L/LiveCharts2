@@ -84,22 +84,13 @@ public class CoreMotionCanvas : IDisposable
     /// <summary>
     /// Gets the clock elapsed time in milliseconds.
     /// </summary>
-    public static long ElapsedMilliseconds
-    {
-        get
-        {
-#if DEBUG
-            if (DebugElapsedMilliseconds > -1)
-                return DebugElapsedMilliseconds;
-#endif
-            return s_clock.ElapsedMilliseconds;
-        }
-    }
+    public static long ElapsedMilliseconds =>
+        DebugElapsedMilliseconds > -1
+            ? DebugElapsedMilliseconds
+            : s_clock.ElapsedMilliseconds;
 
-#if DEBUG
     internal static long DebugElapsedMilliseconds { get; set; } = -1;
     internal static bool IsTesting { get; set; }
-#endif
 
     internal bool DisableAnimations { get; set; }
 
@@ -128,6 +119,11 @@ public class CoreMotionCanvas : IDisposable
     /// The synchronize.
     /// </value>
     public object Sync { get; internal set => field = value ?? new object(); } = new();
+
+    /// <summary>
+    /// Gets the name of the renderer associated with the current canvas instance.
+    /// </summary>
+    public string RendererName => s_rendererName ?? "unknown renderer";
 
     /// <summary>
     /// Draws the frame.

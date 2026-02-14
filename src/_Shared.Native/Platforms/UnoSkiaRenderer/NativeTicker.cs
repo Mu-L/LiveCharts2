@@ -54,7 +54,7 @@ internal partial class NativeFrameTicker : IFrameTicker
 
     private void OnCompositonTargetRendering(object? sender, object e)
     {
-        if (_canvas.IsValid) return;
+        if (_canvas is null || _canvas.IsValid) return;
         _renderMode.InvalidateRenderer();
     }
 

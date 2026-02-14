@@ -54,6 +54,4 @@ public static partial class CustomLiveChartsExtensions
             // but you can also force the use of RTL settings by calling:
             //.UseRightToLeftSettings()
         ;
-
-    public record City(string Name, double Population);
 }

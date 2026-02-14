@@ -20,9 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.Collections.Generic;
-using LiveChartsCore.Motion;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Painting;
 
 namespace LiveChartsCore.Geo;
@@ -30,27 +28,17 @@ namespace LiveChartsCore.Geo;
 /// <summary>
 /// Defines a geographic map.
 /// </summary>
-public interface IGeoMapView
+public interface IGeoMapView : IDrawnView
 {
+    /// <summary>
+    /// Gets the core chart.
+    /// </summary>
+    GeoMapChart CoreChart { get; }
+
     /// <summary>
     /// Gets or sets the active map.
     /// </summary>
     DrawnMap ActiveMap { get; set; }
-
-    /// <summary>
-    /// Gets the motion canvas.
-    /// </summary>
-    CoreMotionCanvas Canvas { get; }
-
-    /// <summary>
-    /// Gets the control width.
-    /// </summary>
-    float Width { get; }
-
-    /// <summary>
-    /// Gets the control height.
-    /// </summary>
-    float Height { get; }
 
     /// <summary>
     /// Gets or sets the stroke.
@@ -83,10 +71,10 @@ public interface IGeoMapView
     /// </summary>
     object SyncContext { get; set; }
 
-    /// <summary>
-    /// Gets or sets the view command.
-    /// </summary>
-    object? ViewCommand { get; set; }
+    ///// <summary>
+    ///// Gets or sets the view command.
+    ///// </summary>
+    //object? ViewCommand { get; set; }
 
     /// <summary>
     /// Invokes an action in the UI thread.

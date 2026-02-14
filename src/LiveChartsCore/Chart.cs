@@ -322,6 +322,7 @@ public abstract class Chart
     /// </summary>
     public virtual void Unload()
     {
+        _lastMeasureTimeStamp = -1;
         IsLoaded = false;
         _everMeasuredElements.Clear();
         _toDeleteElements.Clear();
@@ -801,12 +802,9 @@ public abstract class Chart
         // rendered the last frame, if both timestamps are different it means the canvas is rendering
         // and we are safe to keep measuring, otherwise we skip measuring until the canvas renders a new frame.
 
-#if DEBUG
-        // hack.
-        // a flag to to remove this check in unit tests.
+        // hack. a flag to remove this check in unit tests.
         if (CoreMotionCanvas.IsTesting)
             return true;
-#endif
 
         var canMeasure = Canvas._lastFrameTimestamp != _lastMeasureTimeStamp;
 

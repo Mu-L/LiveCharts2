@@ -64,13 +64,13 @@ public class MapFactory : IMapFactory
 
             if (fill is not null)
             {
-                context.View.Canvas.AddDrawableTask(fill);
+                context.View.CoreCanvas.AddDrawableTask(fill);
                 _ = _usedPaints.Add(fill);
                 _ = toRemovePaints.Remove(fill);
             }
             if (stroke is not null)
             {
-                context.View.Canvas.AddDrawableTask(stroke);
+                context.View.CoreCanvas.AddDrawableTask(stroke);
                 _ = _usedPaints.Add(stroke);
                 _ = toRemovePaints.Remove(stroke);
             }
@@ -97,8 +97,8 @@ public class MapFactory : IMapFactory
                     _ = _usedPathShapes.Add(shape);
                     _ = toRemovePathShapes.Remove(shape);
 
-                    stroke?.AddGeometryToPaintTask(context.View.Canvas, shape);
-                    fill?.AddGeometryToPaintTask(context.View.Canvas, shape);
+                    stroke?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
+                    fill?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
 
                     shape.Commands.Clear();
 
@@ -131,8 +131,8 @@ public class MapFactory : IMapFactory
 
             foreach (var shape in toRemovePathShapes)
             {
-                stroke?.RemoveGeometryFromPaintTask(context.View.Canvas, shape);
-                fill?.RemoveGeometryFromPaintTask(context.View.Canvas, shape);
+                stroke?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
+                fill?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
 
                 shape.Commands.Clear();
 
@@ -143,7 +143,7 @@ public class MapFactory : IMapFactory
         foreach (var paint in toRemovePaints)
         {
             _ = _usedPaints.Remove(paint);
-            context.View.Canvas.RemovePaintTask(paint);
+            context.View.CoreCanvas.RemovePaintTask(paint);
         }
 
         foreach (var layerName in toRemoveLayers)
@@ -182,20 +182,20 @@ public class MapFactory : IMapFactory
                         var shape = landData.Shape;
                         if (shape is null) continue;
 
-                        stroke?.RemoveGeometryFromPaintTask(_mapView.Canvas, shape);
-                        fill?.AddGeometryToPaintTask(_mapView.Canvas, shape);
+                        stroke?.RemoveGeometryFromPaintTask(_mapView.CoreCanvas, shape);
+                        fill?.AddGeometryToPaintTask(_mapView.CoreCanvas, shape);
 
                         landData.Shape = null;
                     }
                 }
                 foreach (var paint in _usedPaints)
                 {
-                    _mapView.Canvas.RemovePaintTask(paint);
-                    paint.ClearGeometriesFromPaintTask(_mapView.Canvas);
+                    _mapView.CoreCanvas.RemovePaintTask(paint);
+                    paint.ClearGeometriesFromPaintTask(_mapView.CoreCanvas);
                 }
 
-                if (stroke is not null) _mapView.Canvas.RemovePaintTask(stroke);
-                if (fill is not null) _mapView.Canvas.RemovePaintTask(fill);
+                if (stroke is not null) _mapView.CoreCanvas.RemovePaintTask(stroke);
+                if (fill is not null) _mapView.CoreCanvas.RemovePaintTask(fill);
             }
         }
 

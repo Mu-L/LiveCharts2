@@ -1,16 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
-    <LangVersion>$(GlobalLangVersion)</LangVersion>
-    <Nullable>enable</Nullable>
-
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <OutputType>Library</OutputType>
     <TargetFrameworks>
       net462;
-      net6.0-windows10.0.19041;
-      net8.0-windows10.0.19041
+      net8.0-windows10.0.19041;
+      net8.0-windows; <!-- https://github.com/Live-Charts/LiveCharts2/issues/1772  -->
     </TargetFrameworks>
     
     <AssemblyName>LiveChartsCore.SkiaSharpView.WinForms</AssemblyName>
@@ -32,7 +29,12 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
-  <Import Project="..\_Shared\_Shared.projitems" Label="Shared" />
+  <PropertyGroup>
+    <!-- https://github.com/Live-Charts/LiveCharts2/issues/1772, we should also wanr the user about this, but there should be no issue. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\..\..\build\SharedLinks.Build.props" />
 
   <PropertyGroup>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
@@ -49,6 +51,10 @@
     <ProjectReference Include="..\..\LiveChartsCore\LiveChartsCore.csproj" />
     <ProjectReference Include="..\LiveChartsCore.SkiaSharp\LiveChartsCore.SkiaSharpView.csproj" />
   </ItemGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net462'">
+    <DefineConstants>$(DefineConstants);STRONG_NAMED_ASSEMBLIES</DefineConstants>
+  </PropertyGroup>
 
   <ItemGroup Condition="$(UseNuGetForGenerator)">
     <PackageReference Include="LiveChartsGenerators" Version="$(LiveChartsCodeGenVersion)">

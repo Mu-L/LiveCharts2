@@ -21,15 +21,10 @@
 // SOFTWARE.
 
 using LiveChartsCore.Motion;
+using LiveChartsCore.Native;
+using LiveChartsCore.SkiaSharpView.WinUI.Rendering;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using LiveChartsCore.Native;
-
-#if !HAS_OS_LVC
-using LiveChartsCore.SkiaSharpView.WinUI.SkiaRenderer;
-#else
-using LiveChartsCore.SkiaSharpView.WinUI.Rendering;
-#endif
 
 #pragma warning disable IDE0028 // Simplify collection initialization
 
@@ -47,7 +42,7 @@ public partial class MotionCanvas : Canvas
         _ = LiveChartsSkiaSharp
             .EnsureInitialized()
             .HasRenderingFactory(
-                (settings, forceGPU) =>
+                (settings) =>
                 {
                     IFrameTicker ticker;
 
@@ -58,7 +53,7 @@ public partial class MotionCanvas : Canvas
                         ? new NativeFrameTicker()
                         : new AsyncLoopTicker();
 #else
-                    IRenderMode renderMode = forceGPU || settings.UseGPU
+                    IRenderMode renderMode = settings.UseGPU
                         ? new GPURenderMode()
                         : new CPURenderMode();
 
@@ -74,9 +69,9 @@ public partial class MotionCanvas : Canvas
     /// <summary>
     /// Initializes a new instance of the <see cref="MotionCanvas"/> class.
     /// </summary>
-    public MotionCanvas(bool forceGPU)
+    public MotionCanvas()
     {
-        _composer = LiveChartsSkiaSharp.MotionCanvasRenderingFactory(LiveCharts.RenderingSettings, forceGPU);
+        _composer = LiveChartsSkiaSharp.MotionCanvasRenderingFactory(LiveCharts.RenderingSettings);
 
         Children.Add((UIElement)_composer.RenderMode);
 
