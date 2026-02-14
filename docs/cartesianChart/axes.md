@@ -25,12 +25,12 @@ Zooming and panning is disabled by default, you can enable it by setting the `Zo
 - `X`: Enables zooming and panning on the X axis.
 - `Y`: Enables zooming and panning on the Y axis.
 - `Both`: Enables zooming and panning on both axes.
-- `NoFit`: Disables the "Fit to Bounds" feature that forces the the chart to bounce back to the data bounds when zooming and panning finishes.
+- `NoFit`: Disables the "Fit to Bounds" feature that forces the chart to bounce back to the data bounds when zooming and panning finishes.
 - `NoZoomBySection`: Disables the "Zoom by Section" feature, this feature selects an area and zooms to this area, normally by right clicking or double tapping and then dragging to the end of the section.
 - `InvertPanningPointerTrigger`: Inverts the panning and zoom by section pointer triggers, when the flag is present, panning is triggered by right clicking the chart, and zoom by section by left clicking (or inverts single/double taps on mobile).
 
 The [ZoomAndPanMode](https://lvcharts.com/api/{{ version }}/LiveChartsCore.Measure.ZoomAndPanMode) type is a flag enum,
-so you can combine the options, for example, if you want to enable zooming on the `X` axis and disable "Fit top Bounds"
+so you can combine the options, for example, if you want to enable zooming on the `X` axis and disable "Fit to Bounds"
 and "Zoom by Section" you can set the `ZoomMode` property to:
 
 ```csharp
@@ -42,7 +42,7 @@ Here are a few examples of the different zoom modes:
 
 **X Mode:**
 
-When the user interacts with the chart, He/She/* is only moving the chart in the X axis direction, the Y axis range is calculated automatically
+When the user interacts with the chart, they are only moving the chart in the X axis direction. The Y axis range is calculated automatically
 by the library to fit all the visible points in the X axis.
 
 {{~ if xaml ~}}
@@ -74,7 +74,7 @@ cartesianChart1.ZoomMode = LiveChartsCore.Measure.ZoomAndPanMode.X;
 
 **Y Mode:**
 
-When the user interacts with the chart, He/She/* is only moving the chart in the Y axis direction, the X axis range is calculated automatically
+When the user interacts with the chart, they are only moving the chart in the Y axis direction. The X axis range is calculated automatically
 by the library to fit all the visible points in the Y axis.
 
 {{~ if xaml ~}}
@@ -184,10 +184,10 @@ xAxis.PropertyChanged += (object sender, System.ComponentModel.PropertyChangedEv
 myChart.XAxes = new List<Axis>{ xAxis };
 ```
 
-Finally notice what when the chart loads, by default both of these properties are `null`, and `null` means that the library will
-calculate the value of both, so when you need to read the initial value of an axis you can access the `Axis.DataBounds` or
-`Axis.VisibleDataBounds` properties, these properties are loaded until the chart is measured, there are multiple options to wait
-for the chart to be measured, in this example we will use the `Chart.UpdateStarted` event that happens when the chart is already measured
+Finally notice that when the chart loads, by default both of these properties are `null`, and `null` means that the library will
+calculate the value of both. So when you need to read the initial value of an axis, you can access the `Axis.DataBounds` or
+`Axis.VisibleDataBounds` properties. These properties are loaded until the chart is measured. There are multiple options to wait
+for the chart to be measured. In this example we will use the `Chart.UpdateStarted` event that happens when the chart is already measured
 and the draw in the UI is about to start.
 
 ```csharp
@@ -208,14 +208,14 @@ chartControl.UpdateStarted +=
 
 ## Clearing the current zooming or panning
 
-Setting `MinLimit` and `MaxLimit` properties to `null` or `double.NaN` will clear the current limits and fit the the data to the viewport.
+Setting `MinLimit` and `MaxLimit` properties to `null` or `double.NaN` will clear the current limits and fit the data to the viewport.
 
 ## MinStep property
 
-The `Step` defines the interval or distance between every separator and label in the axis, LiveCharts will calculate it automatically 
-based on the chart data and the chart size size, but you can configure the minimum value this property could be, for example in the case
-where you don't want decimal separations in the axis labels, you could set the `MinStep` property to `1`, this way, when the calculated 
-step is less that `1` the library will force it to be `1`.
+The `Step` defines the interval or distance between every separator and label in the axis. LiveCharts will calculate it automatically 
+based on the chart data and the chart size, but you can configure the minimum value this property could be. For example, in the case
+where you don't want decimal separations in the axis labels, you could set the `MinStep` property to `1`. This way, when the calculated 
+step is less than `1`, the library will force it to be `1`.
 
 ```csharp
 new Axis

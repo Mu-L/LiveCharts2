@@ -98,7 +98,7 @@ Series = new ISeries[]
 };
 ```
 
-Finally we could aso set the padding to `0`.
+Finally we could also set the padding to `0`.
 
 ![image]({{ assets_url }}/docs/_assets/box-mw-p0.png)
 

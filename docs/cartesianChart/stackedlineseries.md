@@ -96,8 +96,8 @@ a look at the [Paints article]({{ website_url }}/docs/{{ platform }}/{{ version 
 
 ## GeometryFill and GeometryStroke properties
 
-The geometry is the circle shape (by default) that the line series draws for every point, byt by default the size is `0` 
-you can customize the fill and stroke of this shape, if none of these properties are set then LiveCharts will create them 
+The geometry is the circle shape (by default) that the line series draws for every point, but by default the size is `0`. 
+You can customize the fill and stroke of this shape. If none of these properties are set, then LiveCharts will create them 
 based on the series position in your series collection and the current theme.
 
 ![image]({{ assets_url }}/docs/_assets/stackedareageometrystrokefill.png)

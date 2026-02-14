@@ -75,10 +75,10 @@ define the legend look (full example [here](https://github.com/beto-rodriguez/Li
 
 ![custom]({{ assets_url }}/docs/_assets/legend-custom-style.png)
 
-## Tooltip control from scratch
+## Custom legend control
 
-You can also create your own legend, the recommended way is to use the LiveCharts API (example below) but you can
-use anything as tooltip as soon as it implements the `IChartLegend<T>` interface. At the following example we build
+You can also create your own legend. The recommended way is to use the LiveCharts API (example below), but you can
+use anything as a legend as long as it implements the `IChartLegend<T>` interface. In the following example we build
 a custom control to render legends in our charts using the LiveCharts API.
 
 ## CustomLegend.cs
