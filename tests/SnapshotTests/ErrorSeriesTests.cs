@@ -105,6 +105,12 @@ public sealed class ErrorSeriesTests
                     ShowError = true
                 },
             ],
+            XAxes = [
+                new Axis
+                {
+                    IsVisible = false
+                }
+            ],
             Width = 600,
             Height = 600
         };
