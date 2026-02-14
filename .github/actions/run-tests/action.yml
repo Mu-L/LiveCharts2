@@ -1,8 +1,8 @@
 name: "Run tests"
-description: "Runs the specified tests using factos or core tests"
+description: "Runs the specified tests using ui or core tests"
 inputs:
-  use-factos:
-    description: 'Whether to use factos for test selection'
+  test-type:
+    description: 'The type of tests to run (factos, core or snapshot)'
     required: true
   id:
     description: "Identifier for the test target"
@@ -54,7 +54,7 @@ runs:
     # run tests using the factos selection and the console when no emulator is needed
     - name: Run UI tests
       uses: nick-fields/retry@v3.0.2
-      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator != 'true' }}
+      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator != 'true' }}
       with:
         timeout_minutes: 15
         max_attempts: 3
@@ -63,14 +63,14 @@ runs:
 
     # run tests using the factos selection inside the android emulator
     - name: Enable KVM
-      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
+      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator == 'true' }}
       shell: pwsh
       run: |
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
     - name: Create Test Script
-      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
+      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator == 'true' }}
       shell: bash
       run: |
         cat << 'EOF' > run_tests.sh
@@ -86,7 +86,7 @@ runs:
         EOF
         chmod +x run_tests.sh
     - name: Start Android emulator and run tests
-      if : ${{ inputs.use-factos == 'true' && inputs.use-android-emulator == 'true' }}
+      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator == 'true' }}
       uses: reactivecircus/android-emulator-runner@v2.35.0
       with:
         api-level: 35
@@ -94,20 +94,23 @@ runs:
         arch: x86_64
         script: ./run_tests.sh
 
-    # run core tests when factos is not used
-    # the Debug config is required even we are testing the nuget packages in Release.
-    # this is because some optimizations in Release make the tests fail, but the code
-    # that fails is not related to the nuget packages but to the test code itself
-    # there is a function that mocks the ui drawing that fails in Release optimizations.
-    # ToDo: fix that, or now that we have ui tests, maybe just run the tests in the ui?.
-    - name: Run tests
+    - name: Run core tests
       uses: nick-fields/retry@v3.0.2
-      if : ${{ inputs.use-factos != 'true' }}
+      if : ${{ inputs.test-type == 'core' }}
       with:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
         command: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+
+    - name: Run snapshot tests
+      uses: nick-fields/retry@v3.0.2
+      if : ${{ inputs.test-type == 'snapshot' }}
+      with:
+        timeout_minutes: 8
+        max_attempts: 3
+        shell: pwsh
+        command: dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
 
     - name: Upload test results
       if: always()
