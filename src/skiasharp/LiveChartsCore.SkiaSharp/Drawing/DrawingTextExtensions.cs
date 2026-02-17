@@ -267,7 +267,7 @@ internal static class DrawingTextExtensions
                 .Select(token => ShapeAndPlace(token, font, paint))
                 .ToArray();
 
-            var (size, lineWidths) = Measure(blobs, font, maxWidth, padding);
+            var (size, lineWidths) = Measure(blobs, font, maxWidth, padding, tokenResult.IsRTL);
 
             return new BlobArray
             {
@@ -310,7 +310,7 @@ internal static class DrawingTextExtensions
         }
 
         private static (LvcSize Size, List<float> LineWidths) Measure(
-            PositionedBlob[] blobs, SKFont font, float maxWidth, Padding padding)
+            PositionedBlob[] blobs, SKFont font, float maxWidth, Padding padding, bool isRTL)
         {
             var lineCount = 0;
             var x = 0f;
@@ -321,7 +321,10 @@ internal static class DrawingTextExtensions
             var lineHeight = metrics.Descent - metrics.Ascent + metrics.Leading;
             var widths = new List<float>();
 
-            foreach (var pb in blobs)
+            // For RTL text, reverse the blobs so words are positioned right-to-left
+            var orderedBlobs = isRTL ? ((IEnumerable<PositionedBlob>)blobs).Reverse() : blobs;
+
+            foreach (var pb in orderedBlobs)
             {
                 pb.Line = lineCount;
                 var b = pb.Blob;
