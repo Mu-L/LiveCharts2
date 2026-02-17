@@ -107,7 +107,6 @@ public sealed class TextTests
     {
         var label = "مرحبا بالعالم";
         var values = new double[] { 1, 2, 3 };
-        var typeface = SKFontManager.Default.MatchCharacter('أ');
 
         var chart = new SKCartesianChart
         {
@@ -141,7 +140,6 @@ public sealed class TextTests
             "يحتوي على عدة أسطر" + Environment.NewLine +
             "مكتوب باللغة العربية";
         var values = new double[] { 1, 2, 3 };
-        var typeface = SKFontManager.Default.MatchCharacter('أ');
 
         var chart = new SKCartesianChart
         {
@@ -175,7 +173,6 @@ public sealed class TextTests
             "يحتوي على عدة أسطر" + Environment.NewLine +
             "مكتوب باللغة العربية";
         var values = new double[] { 1, 2, 3 };
-        var typeface = SKFontManager.Default.MatchCharacter('أ');
 
         var chart = new SKCartesianChart
         {
