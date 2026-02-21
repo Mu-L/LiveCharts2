@@ -20,7 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -30,7 +29,6 @@ using Avalonia.Platform;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using Avalonia.Threading;
-using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Drawing;
 using SkiaSharp;
@@ -46,6 +44,7 @@ public class MotionCanvas : UserControl
 
     static MotionCanvas()
     {
+        SkiaSharpDrawingContext.s_clearCanvasOnNewFrame = false;
         _ = LiveChartsSkiaSharp.EnsureInitialized();
     }
 

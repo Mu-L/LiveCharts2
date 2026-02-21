@@ -47,6 +47,11 @@ internal partial class SkiaRenderMode : Grid, IRenderMode
         Children.Add(_renderMode);
     }
 
+    static SkiaRenderMode()
+    {
+        SkiaSharpDrawingContext.s_clearCanvasOnNewFrame = false;
+    }
+
     public event CoreMotionCanvas.FrameRequestHandler FrameRequest
     {
         add => _renderMode.FrameRequest += value;
