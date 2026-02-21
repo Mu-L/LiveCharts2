@@ -100,7 +100,9 @@ public class MotionCanvas : UserControl
     }
 
     private SKColor GetBackground() =>
-        (Parent as IChartView)?.BackColor.AsSKColor() ?? SKColor.Empty;
+        // on avalonia always skip cleaning the background, this is handled by the UI frameowork see
+        // https://github.com/Live-Charts/LiveCharts2/issues/1984
+        SKColor.Empty;
 
     // based on:
     // https://github.com/AvaloniaUI/Avalonia/blob/release/11.0.0/samples/RenderDemo/Pages/CustomSkiaPage.cs
