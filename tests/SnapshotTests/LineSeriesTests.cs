@@ -1,4 +1,4 @@
-﻿using LiveChartsCore.Defaults;
+﻿using System.Collections.ObjectModel;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
@@ -84,5 +84,44 @@ public sealed class LineSeriesTests
         };
 
         chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(Curved)}");
+    }
+
+    [TestMethod]
+    public void Gaps()
+    {
+        var points = new ObservableCollection<int?>([1, 1]);
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int?>
+                {
+                    Values = points,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+
+        _ = chart.GetImage();
+
+        var count = 0;
+        int?[] toAdd = [null, 1];
+
+        void Push()
+        {
+            points.Add(toAdd[count++ % toAdd.Length]);
+            points.RemoveAt(0);
+
+            _ = chart.GetImage();
+        }
+
+        Push();
+        Push();
+        Push();
+        Push();
+
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(Gaps)}");
     }
 }
