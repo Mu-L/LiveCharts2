@@ -1,4 +1,4 @@
-﻿using LiveChartsCore.Defaults;
+﻿using System.Collections.ObjectModel;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
@@ -84,5 +84,263 @@ public sealed class LineSeriesTests
         };
 
         chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(Curved)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsRemoveEnd()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+
+        // draw the chart
+        _ = chart.GetImage();
+
+        // do the change, redraw and assert
+        values.RemoveAt(values.Count - 1);
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsRemoveEnd)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsRemoveStart()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        // draw the chart
+        _ = chart.GetImage();
+        // do the change, redraw and assert
+        values.RemoveAt(0);
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsRemoveStart)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsRemoveMiddle()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        // draw the chart
+        _ = chart.GetImage();
+
+        // do the change, redraw and assert
+        values.RemoveAt(2);
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsRemoveMiddle)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsAdd()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        // draw the chart
+        _ = chart.GetImage();
+
+        // do the change, redraw and assert
+        values.Add(6);
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsAdd)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsInsertMiddle()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+
+        // draw the chart
+        _ = chart.GetImage();
+
+        // do the change, redraw and assert
+        values.Insert(2, 6);
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsInsertMiddle)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsInsertStart()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        // draw the chart
+        _ = chart.GetImage();
+        // do the change, redraw and assert
+        values.Insert(0, 6);
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsInsertStart)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsInsertEnd()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        // draw the chart
+        _ = chart.GetImage();
+        // do the change, redraw and assert
+        values.Insert(values.Count, 6);
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsInsertEnd)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsReplace()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+
+        // draw the chart
+        _ = chart.GetImage();
+
+        // do the change, redraw and assert
+        values[2] = 6;
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsReplace)}");
+    }
+
+    [TestMethod]
+    public void VectorOperationsClear()
+    {
+        var values = new ObservableCollection<int>([1, 2, 3, 4, 5]);
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int>
+                {
+                    Values = values,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        // draw the chart
+        _ = chart.GetImage();
+        // do the change, redraw and assert
+        values.Clear();
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(VectorOperationsClear)}");
+    }
+
+
+    [TestMethod]
+    public void Gaps()
+    {
+        var points = new ObservableCollection<int?>([1, 1]);
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<int?>
+                {
+                    Values = points,
+                    Fill = null
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+
+        _ = chart.GetImage();
+
+        var count = 0;
+        int?[] toAdd = [null, 1];
+
+        void Push()
+        {
+            points.Add(toAdd[count++ % toAdd.Length]);
+            points.RemoveAt(0);
+
+            _ = chart.GetImage();
+        }
+
+        Push();
+        Push();
+        Push();
+        Push();
+
+        chart.AssertSnapshotMatches($"{nameof(LineSeriesTests)}_{nameof(Gaps)}");
     }
 }
