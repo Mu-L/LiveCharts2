@@ -36,26 +36,25 @@ internal class VectorManager(LinkedList<Segment> list)
         if (_currentNode is not null && segment.Id < _currentNode.Value.Id)
         {
             // this is a special case, normally caused because the gaps changed (null points).
-            // lets just ignore the replace candidate logic.
+            // restart from the beginning to keep the linked list in sync.
+            _currentNode = list.First;
         }
-        else
+
+        // look for the segment in the list
+        while (_currentNode is not null && _currentNode.Value != segment)
         {
-            // look for the segment in the list
-            while (_currentNode is not null && _currentNode.Value != segment)
+            if (_currentNode.Value.Id == segment.Id)
             {
-                if (_currentNode.Value.Id == segment.Id)
-                {
-                    // save this node, if we can not find the segment
-                    // but we found a node with the same id,
-                    // we have a candidate to do a replace.
-                    replaceCandidate = _currentNode;
-                }
-
-                deleteCandidates ??= [];
-                deleteCandidates.Add(_currentNode);
-
-                _currentNode = _currentNode?.Next;
+                // save this node, if we can not find the segment
+                // but we found a node with the same id,
+                // we have a candidate to do a replace.
+                replaceCandidate = _currentNode;
             }
+
+            deleteCandidates ??= [];
+            deleteCandidates.Add(_currentNode);
+
+            _currentNode = _currentNode?.Next;
         }
 
         if (_currentNode is null)
