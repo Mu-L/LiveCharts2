@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.Collections.Generic;
 using LiveChartsCore.Drawing.Segments;
 
 namespace LiveChartsCore.Measure;
@@ -35,21 +33,29 @@ internal class VectorManager(LinkedList<Segment> list)
         LinkedListNode<Segment>? replaceCandidate = null;
         List<LinkedListNode<Segment>>? deleteCandidates = null;
 
-        // look for the segment in the list
-        while (_currentNode is not null && _currentNode.Value != segment)
+        if (_currentNode is not null && segment.Id < _currentNode.Value.Id)
         {
-            if (_currentNode.Value.Id == segment.Id)
+            // this is a special case, normally caused because the gaps changed (null points).
+            // lets just ignore the replace candidate logic.
+        }
+        else
+        {
+            // look for the segment in the list
+            while (_currentNode is not null && _currentNode.Value != segment)
             {
-                // save this node, if we can not find the segment
-                // but we found a node with the same id,
-                // we have a candidate to do a replace.
-                replaceCandidate = _currentNode;
+                if (_currentNode.Value.Id == segment.Id)
+                {
+                    // save this node, if we can not find the segment
+                    // but we found a node with the same id,
+                    // we have a candidate to do a replace.
+                    replaceCandidate = _currentNode;
+                }
+
+                deleteCandidates ??= [];
+                deleteCandidates.Add(_currentNode);
+
+                _currentNode = _currentNode?.Next;
             }
-
-            deleteCandidates ??= [];
-            deleteCandidates.Add(_currentNode);
-
-            _currentNode = _currentNode?.Next;
         }
 
         if (_currentNode is null)
@@ -64,14 +70,15 @@ internal class VectorManager(LinkedList<Segment> list)
                 // at this point we know that the path contains this segment
                 // but the instance changed, so we replace the node
 
-                if (replaceCandidate is null)
-                    throw new InvalidOperationException("This should not happen :(");
+                if (replaceCandidate is not null)
+                {
+                    if (followsPrevious)
+                        segment.Copy(replaceCandidate.Value);
 
-                if (followsPrevious)
-                    segment.Copy(replaceCandidate.Value);
+                    replaceCandidate.Value = segment;
+                }
 
-                replaceCandidate.Value = segment;
-                _currentNode = replaceCandidate.Next;
+                _currentNode = replaceCandidate?.Next;
             }
             else
             {
