@@ -1,4 +1,5 @@
 ﻿using Factos;
+using LiveChartsCore.Kernel.Sketches;
 using SharedUITests.Helpers;
 using Xunit;
 
@@ -24,9 +25,9 @@ public class OtherTests
         await Task.Delay(1000);
         // if we got here without exceptions it means the chart handled the null context without issues.
 
-        Assert.ChartIsLoaded(sut.CartesianChart);
-        Assert.ChartIsLoaded(sut.PieChart);
-        Assert.ChartIsLoaded(sut.PolarChart);
+        Assert.True(sut.CartesianChart.CoreChart.IsLoaded);
+        Assert.True(sut.PieChart.CoreChart.IsLoaded);
+        Assert.True(sut.PolarChart.CoreChart.IsLoaded);
     }
 #endif
 }

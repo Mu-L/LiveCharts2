@@ -18,7 +18,7 @@
 
         <lvc:CartesianChart
             Grid.Row="0"
-            x:Name="CartesianChart"
+            x:Name="cartesianChart"
             LegendTextPaint="{Binding LegendTextPaint}"
             LegendBackgroundPaint="{Binding LegendBgPaint}"
             TooltipTextPaint="{Binding TooltipTextPaint}"
@@ -32,7 +32,7 @@
 
         <lvc:PieChart
              Grid.Row="1"
-             x:Name="PieChart"
+             x:Name="pieChart"
              LegendTextPaint="{Binding LegendTextPaint}"
              LegendBackgroundPaint="{Binding LegendBgPaint}"
              TooltipTextPaint="{Binding TooltipTextPaint}"
@@ -46,7 +46,7 @@
 
         <lvc:PolarChart
              Grid.Row="2"
-             x:Name="PolarChart"
+             x:Name="polarChart"
              LegendTextPaint="{Binding LegendTextPaint}"
              LegendBackgroundPaint="{Binding LegendBgPaint}"
              TooltipTextPaint="{Binding TooltipTextPaint}"
