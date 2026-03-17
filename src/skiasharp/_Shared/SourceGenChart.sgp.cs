@@ -193,7 +193,7 @@ public partial class SourceGenChart
         // a reference to the canvas in the UI, CoreChart is null until then.
         if (chart.CoreChart is null) return;
 #endif
-        ((Paint)newValue).PaintStyle = PaintStyle.Text;
+        ((Paint)newValue)?.PaintStyle = PaintStyle.Text;
         chart.CoreChart.Update();
     }
 
