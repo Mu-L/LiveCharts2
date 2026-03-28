@@ -34,6 +34,7 @@ runs:
       run: sudo xcode-select -s ${{ inputs.xcode-path }}
 
     - name: List Simulators
+      shell: pwsh
       if : ${{ inputs.test-type == 'factos-ios' }}
       run: xcrun simctl list devicetypes
 
