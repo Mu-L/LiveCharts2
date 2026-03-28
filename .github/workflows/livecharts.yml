@@ -299,11 +299,10 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: android
-          test-type: factos
+          test-type: factos-android
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
-          use-android-emulator: true
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-ios:
@@ -330,7 +329,7 @@ jobs:
         uses: ./.github/actions/run-tests
         with:
           id: ios
-          test-type: factos
+          test-type: factos-ios
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}

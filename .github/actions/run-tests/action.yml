@@ -2,7 +2,7 @@ name: "Run tests"
 description: "Runs the specified tests using ui or core tests"
 inputs:
   test-type:
-    description: 'The type of tests to run (factos, core or snapshot)'
+    description: 'The type of tests to run (factos, factos-android, factos-ios, core or snapshot)'
     required: true
   id:
     description: "Identifier for the test target"
@@ -22,9 +22,6 @@ inputs:
   xcode-path:
     description: 'The Xcode path to select'
     required: false
-  use-android-emulator:
-    description: 'Whether to use android emulator'
-    required: false
   comment_id:
     description: 'The ID of the comment to append to'
     required: false
@@ -35,6 +32,10 @@ runs:
       shell: pwsh
       if: ${{ inputs.xcode-path }}
       run: sudo xcode-select -s ${{ inputs.xcode-path }}
+
+    - name: List Simulators
+      if : ${{ inputs.test-type == 'factos-ios' }}
+      run: xcrun simctl list devicetypes
 
     - name: Setup .NET and Workloads
       uses: ./.github/actions/setup-dotnet-and-workloads
@@ -54,7 +55,7 @@ runs:
     # run tests using the factos selection and the console when no emulator is needed
     - name: Run UI tests
       uses: nick-fields/retry@v3.0.2
-      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator != 'true' }}
+      if : ${{ inputs.test-type == 'factos' }}
       with:
         timeout_minutes: 15
         max_attempts: 3
@@ -63,14 +64,14 @@ runs:
 
     # run tests using the factos selection inside the android emulator
     - name: Enable KVM
-      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator == 'true' }}
+      if : ${{ inputs.test-type == 'factos-android' }}
       shell: pwsh
       run: |
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
     - name: Create Test Script
-      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator == 'true' }}
+      if : ${{ inputs.test-type == 'factos-android' }}
       shell: bash
       run: |
         cat << 'EOF' > run_tests.sh
@@ -86,13 +87,23 @@ runs:
         EOF
         chmod +x run_tests.sh
     - name: Start Android emulator and run tests
-      if : ${{ inputs.test-type == 'factos' && inputs.use-android-emulator == 'true' }}
+      if : ${{ inputs.test-type == 'factos-android' }}
       uses: reactivecircus/android-emulator-runner@v2.35.0
       with:
         api-level: 35
         target: google_apis
         arch: x86_64
         script: ./run_tests.sh
+
+    # run tests using the factos selection with ios target
+    - name: Run UI tests
+      uses: nick-fields/retry@v3.0.2
+      if : ${{ inputs.test-type == 'factos-ios' }}
+      with:
+        timeout_minutes: 15
+        max_attempts: 3
+        shell: pwsh
+        command: dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }} -p:RuntimeIdentifier=iossimulator-x64 -p:DeviceIdentifier=:v2:runtime=com.apple.CoreSimulator.SimRuntime.iOS-26-2,devicetype=com.apple.CoreSimulator.SimDeviceType.iPhone-16
 
     - name: Run core tests
       uses: nick-fields/retry@v3.0.2
@@ -111,7 +122,6 @@ runs:
         max_attempts: 3
         shell: pwsh
         command: dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
-
     - name: Upload snapshot diffs
       if: failure() && inputs.test-type == 'snapshot'
       uses: actions/upload-artifact@v6.0.0
