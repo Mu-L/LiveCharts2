@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Uno.Sdk/6.3.28">
+  
   <PropertyGroup>
     <UnoSingleProject>true</UnoSingleProject>
     <OutputType>Library</OutputType>
@@ -20,27 +21,9 @@
     <!-- Ensures the .xr.xml files are generated in a proper layout folder -->
     <GenerateLibraryLayout>true</GenerateLibraryLayout>
 
-    <IsPackable>true</IsPackable>
-    <Version>$(LiveChartsVersion)</Version>
-    <PackageIcon>icon.png</PackageIcon>
-    <Description>Simple, flexible, interactive and powerful data visualization for Uno.WinUI.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Authors>$(LiveChartsAuthors)</Authors>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <RepositoryUrl>https://github.com/beto-rodriguez/LiveCharts2</RepositoryUrl>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LiveChartsCore.SkiaSharpView.WinUI</RootNamespace>
     <AssemblyName>LiveChartsCore.SkiaSharpView.Uno.WinUI</AssemblyName>
-    <DefaultLanguage>en-US</DefaultLanguage>
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-
-    <Deterministic>true</Deterministic>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PathToPackAssets>../../../</PathToPackAssets>
   </PropertyGroup>
 
   <ItemGroup>
@@ -48,18 +31,24 @@
     <None Include="$(OutputPath)$(AssemblyName).uprimarker" Pack="false" />
   </ItemGroup>
 
-  <Import Project="..\..\..\build\WinUISharedLinks.Build.props" />
-  <Import Project="..\..\..\build\SharedLinks.Build.props" />
-  <Import Project="..\..\..\build\XamlSharedLinks.Build.props" />
-  <Import Project="..\..\..\build\NativeSharedLinks.Build.props" />
+  <Import Project="../../../nuget.props" />
+  <PropertyGroup>
+    <Description>
+      $(Description) This package includes all the required code and dependencies for rendering charts in Uno Platform with SkiaSharp.
+    </Description>
+  </PropertyGroup>
+
+  <Import Project="../../../build/WinUISharedLinks.Build.props" />
+  <Import Project="../../../build/SharedLinks.Build.props" />
+  <Import Project="../../../build/XamlSharedLinks.Build.props" />
+  <Import Project="../../../build/NativeSharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);UNO_LVC;WINUI_LVC;XAML_LVC</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
-    <ProjectReference Include="..\LiveChartsCore.SkiaSharp\LiveChartsCore.SkiaSharpView.csproj" />
+    <ProjectReference Include="../LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj" />
     <!-- If windows add SkiaSharp WinUI package. -->
     <PackageReference
        Condition="$(TargetFramework.Contains('-windows'))"
@@ -85,13 +74,10 @@
   </ItemGroup>
 
   <ItemGroup Condition="!$(UseNuGetForGenerator)">
-    <ProjectReference Include="..\..\..\generators\LiveChartsGenerators\LiveChartsGenerators.csproj">
+    <ProjectReference Include="../../../generators/LiveChartsGenerators/LiveChartsGenerators.csproj">
       <OutputItemType>Analyzer</OutputItemType>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>
-
-  <ItemGroup>
-    <None Include="images\icon.png" Pack="true" PackagePath="\" />
-  </ItemGroup>
+  
 </Project>

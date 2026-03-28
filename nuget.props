@@ -26,4 +26,20 @@
 
     <Description>Simple, stunning, interactive and powerful data visualization for .Net.</Description>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Other packing related properties... -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <DocumentationFile>bin/$(Configuration)/$(TargetFramework)/$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(PathToPackAssets)icon.png" Pack="true" PackagePath="\" />
+    <None Include="$(PathToPackAssets)README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>

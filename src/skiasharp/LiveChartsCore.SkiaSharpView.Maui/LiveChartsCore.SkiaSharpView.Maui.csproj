@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-    <ImplicitUsings>disable</ImplicitUsings>
     <SingleProject>true</SingleProject>
 
     <TargetFrameworks>
       net9.0;net9.0-android;net9.0-ios;net9.0-maccatalyst;
       net10.0;net10.0-android;net10.0-ios;net10.0-maccatalyst;
     </TargetFrameworks>
+    
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">
       $(TargetFrameworks);
       net9.0-windows10.0.19041.0;
@@ -21,23 +21,9 @@
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 
-    <Version>$(LiveChartsVersion)</Version>
-    <PackageIcon>icon.png</PackageIcon>
-    <Description>Simple, flexible, interactive and powerful data visualization for Maui.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Authors>$(LiveChartsAuthors)</Authors>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <RepositoryUrl>https://github.com/beto-rodriguez/LiveCharts2</RepositoryUrl>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
-
-    <Deterministic>true</Deterministic>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <AssemblyName>LiveChartsCore.SkiaSharpView.Maui</AssemblyName>
+    <RootNamespace>LiveChartsCore.SkiaSharpView.Maui</RootNamespace>
+    <PathToPackAssets>../../../</PathToPackAssets>
 	</PropertyGroup>
 
   <PropertyGroup>
@@ -45,9 +31,16 @@
     <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
   </PropertyGroup>
 
-  <Import Project="..\..\..\build\SharedLinks.Build.props" />
-  <Import Project="..\..\..\build\XamlSharedLinks.Build.props" />
-  <Import Project="..\..\..\build\NativeSharedLinks.Build.props" />
+  <Import Project="../../../nuget.props" />
+  <PropertyGroup>
+    <Description>
+      $(Description) This package includes all the required code and dependencies for rendering charts in MAUI with SkiaSharp.
+    </Description>
+  </PropertyGroup>
+
+  <Import Project="../../../build/SharedLinks.Build.props" />
+  <Import Project="../../../build/XamlSharedLinks.Build.props" />
+  <Import Project="../../../build/NativeSharedLinks.Build.props" />
 
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);MAUI_LVC;XAML_LVC</DefineConstants>
@@ -70,16 +63,13 @@
   <ItemGroup>
 	  <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="$(LatestSkiaSharpVersion)" />
     <PackageReference Include="SkiaSharp.HarfBuzz" Version="$(LatestSkiaSharpVersion)" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
-
-
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(LvcMauiVersion)" />
     <PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(LvcMauiVersion)" />
   </ItemGroup>
 
 	<ItemGroup>
-    <ProjectReference Include="..\..\LiveChartsCore\LiveChartsCore.csproj" />
-	  <ProjectReference Include="..\LiveChartsCore.SkiaSharp\LiveChartsCore.SkiaSharpView.csproj" />
+    <ProjectReference Include="../../LiveChartsCore/LiveChartsCore.csproj" />
+	  <ProjectReference Include="../LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj" />
 	</ItemGroup>
 
   <ItemGroup Condition="$(UseNuGetForGenerator)">
@@ -90,14 +80,10 @@
   </ItemGroup>
 
   <ItemGroup Condition="!$(UseNuGetForGenerator)">
-    <ProjectReference Include="..\..\..\generators\LiveChartsGenerators\LiveChartsGenerators.csproj">
+    <ProjectReference Include="../../../generators/LiveChartsGenerators/LiveChartsGenerators.csproj">
       <OutputItemType>Analyzer</OutputItemType>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="images\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
