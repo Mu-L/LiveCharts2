@@ -242,7 +242,7 @@ jobs:
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
+          xcode-path: /Applications/Xcode_26.3.app
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-browser:
@@ -334,7 +334,7 @@ jobs:
           test-id: ${{ matrix.id }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
+          xcode-path: /Applications/Xcode_26.3.app
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   after-tests:
