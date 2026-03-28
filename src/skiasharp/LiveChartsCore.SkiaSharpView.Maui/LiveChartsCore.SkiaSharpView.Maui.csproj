@@ -2,6 +2,7 @@
 
 	<PropertyGroup>
     <SingleProject>true</SingleProject>
+    <ImplicitUsings>disable</ImplicitUsings>
 
     <TargetFrameworks>
       net9.0;net9.0-android;net9.0-ios;net9.0-maccatalyst;
