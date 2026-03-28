@@ -313,7 +313,7 @@ jobs:
         include:
           - id: avalonia-ios
             workloads: ios
-          - id: maui
+          - id: maui-ios
             tf: net10.0-ios
             workloads: maui
           # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
@@ -387,4 +387,3 @@ jobs:
             Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
             ### Test Results Summary (Failure) ❌ (4 / 4)
-            

@@ -66,6 +66,11 @@ MSBuildArg tf_n10w = new("TestBuildTargetFramework", "net10.0-windows");
 MSBuildArg tf_n10w10 = new("TestBuildTargetFramework", "net10.0-windows10.0.19041.0");
 MSBuildArg tf_n462 = new("TestBuildTargetFramework", "net462");
 MSBuildArg isTest = new("IsTestBuild", "true");
+MSBuildArg[] iphoneBuild = [
+    ..msBuildArgs,
+    new("RuntimeIdentifier", "[runtime]"),
+    new("_DeviceName", "[device]")
+];
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
     new("RuntimeIdentifier", "win-x64"),
@@ -82,11 +87,12 @@ TestRecord[] toTest = [
     new($"{root}/{avaloniaDir}.Android",        "avalonia-android",     msBuildArgs),
     new($"{root}/{avaloniaDir}.Browser",        "avalonia-browser",     msBuildArgs,                            AppHost.HeadlessChrome),
     new($"{root}/{avaloniaDir}.Desktop",        "avalonia-desktop",     msBuildArgs),
-    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         msBuildArgs),
+    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         iphoneBuild),
 
     new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
 
     new($"{root}/MauiSample",                   "maui",                 [..msBuildArgs, tf_var]),
+    new($"{root}/MauiSample",                   "maui-ios",             iphoneBuild),
 
     new($"{root}/{unoDir}",                     "uno",                  [..msBuildArgs, tf_var]),
 
