@@ -68,7 +68,8 @@ MSBuildArg tf_n462 = new("TestBuildTargetFramework", "net462");
 MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
-    new("RuntimeIdentifier", "[runtime]")
+    new("RuntimeIdentifier", "iossimulator-arm64"),
+    new("DeviceName", @"""iPhone 17 Pro""")
 ];
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
