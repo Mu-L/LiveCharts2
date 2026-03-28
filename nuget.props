@@ -29,6 +29,7 @@
 
   <PropertyGroup>
     <!-- Other packing related properties... -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <DocumentationFile>bin/$(Configuration)/$(TargetFramework)/$(AssemblyName).xml</DocumentationFile>
