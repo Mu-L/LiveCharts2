@@ -98,7 +98,7 @@ runs:
 
     # run tests using the factos selection with ios target
     - name: Boot Simulator
-      shell: pwsh
+      shell: bash
       if : ${{ inputs.test-type == 'factos-ios' }}
       run: |
         # Find the UDID for the iPhone 17 Pro
