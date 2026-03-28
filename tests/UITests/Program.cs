@@ -68,8 +68,7 @@ MSBuildArg tf_n462 = new("TestBuildTargetFramework", "net462");
 MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
-    new("RuntimeIdentifier", "[runtime]"),
-    new("_DeviceName", "[device]")
+    new("RuntimeIdentifier", "[runtime]")
 ];
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,

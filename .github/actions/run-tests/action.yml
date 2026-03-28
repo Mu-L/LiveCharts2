@@ -104,7 +104,7 @@ runs:
         timeout_minutes: 15
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }} runtime=iossimulator-arm64 device="iPhone 17 Pro"
+        command: dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }} runtime=iossimulator-arm64
 
     - name: Run core tests
       uses: nick-fields/retry@v3.0.2
