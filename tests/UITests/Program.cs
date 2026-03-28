@@ -92,7 +92,7 @@ TestRecord[] toTest = [
     new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
 
     new($"{root}/MauiSample",                   "maui",                 [..msBuildArgs, tf_var]),
-    new($"{root}/MauiSample",                   "maui-ios",             iphoneBuild),
+    new($"{root}/MauiSample",                   "maui-ios",             [..iphoneBuild, tf_var]),
 
     new($"{root}/{unoDir}",                     "uno",                  [..msBuildArgs, tf_var]),
 
