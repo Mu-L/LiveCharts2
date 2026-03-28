@@ -97,21 +97,21 @@ runs:
         script: ./run_tests.sh
 
     # run tests using the factos selection with ios target
-    - name: Boot Simulator
-      shell: bash
-      if : ${{ inputs.test-type == 'factos-ios' }}
-      run: |
-        # Find the UDID for the iPhone 17 Pro
-        UUID=$(xcrun simctl list devicetypes | grep "iPhone 17 Pro" | awk -F '[()]' '{print $2}' | head -n 1)
-        xcrun simctl boot $UUID || true
     - name: Run UI tests
       uses: nick-fields/retry@v3.0.2
       if : ${{ inputs.test-type == 'factos-ios' }}
       with:
         timeout_minutes: 15
         max_attempts: 3
-        shell: pwsh
-        command: dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+        shell: bash
+        command: |
+          # 1. Dynamically find the UUID of a valid, available iPhone
+          # We search for "iPhone" to avoid the iPad M4 issue, and grab the first UUID
+          DEVICE_UUID=$(xcrun simctl list devices | grep "iPhone" | grep -v "unavailable" | grep -oE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}" | head -n 1)
+    
+          echo "Found Device UUID: $DEVICE_UUID"
+
+          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }} device=$DEVICE_UUID
 
     - name: Run core tests
       uses: nick-fields/retry@v3.0.2

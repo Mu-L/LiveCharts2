@@ -69,7 +69,7 @@ MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
     new("RuntimeIdentifier", "iossimulator-arm64"),
-    new("_DeviceName", @"""iPhone 17 Pro""")
+    new("_DeviceName", @"[device]")
 ];
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
