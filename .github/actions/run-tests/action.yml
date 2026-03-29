@@ -107,6 +107,18 @@ runs:
       with:
         model: 'iPhone 16e'
         wait_for_boot: true
+    - name: Verify Simulator Readiness
+      if: ${{ inputs.test-type == 'factos-ios' }}
+      run: |
+        # Force wait until the simulator status is exactly "Booted"
+        # This prevents the "Shutdown" error you encountered
+        ID="${{ steps.launch_ios_simulator.outputs.udid }}"
+        echo "Waiting for simulator $ID to fully boot..."
+        until xcrun simctl list devices | grep "$ID" | grep -q "Booted"; do
+          sleep 5
+        done
+        # Extra 5s buffer for the 'installd' daemon to wake up
+        sleep 5
     - name: Run UI tests
       uses: nick-fields/retry@v3.0.2
       if : ${{ inputs.test-type == 'factos-ios' }}
