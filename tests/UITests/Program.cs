@@ -69,7 +69,7 @@ MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
     new("_DeviceName", "[device]"),
-    new("MTouchUseLlvm", "false")
+    new("MTouchUseLlvm", "false"),
     new("MtouchLink", "SdkOnly")
 ];
 MSBuildArg[] winUIArgs = [

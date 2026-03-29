@@ -105,7 +105,7 @@ runs:
       if : ${{ inputs.test-type == 'factos-ios' }}
       uses: futureware-tech/simulator-action@v5
       with:
-        model: 'iPhone SE (3rd generation)'
+        model: 'iPhone 16e'
         wait_for_boot: true
     - name: Run UI tests
       uses: nick-fields/retry@v3.0.2
