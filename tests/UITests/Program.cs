@@ -69,7 +69,7 @@ MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
     new("RuntimeIdentifier", "iossimulator-arm64"),
-    new("_DeviceName", @"[device]")
+    new("_DeviceName", "[device]")
 ];
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
@@ -87,7 +87,7 @@ TestRecord[] toTest = [
     new($"{root}/{avaloniaDir}.Android",        "avalonia-android",     msBuildArgs),
     new($"{root}/{avaloniaDir}.Browser",        "avalonia-browser",     msBuildArgs,                            AppHost.HeadlessChrome),
     new($"{root}/{avaloniaDir}.Desktop",        "avalonia-desktop",     msBuildArgs),
-    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         iphoneBuild),
+    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         [..msBuildArgs, new("_DeviceName", "[device]")]),
 
     new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
 
