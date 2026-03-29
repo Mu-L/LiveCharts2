@@ -105,9 +105,11 @@ runs:
       if : ${{ inputs.test-type == 'factos-ios' }}
       uses: futureware-tech/simulator-action@v5
       with:
-        model: 'iPhone 16e'
+        # uuid from https://github.com/futureware-tech/simulator-action/wiki/Devices-macos-26
+        udid: '3A65F643-D92E-4AE6-A0D9-46A00A130DF2'
         wait_for_boot: true
     - name: Verify Simulator Readiness
+      shell: bash
       if: ${{ inputs.test-type == 'factos-ios' }}
       run: |
         # Force wait until the simulator status is exactly "Booted"
