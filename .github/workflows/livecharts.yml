@@ -118,7 +118,7 @@ jobs:
             
             #### Packing complete!
 
-            You can download the NuGet packages for this build [here](${{ steps.merge.outputs.artifact-url }}).
+            You can download the NuGet packages for this build [here (dev-${{ github.run_number }})](${{ steps.merge.outputs.artifact-url }}).
             The packages will be available for 30 days, you can either [use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet), or wait for this PR to be merged to have them published to NuGet.org.
 
             #### Running tests 🧪
