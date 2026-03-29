@@ -22,7 +22,7 @@ jobs:
         id: create-comment
         with:
           content: | 
-            ### Thanks for your contribution! 🤗 (1 / 4)
+            #### Thanks for your contribution!
 
             The build and test process is starting. This may take a while.
             You can find more details below as the process continues or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
@@ -39,7 +39,7 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then
             echo "suffix=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
-            echo "suffix=${{ github.run_number }}" >> $GITHUB_OUTPUT
+            echo "suffix=dev-${{ github.run_number }}" >> $GITHUB_OUTPUT
           fi
 
   pack: 
@@ -116,12 +116,12 @@ jobs:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
           content: |
             
-            ### Packing complete! 📦 (2 / 4)
+            #### Packing complete!
 
             You can download the NuGet packages for this build [here](${{ steps.merge.outputs.artifact-url }}).
             The packages will be available for 30 days, you can either [use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet), or wait for this PR to be merged to have them published to NuGet.org.
 
-            ### Running tests 🧪 (3 / 4)
+            #### Running tests 🧪
             
             Tests are running now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
 
@@ -397,7 +397,7 @@ jobs:
           content: |
             Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
-            ### Test Results Summary (Passed) ✅ (4 / 4)
+            #### Test Results Summary (Passed) ✅
 
       - name: Report tests failure
         if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled') || contains(join(needs.*.result, ' '), 'skipped')) }}
@@ -408,7 +408,7 @@ jobs:
           
             Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
-            ### Test Results Summary (Failure) ❌ (4 / 4)
+            #### Test Results Summary (Failure) ❌
 
       - name: Setup .NET
         if: ${{ github.ref_type == 'tag' && !contains(join(needs.*.result, ' '), 'failure') && !contains(join(needs.*.result, ' '), 'cancelled') && !contains(join(needs.*.result, ' '), 'skipped') }}
