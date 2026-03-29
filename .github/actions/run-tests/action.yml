@@ -100,6 +100,12 @@ runs:
         script: ./run_tests.sh
 
     # run tests using the factos selection with ios target
+    - name: Launch iOS Simulator
+      id: launch_ios_simulator
+      uses: futureware-tech/simulator-action@v5
+      with:
+        model: 'iPhone SE (3rd generation'
+        wait_for_boot: true
     - name: Run UI tests
       uses: nick-fields/retry@v3.0.2
       if : ${{ inputs.test-type == 'factos-ios' }}
@@ -108,12 +114,7 @@ runs:
         max_attempts: 3
         shell: bash
         command: |
-          # 1. Dynamically find the UUID of a valid, available iPhone
-          # We search for "iPhone" to avoid the iPad M4 issue, and grab the first UUID
-          UUID=$(xcrun simctl list devices | grep "iPhone" | grep -v "unavailable" | grep -oE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}" | head -n 1)
-          echo "Found Device UUID: $UUID"
-          DEVICE_POINTER=":v2:udid=$UUID"
-          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ inputs.livecharts-suffix }} device=$DEVICE_POINTER
+          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ inputs.livecharts-suffix }} device=${{ steps.launch_ios_simulator.outputs.udid }}
 
     - name: Run core tests
       uses: nick-fields/retry@v3.0.2

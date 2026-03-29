@@ -68,8 +68,9 @@ MSBuildArg tf_n462 = new("TestBuildTargetFramework", "net462");
 MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
-    new("RuntimeIdentifier", "iossimulator-arm64"),
-    new("_DeviceName", "[device]")
+    new("_DeviceName", "[device]"),
+    new("MTouchUseLlvm", "false")
+    new("MtouchLink", "SdkOnly")
 ];
 MSBuildArg[] winUIArgs = [
     .. msBuildArgs,
@@ -87,12 +88,12 @@ TestRecord[] toTest = [
     new($"{root}/{avaloniaDir}.Android",        "avalonia-android",     msBuildArgs),
     new($"{root}/{avaloniaDir}.Browser",        "avalonia-browser",     msBuildArgs,                            AppHost.HeadlessChrome),
     new($"{root}/{avaloniaDir}.Desktop",        "avalonia-desktop",     msBuildArgs),
-    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         [..msBuildArgs, new("_DeviceName", "[device]")]),
+    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         iphoneBuild,
 
     new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
 
     new($"{root}/MauiSample",                   "maui",                 [..msBuildArgs, tf_var]),
-    new($"{root}/MauiSample",                   "maui-ios",             [..iphoneBuild, tf_var]),
+    new($"{root}/MauiSample",                   "maui-ios",             [..iphoneBuild, tf_var, new("RuntimeIdentifier", "iossimulator-arm64")]),
 
     new($"{root}/{unoDir}",                     "uno",                  [..msBuildArgs, tf_var]),
 
