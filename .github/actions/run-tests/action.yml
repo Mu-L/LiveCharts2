@@ -102,6 +102,7 @@ runs:
     # run tests using the factos selection with ios target
     - name: Launch iOS Simulator
       id: launch_ios_simulator
+      if : ${{ inputs.test-type == 'factos-ios' }}
       uses: futureware-tech/simulator-action@v5
       with:
         model: 'iPhone SE (3rd generation'
