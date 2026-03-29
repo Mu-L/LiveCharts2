@@ -129,7 +129,7 @@ runs:
         max_attempts: 3
         shell: bash
         command: |
-          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ inputs.livecharts-suffix }} device=:v2:udid=${{ steps.launch_ios_simulator.outputs.udid }}
+          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ inputs.livecharts-suffix }} device=:v2:udid=${{ steps.launch_ios_simulator.outputs.udid }} -p:RunAOTCompilation=false -p:UseInterpreter=true
 
     - name: Run core tests
       uses: nick-fields/retry@v3.0.2
