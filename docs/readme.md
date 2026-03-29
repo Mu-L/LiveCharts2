@@ -1,6 +1,6 @@
 # About docs in this repository
 
-The docs in this repo use markdown and [Scriban](https://github.com/scriban/scriban) to prerocess the md files,
+The docs in this repo use markdown and [Scriban](https://github.com/scriban/scriban) to preprocess the md files,
 there is a closed source tool that does the prerocessing, there is nothing special about the tool, it just uses Scriban
 on all the files in the docs folder. Scriban is a templating language similar to Liquid, and the tool just replaces the
 templates with the actual content.
@@ -14,7 +14,7 @@ with the result of the function.
 |------------------------|-------------------------------------------------------------------------------------------------|
 | version                | The current version of LiveCharts2, e.g. 2.0.0-beta.1                                           |
 | platform               | The current platform, e.g. wpf, winforms, avalonia, maui, uno                                   |
-| platforn_display_Name  | The platform name but as shown in NuGet, (WPF, Blazor, Maui, Uno.WinUI, Avalonia, WinUI, Eto)   |
+| platforn_display_name  | The platform name but as shown in NuGet, (WPF, Blazor, Maui, Uno.WinUI, Avalonia, WinUI, Eto)   |
 | platform_samples_folder| The folder name for the current platform samples in the repo                                    |
 | view_extension         | Resolves the view file depending on the platform, e.g. "/View.xaml" for wpf, "/View.axaml" for avalonia or ".razor" for Blazor |
 | view_code              | Resolves the view code depending on the platform, e.g. "View.xaml.cs" for wpf, "View.axaml.cs" for avalonia or ".razor" for Blazor |

@@ -204,7 +204,7 @@ Lets take the example of the next series:"
 
 By default the tooltip will be:
 
-![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/assets/tooltip-format1.png)
+![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/_assets/tooltip-format1.png)
 
 We can add format to the tooltip:
 
@@ -225,7 +225,7 @@ We can add format to the tooltip:
     }
 ];</code></pre>
 
-![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/assets/tooltip-format2.png)
+![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/_assets/tooltip-format2.png)
 
 We used the Model property of the point, the Model property is just the item in the Values
 collection, for example in the next case, the Model property is of type `City`.
@@ -256,7 +256,7 @@ We can also show a label for the `X` coordinate, the default tooltip uses the X 
     YToolTipLabelFormatter = point => point.Model.ToString("C2")
 };</code></pre>
 
-![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/assets/tooltip-format3.png)
+![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/_assets/tooltip-format3.png)
 
 When the series is "Stacked" (`PieSeries`, `StackedColumn` or `StackedRow`) we can find information about the stacked data
 in the `StackedValue` property, for example:
@@ -279,7 +279,7 @@ in the `StackedValue` property, for example:
 
 Will result in:
 
-![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/assets/tooltip-format4.png)
+![tooltip](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/_assets/tooltip-format4.png)
 
 :::tip
 The PieSeries class uses the `ToolTipLabelFormatter` property to configure the text inside the tooltip.
