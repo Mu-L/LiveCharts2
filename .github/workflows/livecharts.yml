@@ -7,6 +7,9 @@ permissions:
 
 on:
   pull_request:
+  push:
+    tags:
+      - '**'
 
 jobs:
 
@@ -26,9 +29,22 @@ jobs:
     outputs: 
       comment_id: ${{ steps.create-comment.outputs.comment_id }}
 
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      suffix: ${{ steps.vars.outputs.suffix }}
+    steps:
+      - id: vars
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "suffix=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "suffix=-${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
   pack: 
     runs-on: windows-2025
-    needs: report-progress-starting
+    needs: [report-progress-starting, prepare]
     strategy:
       matrix:
         include:
@@ -66,7 +82,7 @@ jobs:
 
       - name: Pack
         run: 
-          dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSuffix=-${{ github.sha }}
+          dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSuffix=-${{ needs.prepare.outputs.suffix }}
 
       - name: Upload packages
         id: upload
@@ -80,7 +96,7 @@ jobs:
 
   collect-packages:
     runs-on: ubuntu-24.04
-    needs: [pack, report-progress-starting]
+    needs: [pack, report-progress-starting, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -111,7 +127,7 @@ jobs:
 
   test-core:
     runs-on: windows-2025
-    needs: [pack, report-progress-starting, collect-packages]
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     strategy:
       fail-fast: false
       matrix:
@@ -125,15 +141,14 @@ jobs:
         with:
           id: core
           test-id: core-${{ matrix.framework }}
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           test-type: core
           target-framework: ${{ matrix.framework }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-snapshot:
     runs-on: windows-2025
-    needs: [pack, report-progress-starting, collect-packages]
-    strategy:
-      fail-fast: false
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -143,6 +158,7 @@ jobs:
         with:
           id: snapshot
           test-id: snapshot
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           test-type: snapshot
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
@@ -171,7 +187,7 @@ jobs:
           - id: wpf-net10w19041
           - id: wpf-net462
           
-    needs: [pack, report-progress-starting, collect-packages]
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -182,6 +198,7 @@ jobs:
           id: windows
           test-type: factos
           test-id: ${{ matrix.id }}
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -197,7 +214,7 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: android
-    needs: [pack, report-progress-starting, collect-packages]
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -211,6 +228,7 @@ jobs:
           id: linux
           test-type: factos
           test-id: ${{ matrix.id }}
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -229,7 +247,7 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: maui
-    needs: [pack, report-progress-starting, collect-packages]
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -240,6 +258,7 @@ jobs:
           id: mac
           test-type: factos
           test-id: ${{ matrix.id }}
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           xcode-path: /Applications/Xcode_26.2.app
@@ -260,7 +279,7 @@ jobs:
           # - id: uno
           #   tf: net10.0-browserwasm
           #   workloads: wasm-tools android
-    needs: [pack, report-progress-starting, collect-packages]
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -271,6 +290,7 @@ jobs:
           id: browser
           test-type: factos
           test-id: ${{ matrix.id }}
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -290,7 +310,7 @@ jobs:
           # - id: uno
           #   tf: net10.0-android
           #   workloads: android
-    needs: [pack, report-progress-starting, collect-packages]
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -301,6 +321,7 @@ jobs:
           id: android
           test-type: factos-android
           test-id: ${{ matrix.id }}
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -320,7 +341,7 @@ jobs:
           # - id: uno
           #   tf: net10.0-ios
           #   workloads: ios android
-    needs: [pack, report-progress-starting, collect-packages]
+    needs: [pack, report-progress-starting, collect-packages, prepare]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -331,6 +352,7 @@ jobs:
           id: ios
           test-type: factos-ios
           test-id: ${{ matrix.id }}
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           xcode-path: /Applications/Xcode_26.2.app
@@ -349,6 +371,7 @@ jobs:
       - test-browser
       - test-android
       - test-ios
+      - prepare
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -356,15 +379,14 @@ jobs:
       - name: Download all test results
         uses: actions/download-artifact@v7.0.0
         with:
-          pattern: test-results-*
-          path: ./test-results
+          path: ./artifacts
 
       - name: Publish all test results
         id: report
         uses: dorny/test-reporter@v2.4.0
         with:
           name: all-test-results
-          path: "./test-results/**/*.trx"
+          path: "./artifacts/**/*.trx"
           reporter: dotnet-trx
 
       - name: Report tests completion
@@ -387,3 +409,13 @@ jobs:
             Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
             ### Test Results Summary (Failure) ❌ (4 / 4)
+
+      - name: Setup .NET
+        if: github.ref_type == 'tag'
+        uses: ./.github/actions/setup-dotnet-and-workloads
+
+      - name: Publish to NuGet
+        shell: bash
+        if: github.ref_type == 'tag'
+        run:
+          dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

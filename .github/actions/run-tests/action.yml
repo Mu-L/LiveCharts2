@@ -7,6 +7,9 @@ inputs:
   id:
     description: "Identifier for the test target"
     required: true
+  livecharts-suffix:
+    description: 'The suffix to add to the LiveCharts version'
+    required: true
   test-id:
     description: 'The test id to select for factos'
     required: false
@@ -61,7 +64,7 @@ runs:
         timeout_minutes: 15
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+        command: dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ intputs.livecharts-suffix }}
 
     # run tests using the factos selection inside the android emulator
     - name: Enable KVM
@@ -79,7 +82,7 @@ runs:
         n=0
         while [ $n -lt 3 ]; do
           echo "Starting Attempt $((n+1))..."
-          timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }}
+          timeout 15m dotnet run --project tests/UITests -c Release --report-trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ intputs.livecharts-suffix }}
           if [ $? -eq 0 ]; then exit 0; fi
           n=$((n+1))
           sleep 10
@@ -110,7 +113,7 @@ runs:
           UUID=$(xcrun simctl list devices | grep "iPhone" | grep -v "unavailable" | grep -oE "[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}" | head -n 1)
           echo "Found Device UUID: $UUID"
           DEVICE_POINTER=":v2:udid=$UUID"
-          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ github.sha }} device=$DEVICE_POINTER
+          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ intputs.livecharts-suffix }} device=$DEVICE_POINTER
 
     - name: Run core tests
       uses: nick-fields/retry@v3.0.2
@@ -119,7 +122,7 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+        command: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ intputs.livecharts-suffix }}
 
     - name: Run snapshot tests
       uses: nick-fields/retry@v3.0.2
@@ -128,7 +131,7 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ github.sha }}
+        command: dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ intputs.livecharts-suffix }}
     - name: Upload snapshot diffs
       if: failure() && inputs.test-type == 'snapshot'
       uses: actions/upload-artifact@v6.0.0
