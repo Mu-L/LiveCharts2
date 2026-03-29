@@ -39,7 +39,7 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then
             echo "suffix=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           else
-            echo "suffix=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "suffix=${{ github.run_number }}" >> $GITHUB_OUTPUT
           fi
 
   pack: 
