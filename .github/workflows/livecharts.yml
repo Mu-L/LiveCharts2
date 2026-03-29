@@ -7,9 +7,6 @@ permissions:
 
 on:
   pull_request:
-  push:
-    tags:
-      - '**'
 
 jobs:
 
@@ -35,12 +32,8 @@ jobs:
       suffix: ${{ steps.vars.outputs.suffix }}
     steps:
       - id: vars
-        run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "suffix=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "suffix=dev-${{ github.run_number }}" >> $GITHUB_OUTPUT
-          fi
+        run:
+          echo "suffix=dev-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
   pack: 
     runs-on: windows-2025
