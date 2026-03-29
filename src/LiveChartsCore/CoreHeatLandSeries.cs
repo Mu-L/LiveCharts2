@@ -102,7 +102,7 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
 
         if (!_isHeatInCanvas)
         {
-            context.View.Canvas.AddDrawableTask(_heatPaint);
+            context.View.CoreCanvas.AddDrawableTask(_heatPaint);
             _isHeatInCanvas = true;
         }
 
@@ -124,7 +124,7 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
         foreach (var land in Lands ?? [])
         {
             _ = Maps.BuildProjector(
-                context.View.MapProjection, [context.View.Width, context.View.Height]);
+                context.View.MapProjection, [context.View.ControlSize.Width, context.View.ControlSize.Height]);
 
             var heat = HeatFunctions.InterpolateColor((float)land.Value, bounds, HeatMap, heatStops);
 
@@ -156,8 +156,11 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
     /// <summary>
     /// Initializes the series.
     /// </summary>
-    protected void IntitializeSeries(Paint heatPaint) =>
+    protected void IntitializeSeries(Paint heatPaint)
+    {
+        heatPaint.PaintStyle = PaintStyle.Fill;
         _heatPaint = heatPaint;
+    }
 
     /// <summary>
     /// Called to invoke the property changed event.

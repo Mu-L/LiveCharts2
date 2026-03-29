@@ -1,6 +1,6 @@
-﻿<Project Sdk="Uno.Sdk">
+﻿<Project Sdk="Uno.Sdk/6.5.31">
     <PropertyGroup>
-        <TargetFrameworks>net9.0-android;net9.0-ios;net9.0-windows10.0.26100;net9.0-browserwasm;net9.0-desktop</TargetFrameworks>
+        <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-windows10.0.19041.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
 
         <OutputType>Exe</OutputType>
         <UnoSingleProject>true</UnoSingleProject>
@@ -38,11 +38,12 @@
             SkiaRenderer;
         </UnoFeatures>
 
+        <NoWarn>$(NoWarn);MSB4240</NoWarn>
     </PropertyGroup>
 
-    <Import Project="./../Directory.Build.props"/>
-    <Import Project="./../../../Directory.Build.props"/>
-    <Import Project="./../../../build/RenderSettings.Build.props"/>
+    <!--<Import Project="./../Directory.Build.props" />-->
+    <Import Project="./../../../Directory.Build.props" />
+    <Import Project="./../../../build/RenderSettings.Build.props" />
 
     <ItemGroup>
         <Page Include="..\..\WinUISample\WinUISample\Samples\**\*.xaml">
@@ -65,5 +66,23 @@
     <ItemGroup Condition="!$(UseNuGetForSamples)">
         <ProjectReference Include="..\..\..\src\skiasharp\LiveChartsCore.SkiaSharpView.Uno.WinUI\LiveChartsCore.SkiaSharpView.Uno.WinUI.csproj" />
     </ItemGroup>
+
+    <!-- UI test setup -->
+    <!--<Import Project="..\..\build\UITestsLinks.Build.props" />-->
+    <!--in uno we do not use the UITestsLinks because the uno folder is different.-->
+    <ItemGroup Condition="$(UITesting) == 'true'">
+        <Compile Include="..\..\..\tests\SharedUITests\**\*.cs">
+            <Link>UITests\%(RecursiveDir)%(Filename).cs</Link>
+        </Compile>
+    </ItemGroup>
+
+    <ItemGroup Condition="$(UITesting) == 'true'">
+        <PackageReference Include="Factos.Uno" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="$(UITesting) == 'true'">
+        <NoWarn>$(NoWarnUITests)</NoWarn>
+        <DefineConstants>$(DefineConstants);UI_TESTING;XAML_UI_TESTING;UNO_UI_TESTING</DefineConstants>
+    </PropertyGroup>
 
 </Project>

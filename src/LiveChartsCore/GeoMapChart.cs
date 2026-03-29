@@ -111,8 +111,8 @@ public class GeoMapChart
     /// </summary>
     public void Unload()
     {
-        if (View.Stroke is not null) View.Canvas.RemovePaintTask(View.Stroke);
-        if (View.Fill is not null) View.Canvas.RemovePaintTask(View.Fill);
+        if (View.Stroke is not null) View.CoreCanvas.RemovePaintTask(View.Stroke);
+        if (View.Fill is not null) View.CoreCanvas.RemovePaintTask(View.Fill);
 
         _everMeasuredSeries.Clear();
         _heatPaint = null!;
@@ -125,7 +125,7 @@ public class GeoMapChart
         _activeMap = null!;
         _mapFactory = null!;
 
-        View.Canvas.Dispose();
+        View.CoreCanvas.Dispose();
     }
 
     /// <summary>
@@ -161,7 +161,7 @@ public class GeoMapChart
         {
             View.InvokeOnUIThread(() =>
             {
-                lock (View.Canvas.Sync)
+                lock (View.CoreCanvas.Sync)
                 {
                     if (_isUnloaded) return;
                     Measure();
@@ -177,32 +177,32 @@ public class GeoMapChart
     {
         if (_activeMap is not null && _activeMap != View.ActiveMap)
         {
-            _previousStroke?.ClearGeometriesFromPaintTask(View.Canvas);
-            _previousFill?.ClearGeometriesFromPaintTask(View.Canvas);
+            _previousStroke?.ClearGeometriesFromPaintTask(View.CoreCanvas);
+            _previousFill?.ClearGeometriesFromPaintTask(View.CoreCanvas);
 
             _previousFill = null;
             _previousStroke = null;
 
-            View.Canvas.Clear();
+            View.CoreCanvas.Clear();
         }
         _activeMap = View.ActiveMap;
 
         if (!_isHeatInCanvas)
         {
-            View.Canvas.AddDrawableTask(_heatPaint);
+            View.CoreCanvas.AddDrawableTask(_heatPaint);
             _isHeatInCanvas = true;
         }
 
         if (_previousStroke != View.Stroke)
         {
             if (_previousStroke is not null)
-                View.Canvas.RemovePaintTask(_previousStroke);
+                View.CoreCanvas.RemovePaintTask(_previousStroke);
 
             if (View.Stroke is not null)
             {
                 if (View.Stroke.ZIndex == 0) View.Stroke.ZIndex = PaintConstants.GeoMapStrokeZIndex;
                 View.Stroke.PaintStyle = PaintStyle.Stroke;
-                View.Canvas.AddDrawableTask(View.Stroke);
+                View.CoreCanvas.AddDrawableTask(View.Stroke);
             }
 
             _previousStroke = View.Stroke;
@@ -211,12 +211,12 @@ public class GeoMapChart
         if (_previousFill != View.Fill)
         {
             if (_previousFill is not null)
-                View.Canvas.RemovePaintTask(_previousFill);
+                View.CoreCanvas.RemovePaintTask(_previousFill);
 
             if (View.Fill is not null)
             {
                 View.Fill.PaintStyle = PaintStyle.Fill;
-                View.Canvas.AddDrawableTask(View.Fill);
+                View.CoreCanvas.AddDrawableTask(View.Fill);
             }
 
             _previousFill = View.Fill;
@@ -227,7 +227,7 @@ public class GeoMapChart
 
         var context = new MapContext(
             this, View, View.ActiveMap,
-            Maps.BuildProjector(View.MapProjection, [View.Width, View.Height]));
+            Maps.BuildProjector(View.MapProjection, [View.ControlSize.Width, View.ControlSize.Height]));
 
         _mapFactory.GenerateLands(context);
 
@@ -245,7 +245,7 @@ public class GeoMapChart
             _ = _everMeasuredSeries.Remove(series);
         }
 
-        View.Canvas.Invalidate();
+        View.CoreCanvas.Invalidate();
     }
 
     private Task PanningThrottlerUnlocked()
@@ -253,7 +253,7 @@ public class GeoMapChart
         return Task.Run(() =>
             View.InvokeOnUIThread(() =>
             {
-                lock (View.Canvas.Sync)
+                lock (View.CoreCanvas.Sync)
                 {
                     Pan(
                         new LvcPoint(

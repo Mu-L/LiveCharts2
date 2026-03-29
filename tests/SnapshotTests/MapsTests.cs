@@ -1,0 +1,47 @@
+﻿using LiveChartsCore.Geo;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
+using LiveChartsCore.SkiaSharpView.SKCharts;
+
+namespace SnapshotTests;
+
+[TestClass]
+public sealed class MapsTests
+{
+    [TestMethod]
+    public void Basic()
+    {
+        var lands = new HeatLand[]
+        {
+            new() { Name = "bra", Value = 13 },
+            new() { Name = "mex", Value = 10 },
+            new() { Name = "usa", Value = 15 },
+            new() { Name = "can", Value = 8 },
+            new() { Name = "ind", Value = 12 },
+            new() { Name = "deu", Value = 13 },
+            new() { Name= "jpn", Value = 15 },
+            new() { Name = "chn", Value = 14 },
+            new() { Name = "rus", Value = 11 },
+            new() { Name = "fra", Value = 8 },
+            new() { Name = "esp", Value = 7 },
+            new() { Name = "kor", Value = 10 },
+            new() { Name = "zaf", Value = 12 },
+            new() { Name = "are", Value = 13 }
+        };
+
+        var series = new HeatLandSeries[]
+        {
+            new() { Lands = lands }
+        };
+
+        var chart = new SKGeoMap
+        {
+            Series = series,
+            MapProjection = MapProjection.Mercator,
+            Width = 600,
+            Height = 600
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(Basic)}");
+    }
+}

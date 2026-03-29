@@ -756,7 +756,11 @@ public class CartesianChartEngine(
                 ce._isInternalSet = false;
             }
 
-            if (axis.IsVisible) AddVisual(axis.ChartElementSource);
+            if (axis.IsVisible)
+            {
+                AddVisual(axis.ChartElementSource);
+                axis.InvalidateCrosshair(this, _pointerPosition);
+            }
             axis.ChartElementSource.RemoveOldPaints(View); // <- this is probably obsolete.
             // the probable issue is the "IsVisible" property
         }

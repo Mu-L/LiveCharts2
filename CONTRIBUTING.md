@@ -10,13 +10,13 @@ but there are a few exceptions:
 ~~10. We only use var when the type is explicitly named on the right-hand side, typically due to either new or an explicit cast, e.g. 
 `var stream = new FileStream(...)` not `var stream = OpenStandardInput()`.~~
 
-10.Feel free to use `var` anywhere.
+10. Feel free to use `var` anywhere.
 
-18.When using a single-statement if, we follow these conventions:
+18. When using a single-statement if, we follow these conventions:
 
 * ~~Never use single-line form (for example: if (source == null) throw new ArgumentNullException("source");)~~
 
-* Please use single line `if` expressions, if the line is too long please create a new line everytime the width of the line could exceeds the editor window size, for example, the following line is valid: 
+* Please use single line `if` expressions. If the line is too long, please create a new line every time the width of the line could exceed the editor window size. For example, the following line is valid: 
 ```
 if (model == null)
     throw new Exception(
@@ -25,7 +25,7 @@ if (model == null)
 ```
 
 
-* Using braces is always accepted, and required if any block of an if/else if/.../else compound statement uses braces ~~or if a single statement body spans multiple lines.~~ (just brake the lines as in the previous sample)
+* Using braces is always accepted, and required if any block of an if/else if/.../else compound statement uses braces ~~or if a single statement body spans multiple lines.~~ (just break the lines as in the previous sample)
 
 * Braces may be omitted only if the body of every block associated with an if/else if/.../else compound statement is placed on a single line.
 
@@ -44,7 +44,7 @@ public class Hello
 }
 ```
 
-When using generics just ignore them, for example, the following class must also be named `Hello.cs` 
+When using generics, just ignore them. For example, the following class must also be named `Hello.cs`: 
 
 ```
 public class Hello<T>
@@ -53,7 +53,7 @@ public class Hello<T>
 }
 ```
 
-If You have generic and a no generic definition that share the same name, please place both classes in the same file, this should only 
+If you have generic and a non-generic definition that share the same name, please place both classes in the same file. This should only 
 happen when both objects are related to each other by inheritance.
 
 The following `Hello.cs` must contain both, inheritance is required.

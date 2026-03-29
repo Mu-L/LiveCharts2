@@ -52,7 +52,7 @@ internal partial class NativeFrameTicker : IFrameTicker
 
     private void OnFrameTick()
     {
-        if (_canvas.IsValid) return;
+        if (_canvas is null || _canvas.IsValid) return;
         _renderMode.InvalidateRenderer();
     }
 

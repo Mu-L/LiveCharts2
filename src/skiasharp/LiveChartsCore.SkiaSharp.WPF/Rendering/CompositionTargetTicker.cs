@@ -47,7 +47,7 @@ internal class CompositionTargetTicker : IFrameTicker
 
     private void OnCompositonTargetRendering(object? sender, EventArgs e)
     {
-        if (_canvas.IsValid) return;
+        if (_canvas is null || _canvas.IsValid) return;
         _renderMode.InvalidateRenderer();
     }
 
