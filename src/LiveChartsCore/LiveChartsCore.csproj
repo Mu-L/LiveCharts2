@@ -10,29 +10,18 @@
 
     <AssemblyName>LiveChartsCore</AssemblyName>
     <RootNamespace>LiveChartsCore</RootNamespace>
+    <PathToPackAssets>../../</PathToPackAssets>
   </PropertyGroup>
 
-  <Import Project="../../nuget.props" />
-  <ItemGroup>
-    <None Include="../../icon.png" Pack="true" PackagePath="\" />
-    <None Include="../../README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+  <Import Project="../../nuget.props" />  
   <PropertyGroup>
     <Description>
       $(Description) This package contains only the core of the library, you probably need another package that is compatible with you UI framework, unless you are building a custom package.
     </Description>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <DocumentationFile>bin/$(Configuration)/$(TargetFramework)/$(AssemblyName).xml</DocumentationFile>
-  </PropertyGroup>
-
   <ItemGroup>
-    <EmbeddedResource Include="Geo\world.geojson">
+    <EmbeddedResource Include="Geo/world.geojson">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
@@ -42,11 +31,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference
-      Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'netstandard2.0'"
-      Include="System.Text.Json"
-      Version="8.0.5" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+    <PackageReference Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'netstandard2.0'" Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
   <ItemGroup Condition="$(UseNuGetForGenerator)">
@@ -57,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="!$(UseNuGetForGenerator)">
-    <ProjectReference Include="..\..\generators\LiveChartsGenerators\LiveChartsGenerators.csproj">
+    <ProjectReference Include="../../generators/LiveChartsGenerators/LiveChartsGenerators.csproj">
       <OutputItemType>Analyzer</OutputItemType>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
