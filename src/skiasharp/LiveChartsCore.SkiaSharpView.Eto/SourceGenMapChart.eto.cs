@@ -58,6 +58,7 @@ public abstract partial class SourceGenMapChart : Panel, IGeoMapView
     public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Content).CanvasCore;
 
     bool IGeoMapView.DesignerMode => false;
+    bool IGeoMapView.IsDarkMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = Content.Width, Height = Content.Height };
 
     void IGeoMapView.InvokeOnUIThread(Action action) =>

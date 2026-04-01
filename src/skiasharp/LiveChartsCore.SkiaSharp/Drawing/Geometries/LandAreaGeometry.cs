@@ -41,4 +41,29 @@ public class LandAreaGeometry : VectorGeometry
     /// <inheritdoc cref="VectorGeometry.OnClose(SkiaSharpDrawingContext, SKPath, Segment)"/>
     protected override void OnClose(SkiaSharpDrawingContext context, SKPath path, Segment segment)
     { }
+
+    /// <summary>
+    /// Determines whether the specified point is inside this land polygon using SKPath hit-testing.
+    /// </summary>
+    public override bool ContainsPoint(float x, float y)
+    {
+        if (Commands.Count == 0) return false;
+
+        using var path = new SKPath();
+        var isFirst = true;
+
+        foreach (var segment in Commands)
+        {
+            if (isFirst)
+            {
+                path.MoveTo(segment.Xi, segment.Yi);
+                isFirst = false;
+            }
+
+            path.LineTo(segment.Xi, segment.Yi);
+        }
+
+        path.Close();
+        return path.Contains(x, y);
+    }
 }

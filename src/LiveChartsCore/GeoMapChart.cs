@@ -27,7 +27,9 @@ using System.Threading.Tasks;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
+using LiveChartsCore.Themes;
 
 namespace LiveChartsCore;
 
@@ -39,16 +41,21 @@ public class GeoMapChart
     private readonly HashSet<IGeoSeries> _everMeasuredSeries = [];
     private readonly ActionThrottler _updateThrottler;
     private readonly ActionThrottler _panningThrottler;
+    private readonly ActionThrottler _tooltipThrottler;
     private bool _isHeatInCanvas = false;
     private Paint _heatPaint;
     private Paint? _previousStroke;
     private Paint? _previousFill;
     private LvcPoint _pointerPanningPosition = new(-10, -10);
     private LvcPoint _pointerPreviousPanningPosition = new(-10, -10);
+    private LvcPoint _pointerPosition = new(-10, -10);
     private bool _isPanning = false;
+    private bool _isPointerIn = false;
     private IMapFactory _mapFactory;
     private DrawnMap? _activeMap;
     private bool _isUnloaded = false;
+    private bool _isToolTipOpen = false;
+    private LandDefinition? _hoveredLand;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
@@ -69,6 +76,7 @@ public class GeoMapChart
         PointerLeft += Chart_PointerLeft;
 
         _panningThrottler = new ActionThrottler(PanningThrottlerUnlocked, TimeSpan.FromMilliseconds(30));
+        _tooltipThrottler = new ActionThrottler(TooltipThrottlerUnlocked, TimeSpan.FromMilliseconds(50));
     }
 
     internal event Action<LvcPoint> PointerDown;
@@ -80,6 +88,16 @@ public class GeoMapChart
     /// Gets the chart view.
     /// </summary>
     public IGeoMapView View { get; private set; }
+
+    /// <summary>
+    /// Gets the active theme, ensuring it is set up for the current dark/light mode.
+    /// </summary>
+    public Theme GetTheme()
+    {
+        var theme = LiveCharts.DefaultSettings.GetTheme();
+        theme.Setup(View.IsDarkMode);
+        return theme;
+    }
 
     /// <inheritdoc cref="IMapFactory.ViewTo(GeoMapChart, object)"/>
     public virtual void ViewTo(object? command) => _mapFactory.ViewTo(this, command);
@@ -245,6 +263,45 @@ public class GeoMapChart
             _ = _everMeasuredSeries.Remove(series);
         }
 
+        // Refresh tooltip if a land is currently hovered (data may have changed)
+        if (_hoveredLand is not null && View.Tooltip is not null &&
+            View.TooltipPosition != TooltipPosition.Hidden)
+        {
+            var value = 0d;
+            foreach (var series in View.Series?.Cast<IGeoSeries>() ?? [])
+            {
+                if (series.TryGetValue(_hoveredLand.ShortName, out value))
+                    break;
+            }
+
+            // Compute screen-space center from the first data shape
+            var center = _pointerPosition;
+            foreach (var data in _hoveredLand.Data)
+            {
+                if (data.Shape is null) continue;
+                float minX = float.MaxValue, minY = float.MaxValue;
+                float maxX = float.MinValue, maxY = float.MinValue;
+                foreach (var seg in data.Shape.Commands)
+                {
+                    if (seg.Xi < minX) minX = seg.Xi;
+                    if (seg.Yi < minY) minY = seg.Yi;
+                    if (seg.Xi > maxX) maxX = seg.Xi;
+                    if (seg.Yi > maxY) maxY = seg.Yi;
+                }
+                center = new LvcPoint((minX + maxX) / 2f, (minY + maxY) / 2f);
+                break;
+            }
+
+            View.Tooltip.Show(
+                new GeoTooltipPoint
+                {
+                    Land = _hoveredLand,
+                    Value = value,
+                    LandCenter = center
+                },
+                this);
+        }
+
         View.CoreCanvas.Invalidate();
     }
 
@@ -264,22 +321,142 @@ public class GeoMapChart
             }));
     }
 
+    /// <summary>
+    /// Finds the land definition at the specified pointer position, if any.
+    /// </summary>
+    /// <param name="pointerPosition">The pointer position in control coordinates.</param>
+    /// <returns>A tuple of the land definition, heat value, and screen-space center, or null.</returns>
+    public (LandDefinition Land, double Value, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
+    {
+        if (_activeMap is null) return null;
+
+        foreach (var layer in _activeMap.Layers.Values)
+        {
+            if (!layer.IsVisible) continue;
+
+            foreach (var landDefinition in layer.Lands.Values)
+            {
+                foreach (var landData in landDefinition.Data)
+                {
+                    if (landData.Shape is null) continue;
+                    if (!landData.Shape.ContainsPoint(pointerPosition.X, pointerPosition.Y)) continue;
+
+                    // Look up the heat value from the series
+                    var value = 0d;
+                    foreach (var series in View.Series?.Cast<IGeoSeries>() ?? [])
+                    {
+                        if (series.TryGetValue(landDefinition.ShortName, out value))
+                            break;
+                    }
+
+                    // Compute screen-space center from the shape's segments
+                    var commands = landData.Shape.Commands;
+                    float minX = float.MaxValue, minY = float.MaxValue;
+                    float maxX = float.MinValue, maxY = float.MinValue;
+                    foreach (var seg in commands)
+                    {
+                        if (seg.Xi < minX) minX = seg.Xi;
+                        if (seg.Yi < minY) minY = seg.Yi;
+                        if (seg.Xi > maxX) maxX = seg.Xi;
+                        if (seg.Yi > maxY) maxY = seg.Yi;
+                    }
+                    var center = new LvcPoint((minX + maxX) / 2f, (minY + maxY) / 2f);
+
+                    return (landDefinition, value, center);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private Task TooltipThrottlerUnlocked()
+    {
+        return Task.Run(() =>
+            View.InvokeOnUIThread(() =>
+            {
+                lock (View.CoreCanvas.Sync)
+                {
+                    if (_isUnloaded || _isPanning || !_isPointerIn) return;
+                    if (View.Tooltip is null || View.TooltipPosition == TooltipPosition.Hidden) return;
+
+                    var result = FindLandAt(_pointerPosition);
+
+                    if (result is null)
+                    {
+                        if (_isToolTipOpen)
+                        {
+                            _hoveredLand = null;
+                            _isToolTipOpen = false;
+                            View.Tooltip.Hide(this);
+                            View.CoreCanvas.Invalidate();
+                        }
+                        return;
+                    }
+
+                    var (land, value, center) = result.Value;
+
+                    if (land == _hoveredLand) return;
+                    _hoveredLand = land;
+                    _isToolTipOpen = true;
+
+                    View.Tooltip.Show(
+                        new GeoTooltipPoint
+                        {
+                            Land = land,
+                            Value = value,
+                            LandCenter = center
+                        },
+                        this);
+                    View.CoreCanvas.Invalidate();
+                }
+            }));
+    }
+
     private void Chart_PointerDown(LvcPoint pointerPosition)
     {
         _isPanning = true;
         _pointerPreviousPanningPosition = pointerPosition;
+
+        // Hide tooltip while panning
+        if (_isToolTipOpen)
+        {
+            _hoveredLand = null;
+            _isToolTipOpen = false;
+            View.Tooltip?.Hide(this);
+        }
     }
 
     private void Chart_PointerMove(LvcPoint pointerPosition)
     {
-        if (!_isPanning) return;
-        _pointerPanningPosition = pointerPosition;
-        _panningThrottler.Call();
+        _pointerPosition = pointerPosition;
+        _isPointerIn = true;
+
+        if (_isPanning)
+        {
+            _pointerPanningPosition = pointerPosition;
+            _panningThrottler.Call();
+        }
+        else
+        {
+            _tooltipThrottler.Call();
+        }
     }
 
     private void Chart_PointerLeft()
     {
-        // ...?
+        _isPointerIn = false;
+
+        if (_isToolTipOpen)
+        {
+            _hoveredLand = null;
+            _isToolTipOpen = false;
+            View.InvokeOnUIThread(() =>
+            {
+                View.Tooltip?.Hide(this);
+                View.CoreCanvas.Invalidate();
+            });
+        }
     }
 
     private void Chart_PointerUp(LvcPoint pointerPosition)

@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
 
 namespace LiveChartsCore.Geo;
@@ -86,4 +87,34 @@ public interface IGeoMapView : IDrawnView
     /// Gets or sets the series.
     /// </summary>
     IEnumerable<IGeoSeries> Series { get; set; }
+
+    /// <summary>
+    /// Gets whether the UI is in dark mode.
+    /// </summary>
+    bool IsDarkMode { get; }
+
+    /// <summary>
+    /// Gets or sets the tooltip.
+    /// </summary>
+    IGeoMapTooltip? Tooltip { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tooltip position.
+    /// </summary>
+    TooltipPosition TooltipPosition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tooltip text paint.
+    /// </summary>
+    Paint? TooltipTextPaint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tooltip background paint.
+    /// </summary>
+    Paint? TooltipBackgroundPaint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tooltip text size.
+    /// </summary>
+    double TooltipTextSize { get; set; }
 }

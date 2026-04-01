@@ -68,6 +68,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     bool IGeoMapView.DesignerMode => false;
+    bool IGeoMapView.IsDarkMode => false;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };

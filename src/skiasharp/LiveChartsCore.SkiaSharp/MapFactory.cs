@@ -82,6 +82,8 @@ public class MapFactory : IMapFactory
             {
                 foreach (var landData in landDefinition.Data)
                 {
+                    landData.Land = landDefinition;
+
                     LandAreaGeometry shape;
 
                     if (landData.Shape is null)

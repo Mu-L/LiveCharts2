@@ -146,6 +146,25 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
         ClearHeat(toRemove);
     }
 
+    /// <inheritdoc cref="IGeoSeries.TryGetValue(string, out double)"/>
+    public bool TryGetValue(string landShortName, out double value)
+    {
+        if (Lands is not null)
+        {
+            foreach (var land in Lands)
+            {
+                if (string.Equals(land.Name, landShortName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = land.Value;
+                    return true;
+                }
+            }
+        }
+
+        value = 0;
+        return false;
+    }
+
     /// <inheritdoc cref="IGeoSeries.Delete(MapContext)"/>
     public void Delete(MapContext context)
     {

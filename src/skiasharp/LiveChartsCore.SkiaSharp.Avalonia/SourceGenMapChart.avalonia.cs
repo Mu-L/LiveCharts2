@@ -23,7 +23,9 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Rendering;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
@@ -48,6 +50,11 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
         Content = new MotionCanvas();
         InitializeChartControl();
 
+        PointerPressed += OnPointerPressed;
+        PointerMoved += OnPointerMoved;
+        PointerReleased += OnPointerReleased;
+        PointerExited += OnPointerExited;
+
         SizeChanged += (s, e) =>
             CoreChart.Update();
 
@@ -60,6 +67,7 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
     bool IGeoMapView.DesignerMode => Design.IsDesignMode;
+    bool IGeoMapView.IsDarkMode => Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)MotionCanvas.Bounds.Width, Height = (float)MotionCanvas.Bounds.Height };
 
     private void GeoMap_DetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -73,4 +81,27 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
 
     bool ICustomHitTest.HitTest(Point point) =>
         new Rect(Bounds.Size).Contains(point);
+
+    private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnPointerMoved(object? sender, PointerEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerMove(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnPointerExited(object? sender, PointerEventArgs e)
+    {
+        CoreChart?.InvokePointerLeft();
+    }
 }

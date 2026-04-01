@@ -55,6 +55,9 @@ public partial class SourceGenSKMapChart : InMemorySkiaSharpChart, IGeoMapView
     /// <inheritdoc cref="IGeoMapView.DesignerMode" />
     bool IGeoMapView.DesignerMode => false;
 
+    /// <inheritdoc cref="IGeoMapView.IsDarkMode" />
+    bool IGeoMapView.IsDarkMode => false;
+
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
 

@@ -53,6 +53,7 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
     public CoreMotionCanvas CoreCanvas => _motionCanvas.CanvasCore;
 
     bool IGeoMapView.DesignerMode => false;
+    bool IGeoMapView.IsDarkMode => false;
 
     LvcSize IDrawnView.ControlSize => new()
     {
