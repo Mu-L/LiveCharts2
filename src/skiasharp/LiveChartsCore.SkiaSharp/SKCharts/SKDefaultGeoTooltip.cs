@@ -47,6 +47,8 @@ public class SKDefaultGeoTooltip : Container<PopUpGeometry>, IGeoMapTooltip
     private bool _isInitialized;
     private bool _isOpen;
     private object? _themeId;
+    private Paint? _lastBackgroundPaint;
+    private Paint? _lastTextPaint;
     private DrawnTask? _drawnTask;
     private const int Py = 4;
     private const int Px = 8;
@@ -72,11 +74,17 @@ public class SKDefaultGeoTooltip : Container<PopUpGeometry>, IGeoMapTooltip
         var theme = chart.GetTheme();
         var currentThemeId = theme.ThemeId;
 
-        if (!_isInitialized || _themeId != currentThemeId || chart.View.TooltipBackgroundPaint is not null)
+        var bgPaint = chart.View.TooltipBackgroundPaint;
+        var textPaint = chart.View.TooltipTextPaint;
+
+        if (!_isInitialized || _themeId != currentThemeId ||
+            bgPaint != _lastBackgroundPaint || textPaint != _lastTextPaint)
         {
             Initialize(chart, theme);
             _isInitialized = true;
             _themeId = currentThemeId;
+            _lastBackgroundPaint = bgPaint;
+            _lastTextPaint = textPaint;
         }
 
         if (_drawnTask is null || _drawnTask.IsEmpty)
@@ -207,7 +215,7 @@ public class SKDefaultGeoTooltip : Container<PopUpGeometry>, IGeoMapTooltip
             });
 
         // Value line
-        if (point.Value != 0)
+        if (point.HasValue)
         {
             stackLayout.Children.Add(
                 new LabelGeometry

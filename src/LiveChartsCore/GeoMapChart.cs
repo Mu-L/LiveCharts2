@@ -59,6 +59,7 @@ public class GeoMapChart
     private float _zoomLevel = 1f;
     private LvcPoint _panOffset = new(0, 0);
     private bool _isBouncing = false;
+    private System.Threading.Timer? _bounceTimer;
     private bool _isPointerDown = false;
     private LvcPoint _pointerDownPosition = new(-10, -10);
     private bool _pointerDownIsClick = false;
@@ -101,21 +102,21 @@ public class GeoMapChart
     public IGeoMapView View { get; private set; }
 
     /// <summary>
-    /// Gets or sets the current zoom level.
+    /// Gets the current zoom level.
     /// </summary>
     public float ZoomLevel
     {
         get => _zoomLevel;
-        set => _zoomLevel = value;
+        internal set => _zoomLevel = value;
     }
 
     /// <summary>
-    /// Gets or sets the current pan offset.
+    /// Gets the current pan offset.
     /// </summary>
     public LvcPoint PanOffset
     {
         get => _panOffset;
-        set => _panOffset = value;
+        internal set => _panOffset = value;
     }
 
     /// <summary>
@@ -181,6 +182,10 @@ public class GeoMapChart
     {
         if (View.Stroke is not null) View.CoreCanvas.RemovePaintTask(View.Stroke);
         if (View.Fill is not null) View.CoreCanvas.RemovePaintTask(View.Fill);
+
+        _bounceTimer?.Dispose();
+        _bounceTimer = null;
+        _isBouncing = false;
 
         _everMeasuredSeries.Clear();
         _heatPaint = null!;
@@ -318,10 +323,11 @@ public class GeoMapChart
             View.TooltipPosition != TooltipPosition.Hidden)
         {
             var value = 0d;
+            var hasValue = false;
             foreach (var series in View.Series?.Cast<IGeoSeries>() ?? [])
             {
                 if (series.TryGetValue(_hoveredLand.ShortName, out value))
-                    break;
+                { hasValue = true; break; }
             }
 
             // Compute screen-space center from the first data shape
@@ -354,6 +360,7 @@ public class GeoMapChart
                 {
                     Land = _hoveredLand,
                     Value = value,
+                    HasValue = hasValue,
                     LandCenter = center
                 },
                 this);
@@ -382,8 +389,8 @@ public class GeoMapChart
     /// Finds the land definition at the specified pointer position, if any.
     /// </summary>
     /// <param name="pointerPosition">The pointer position in control coordinates.</param>
-    /// <returns>A tuple of the land definition, heat value, and screen-space center, or null.</returns>
-    public (LandDefinition Land, double Value, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
+    /// <returns>A tuple of the land definition, heat value, whether a value exists, and screen-space center, or null.</returns>
+    public (LandDefinition Land, double Value, bool HasValue, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
     {
         if (_activeMap is null) return null;
 
@@ -400,10 +407,11 @@ public class GeoMapChart
 
                     // Look up the heat value from the series
                     var value = 0d;
+                    var hasValue = false;
                     foreach (var series in View.Series?.Cast<IGeoSeries>() ?? [])
                     {
                         if (series.TryGetValue(landDefinition.ShortName, out value))
-                            break;
+                        { hasValue = true; break; }
                     }
 
                     // Compute screen-space center from the shape's segments (base coordinates)
@@ -427,7 +435,7 @@ public class GeoMapChart
                     var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
                     var center = new LvcPoint(baseCx * _zoomLevel + tx, baseCy * _zoomLevel + ty);
 
-                    return (landDefinition, value, center);
+                    return (landDefinition, value, hasValue, center);
                 }
             }
         }
@@ -459,7 +467,7 @@ public class GeoMapChart
                         return;
                     }
 
-                    var (land, value, center) = result.Value;
+                    var (land, value, hasValue, center) = result.Value;
 
                     if (land == _hoveredLand) return;
                     _hoveredLand = land;
@@ -470,6 +478,7 @@ public class GeoMapChart
                         {
                             Land = land,
                             Value = value,
+                            HasValue = hasValue,
                             LandCenter = center
                         },
                         this);
@@ -639,9 +648,17 @@ public class GeoMapChart
         var startPanY = _panOffset.Y;
         var startZoom = _zoomLevel;
 
-        System.Threading.Timer? timer = null;
-        timer = new System.Threading.Timer(_ =>
+        _bounceTimer?.Dispose();
+        _bounceTimer = new System.Threading.Timer(_ =>
         {
+            if (_isUnloaded)
+            {
+                _isBouncing = false;
+                _bounceTimer?.Dispose();
+                _bounceTimer = null;
+                return;
+            }
+
             step++;
             var t = (float)step / steps;
             // ease-out cubic
@@ -653,13 +670,15 @@ public class GeoMapChart
 
             View.InvokeOnUIThread(() =>
             {
+                if (_isUnloaded) return;
                 _mapFactory.SetViewport(this, newZoom, new LvcPoint(newPanX, newPanY));
             });
 
             if (step >= steps)
             {
                 _isBouncing = false;
-                timer?.Dispose();
+                _bounceTimer?.Dispose();
+                _bounceTimer = null;
             }
         }, null, intervalMs, intervalMs);
     }

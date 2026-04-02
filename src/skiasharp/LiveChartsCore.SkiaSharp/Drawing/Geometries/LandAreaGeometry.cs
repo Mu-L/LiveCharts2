@@ -185,11 +185,7 @@ public class LandAreaGeometry : VectorGeometry, IDrawnElement<SkiaSharpDrawingCo
             (x, y) = vt.InverseTransform(x, y);
 
         if (_basePath is not null && !_pathDirty)
-        {
-            using var closedPath = new SKPath(_basePath);
-            closedPath.Close();
-            return closedPath.Contains(x, y);
-        }
+            return _basePath.Contains(x, y);
 
         if (Commands.Count == 0) return false;
 

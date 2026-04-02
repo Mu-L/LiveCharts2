@@ -40,6 +40,11 @@ public class GeoTooltipPoint
     public double Value { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the land has a heat value assigned.
+    /// </summary>
+    public bool HasValue { get; set; }
+
+    /// <summary>
     /// Gets or sets the heat color of the land.
     /// </summary>
     public LvcColor Color { get; set; }
