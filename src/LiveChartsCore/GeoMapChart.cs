@@ -606,7 +606,7 @@ public class GeoMapChart
         var targetPanY = _panOffset.Y;
 
         // If zoom is bouncing, reset pan to keep centered
-        if (targetZoom != zoom)
+        if (Math.Abs(targetZoom - zoom) > 1e-6)
         {
             // Scale current pan proportionally to new zoom
             targetPanX = _panOffset.X * targetZoom / zoom;
