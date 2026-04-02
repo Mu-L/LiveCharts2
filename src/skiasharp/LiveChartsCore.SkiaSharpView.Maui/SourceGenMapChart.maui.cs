@@ -68,19 +68,19 @@ public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
     void IGeoMapView.InvokeOnUIThread(Action action) =>
         MainThread.BeginInvokeOnMainThread(action);
 
-    internal override void OnPressed(object? sender, Native.Events.PressedEventArgs args) =>
+    internal override void OnPressed(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args) =>
         CoreChart?.InvokePointerDown(args.Location);
 
-    internal override void OnMoved(object? sender, Native.Events.ScreenEventArgs args) =>
+    internal override void OnMoved(object? sender, LiveChartsCore.Native.Events.ScreenEventArgs args) =>
         CoreChart?.InvokePointerMove(args.Location);
 
-    internal override void OnReleased(object? sender, Native.Events.PressedEventArgs args) =>
+    internal override void OnReleased(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args) =>
         CoreChart?.InvokePointerUp(args.Location);
 
-    internal override void OnExited(object? sender, Native.Events.EventArgs args) =>
+    internal override void OnExited(object? sender, LiveChartsCore.Native.Events.EventArgs args) =>
         CoreChart?.InvokePointerLeft();
 
-    internal override void OnScrolled(object? sender, Native.Events.ScrollEventArgs args) =>
+    internal override void OnScrolled(object? sender, LiveChartsCore.Native.Events.ScrollEventArgs args) =>
         CoreChart?.InvokePointerWheel(
             args.Location,
             args.ScrollDelta > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
