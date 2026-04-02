@@ -30,6 +30,7 @@ using Avalonia.Threading;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Avalonia;
 
@@ -54,6 +55,7 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
         PointerMoved += OnPointerMoved;
         PointerReleased += OnPointerReleased;
         PointerExited += OnPointerExited;
+        PointerWheelChanged += OnPointerWheelChanged;
 
         SizeChanged += (s, e) =>
             CoreChart.Update();
@@ -103,5 +105,15 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     private void OnPointerExited(object? sender, PointerEventArgs e)
     {
         CoreChart?.InvokePointerLeft();
+    }
+
+    private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        e.Handled = true;
+
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerWheel(
+            new LvcPoint((float)p.X, (float)p.Y),
+            e.Delta.Y > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
     }
 }

@@ -26,6 +26,7 @@ using Eto.Forms;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Eto;
 
@@ -52,6 +53,12 @@ public abstract partial class SourceGenMapChart : Panel, IGeoMapView
 
         Content.SizeChanged += (s, e) =>
             CoreChart.Update();
+
+        Content.MouseWheel += OnMouseWheel;
+        Content.MouseDown += OnMouseDown;
+        Content.MouseMove += OnMouseMove;
+        Content.MouseUp += OnMouseUp;
+        Content.MouseLeave += OnMouseLeave;
     }
 
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
@@ -69,5 +76,37 @@ public abstract partial class SourceGenMapChart : Panel, IGeoMapView
     {
         base.OnUnLoad(e);
         CoreChart.Unload();
+    }
+
+    private void OnMouseWheel(object? sender, MouseEventArgs e)
+    {
+        var p = e.Location;
+        CoreChart?.InvokePointerWheel(
+            new LvcPoint(p.X, p.Y),
+            e.Delta.Height > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
+        e.Handled = true;
+    }
+
+    private void OnMouseDown(object? sender, MouseEventArgs e)
+    {
+        var p = e.Location;
+        CoreChart?.InvokePointerDown(new LvcPoint(p.X, p.Y));
+    }
+
+    private void OnMouseMove(object? sender, MouseEventArgs e)
+    {
+        var p = e.Location;
+        CoreChart?.InvokePointerMove(new LvcPoint(p.X, p.Y));
+    }
+
+    private void OnMouseUp(object? sender, MouseEventArgs e)
+    {
+        var p = e.Location;
+        CoreChart?.InvokePointerUp(new LvcPoint(p.X, p.Y));
+    }
+
+    private void OnMouseLeave(object? sender, MouseEventArgs e)
+    {
+        CoreChart?.InvokePointerLeft();
     }
 }

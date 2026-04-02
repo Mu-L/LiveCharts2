@@ -30,6 +30,23 @@
                            ValueChanged="OnTextSizeChanged"/>
 
             <Button Content="Toggle Brazil" Command="{Binding ToggleBrazilCommand}"/>
+            <Button Content="Clear Series" x:Name="ClearSeriesBtn"/>
+            <Button Content="Reset Zoom" x:Name="ResetZoomBtn"/>
+
+            <TextBlock Text="Border:" VerticalAlignment="Center"/>
+            <NumericUpDown x:Name="BorderWidthUpDown" Value="1" Minimum="0" Maximum="10"
+                           Increment="0.5" Width="110" VerticalAlignment="Center"
+                           ValueChanged="OnBorderWidthChanged"/>
+            <ComboBox x:Name="BorderColorCombo" SelectedIndex="0" VerticalAlignment="Center">
+                <ComboBoxItem Content="White" Tag="White"/>
+                <ComboBoxItem Content="Black" Tag="Black"/>
+                <ComboBoxItem Content="Gray" Tag="Gray"/>
+                <ComboBoxItem Content="Red" Tag="Red"/>
+                <ComboBoxItem Content="None" Tag="None"/>
+            </ComboBox>
+
+            <TextBlock x:Name="ClickedLandText" Text="Click a country..." VerticalAlignment="Center"
+                       Margin="12,0,0,0" Foreground="Gray"/>
         </StackPanel>
 
         <lvc:GeoMap

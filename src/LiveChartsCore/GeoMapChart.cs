@@ -56,6 +56,12 @@ public class GeoMapChart
     private bool _isUnloaded = false;
     private bool _isToolTipOpen = false;
     private LandDefinition? _hoveredLand;
+    private float _zoomLevel = 1f;
+    private LvcPoint _panOffset = new(0, 0);
+    private bool _isBouncing = false;
+    private bool _isPointerDown = false;
+    private LvcPoint _pointerDownPosition = new(-10, -10);
+    private bool _pointerDownIsClick = false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
@@ -85,9 +91,32 @@ public class GeoMapChart
     internal event Action PointerLeft;
 
     /// <summary>
+    /// Occurs when a land (country) is clicked.
+    /// </summary>
+    public event Action<LandClickedEventArgs>? LandClicked;
+
+    /// <summary>
     /// Gets the chart view.
     /// </summary>
     public IGeoMapView View { get; private set; }
+
+    /// <summary>
+    /// Gets or sets the current zoom level.
+    /// </summary>
+    public float ZoomLevel
+    {
+        get => _zoomLevel;
+        set => _zoomLevel = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the current pan offset.
+    /// </summary>
+    public LvcPoint PanOffset
+    {
+        get => _panOffset;
+        set => _panOffset = value;
+    }
 
     /// <summary>
     /// Gets the active theme, ensuring it is set up for the current dark/light mode.
@@ -104,6 +133,27 @@ public class GeoMapChart
 
     /// <inheritdoc cref="IMapFactory.Pan(GeoMapChart, LvcPoint)"/>
     public virtual void Pan(LvcPoint delta) => _mapFactory.Pan(this, delta);
+
+    /// <inheritdoc cref="IMapFactory.Zoom(GeoMapChart, LvcPoint, ZoomDirection)"/>
+    public virtual void Zoom(LvcPoint pivot, ZoomDirection direction) =>
+        _mapFactory.Zoom(this, pivot, direction);
+
+    /// <summary>
+    /// Resets the viewport to the default zoom and pan.
+    /// </summary>
+    public void ResetViewport()
+    {
+        _isBouncing = false;
+        _mapFactory.SetViewport(this, 1f, new LvcPoint(0, 0));
+    }
+
+    /// <summary>
+    /// Invokes a pointer wheel event.
+    /// </summary>
+    /// <param name="point">The pointer position.</param>
+    /// <param name="direction">The zoom direction.</param>
+    protected internal void InvokePointerWheel(LvcPoint point, ZoomDirection direction) =>
+        Zoom(point, direction);
 
     /// <summary>
     /// Queues a measure request to update the chart.
@@ -288,7 +338,14 @@ public class GeoMapChart
                     if (seg.Xi > maxX) maxX = seg.Xi;
                     if (seg.Yi > maxY) maxY = seg.Yi;
                 }
-                center = new LvcPoint((minX + maxX) / 2f, (minY + maxY) / 2f);
+                // Transform base center to screen space
+                var baseCx = (minX + maxX) / 2f;
+                var baseCy = (minY + maxY) / 2f;
+                var ctrlCx = View.ControlSize.Width * 0.5f;
+                var ctrlCy = View.ControlSize.Height * 0.5f;
+                var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+                var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+                center = new LvcPoint(baseCx * _zoomLevel + tx, baseCy * _zoomLevel + ty);
                 break;
             }
 
@@ -349,7 +406,7 @@ public class GeoMapChart
                             break;
                     }
 
-                    // Compute screen-space center from the shape's segments
+                    // Compute screen-space center from the shape's segments (base coordinates)
                     var commands = landData.Shape.Commands;
                     float minX = float.MaxValue, minY = float.MaxValue;
                     float maxX = float.MinValue, maxY = float.MinValue;
@@ -360,7 +417,15 @@ public class GeoMapChart
                         if (seg.Xi > maxX) maxX = seg.Xi;
                         if (seg.Yi > maxY) maxY = seg.Yi;
                     }
-                    var center = new LvcPoint((minX + maxX) / 2f, (minY + maxY) / 2f);
+
+                    // Transform base center to screen space
+                    var baseCx = (minX + maxX) / 2f;
+                    var baseCy = (minY + maxY) / 2f;
+                    var ctrlCx = View.ControlSize.Width * 0.5f;
+                    var ctrlCy = View.ControlSize.Height * 0.5f;
+                    var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+                    var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+                    var center = new LvcPoint(baseCx * _zoomLevel + tx, baseCy * _zoomLevel + ty);
 
                     return (landDefinition, value, center);
                 }
@@ -415,16 +480,10 @@ public class GeoMapChart
 
     private void Chart_PointerDown(LvcPoint pointerPosition)
     {
-        _isPanning = true;
         _pointerPreviousPanningPosition = pointerPosition;
-
-        // Hide tooltip while panning
-        if (_isToolTipOpen)
-        {
-            _hoveredLand = null;
-            _isToolTipOpen = false;
-            View.Tooltip?.Hide(this);
-        }
+        _pointerDownPosition = pointerPosition;
+        _pointerDownIsClick = true;
+        _isPointerDown = true;
     }
 
     private void Chart_PointerMove(LvcPoint pointerPosition)
@@ -432,12 +491,31 @@ public class GeoMapChart
         _pointerPosition = pointerPosition;
         _isPointerIn = true;
 
+        if (_isPointerDown && !_isPanning)
+        {
+            var dx = pointerPosition.X - _pointerDownPosition.X;
+            var dy = pointerPosition.Y - _pointerDownPosition.Y;
+            if (dx * dx + dy * dy > 25) // 5px drag threshold
+            {
+                _isPanning = true;
+                _pointerDownIsClick = false;
+
+                // Hide tooltip while panning
+                if (_isToolTipOpen)
+                {
+                    _hoveredLand = null;
+                    _isToolTipOpen = false;
+                    View.Tooltip?.Hide(this);
+                }
+            }
+        }
+
         if (_isPanning)
         {
             _pointerPanningPosition = pointerPosition;
             _panningThrottler.Call();
         }
-        else
+        else if (!_isPointerDown)
         {
             _tooltipThrottler.Call();
         }
@@ -461,8 +539,128 @@ public class GeoMapChart
 
     private void Chart_PointerUp(LvcPoint pointerPosition)
     {
-        if (!_isPanning) return;
-        _isPanning = false;
-        _panningThrottler.Call();
+        var wasClick = _pointerDownIsClick;
+        _pointerDownIsClick = false;
+        _isPointerDown = false;
+
+        if (_isPanning)
+        {
+            _isPanning = false;
+            _panningThrottler.Call();
+            BounceBack();
+        }
+
+        if (wasClick && LandClicked is not null)
+        {
+            var result = FindLandAt(pointerPosition);
+            if (result is not null)
+            {
+                LandClicked.Invoke(new LandClickedEventArgs
+                {
+                    Land = result.Value.Land,
+                    Value = result.Value.Value,
+                    Position = pointerPosition
+                });
+            }
+        }
+    }
+
+    private void BounceBack()
+    {
+        if (_isBouncing) return;
+
+        var controlW = View.ControlSize.Width;
+        var controlH = View.ControlSize.Height;
+        if (controlW <= 0 || controlH <= 0) return;
+
+        var cx = controlW * 0.5f;
+        var cy = controlH * 0.5f;
+        var zoom = _zoomLevel;
+        var minZoom = (float)View.MinZoomLevel;
+        var targetZoom = zoom < minZoom ? minZoom : zoom;
+
+        // Map occupies [0,0]..[controlW,controlH] in base coordinates.
+        // After transform: screenX = baseX * zoom + tx, where tx = cx*(1-zoom) + panX
+        // Map left edge on screen = tx, map right edge on screen = controlW * zoom + tx
+        //
+        // Constraint: the map must fully cover the viewport (no background visible).
+        // When zoomed in (map bigger than viewport):
+        //   left edge <= 0  AND  right edge >= controlW
+        //   tx <= 0  AND  tx >= controlW - mapScreenW  (i.e. controlW*(1-zoom))
+        // When at 1x (map == viewport): tx must be 0, ty must be 0 → panX=0, panY=0
+
+        var mapScreenW = controlW * targetZoom;
+        var mapScreenH = controlH * targetZoom;
+
+        // Compute current tx/ty at the target zoom using current pan
+        var targetPanX = _panOffset.X;
+        var targetPanY = _panOffset.Y;
+
+        // If zoom is bouncing, reset pan to keep centered
+        if (targetZoom != zoom)
+        {
+            // Scale current pan proportionally to new zoom
+            targetPanX = _panOffset.X * targetZoom / zoom;
+            targetPanY = _panOffset.Y * targetZoom / zoom;
+        }
+
+        var tx = cx * (1 - targetZoom) + targetPanX;
+        var ty = cy * (1 - targetZoom) + targetPanY;
+
+        // Clamp: map left edge must be <= 0 (can't show background on left)
+        if (tx > 0) tx = 0;
+        // Clamp: map right edge must be >= controlW (can't show background on right)
+        if (tx + mapScreenW < controlW) tx = controlW - mapScreenW;
+
+        // Clamp vertical
+        if (ty > 0) ty = 0;
+        if (ty + mapScreenH < controlH) ty = controlH - mapScreenH;
+
+        targetPanX = tx - cx * (1 - targetZoom);
+        targetPanY = ty - cy * (1 - targetZoom);
+
+        var panDiffX = Math.Abs(targetPanX - _panOffset.X);
+        var panDiffY = Math.Abs(targetPanY - _panOffset.Y);
+        var zoomDiff = Math.Abs(targetZoom - zoom);
+
+        if (panDiffX < 0.5f && panDiffY < 0.5f && zoomDiff < 0.001f) return;
+
+        _isBouncing = true;
+        AnimateBounce(targetPanX, targetPanY, targetZoom);
+    }
+
+    private void AnimateBounce(float targetPanX, float targetPanY, float targetZoom)
+    {
+        const int steps = 8;
+        const int intervalMs = 16;
+        var step = 0;
+
+        var startPanX = _panOffset.X;
+        var startPanY = _panOffset.Y;
+        var startZoom = _zoomLevel;
+
+        System.Threading.Timer? timer = null;
+        timer = new System.Threading.Timer(_ =>
+        {
+            step++;
+            var t = (float)step / steps;
+            // ease-out cubic
+            t = 1 - (1 - t) * (1 - t) * (1 - t);
+
+            var newPanX = startPanX + (targetPanX - startPanX) * t;
+            var newPanY = startPanY + (targetPanY - startPanY) * t;
+            var newZoom = startZoom + (targetZoom - startZoom) * t;
+
+            View.InvokeOnUIThread(() =>
+            {
+                _mapFactory.SetViewport(this, newZoom, new LvcPoint(newPanX, newPanY));
+            });
+
+            if (step >= steps)
+            {
+                _isBouncing = false;
+                timer?.Dispose();
+            }
+        }, null, intervalMs, intervalMs);
     }
 }

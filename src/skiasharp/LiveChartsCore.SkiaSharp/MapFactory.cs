@@ -20,13 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Drawing.Segments;
 using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 
@@ -40,12 +39,21 @@ public class MapFactory : IMapFactory
     private readonly HashSet<LandAreaGeometry> _usedPathShapes = [];
     private readonly HashSet<Paint> _usedPaints = [];
     private readonly HashSet<string> _usedLayers = [];
+    private readonly MapViewportTransform _viewportTransform = new();
     private IGeoMapView? _mapView;
 
     /// <inheritdoc cref="IMapFactory.GenerateLands(MapContext)"/>
     public void GenerateLands(MapContext context)
     {
         var projector = context.Projector;
+
+        // Sync viewport transform with current chart state
+        _viewportTransform.Zoom = context.CoreMap.ZoomLevel;
+        _viewportTransform.PanX = context.CoreMap.PanOffset.X;
+        _viewportTransform.PanY = context.CoreMap.PanOffset.Y;
+        _viewportTransform.CenterX = context.View.ControlSize.Width * 0.5f;
+        _viewportTransform.CenterY = context.View.ControlSize.Height * 0.5f;
+
 
         var toRemoveLayers = new HashSet<string>(_usedLayers);
         var toRemovePathShapes = new HashSet<LandAreaGeometry>(_usedPathShapes);
@@ -89,7 +97,6 @@ public class MapFactory : IMapFactory
                     if (landData.Shape is null)
                     {
                         landData.Shape = shape = new LandAreaGeometry();
-                        shape.Animate(EasingFunctions.ExponentialOut, TimeSpan.FromMilliseconds(800));
                     }
                     else
                     {
@@ -98,6 +105,8 @@ public class MapFactory : IMapFactory
 
                     _ = _usedPathShapes.Add(shape);
                     _ = toRemovePathShapes.Remove(shape);
+
+                    shape.ViewportTransform = _viewportTransform;
 
                     stroke?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
                     fill?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
@@ -128,6 +137,8 @@ public class MapFactory : IMapFactory
                             Yj = y,
                         });
                     }
+
+                    shape.MarkPathDirty();
                 }
             }
 
@@ -159,7 +170,76 @@ public class MapFactory : IMapFactory
     public void ViewTo(GeoMapChart sender, object? command) { }
 
     /// <inheritdoc cref="IMapFactory.Pan(GeoMapChart, LvcPoint)"/>
-    public void Pan(GeoMapChart sender, LvcPoint delta) { }
+    public void Pan(GeoMapChart sender, LvcPoint delta)
+    {
+        _viewportTransform.PanX += delta.X;
+        _viewportTransform.PanY += delta.Y;
+
+
+        sender.PanOffset = new LvcPoint(_viewportTransform.PanX, _viewportTransform.PanY);
+        sender.View.CoreCanvas.Invalidate();
+    }
+
+    /// <inheritdoc cref="IMapFactory.Zoom(GeoMapChart, LvcPoint, ZoomDirection)"/>
+    public void Zoom(GeoMapChart sender, LvcPoint pivot, ZoomDirection direction)
+    {
+        _viewportTransform.CenterX = sender.View.ControlSize.Width * 0.5f;
+        _viewportTransform.CenterY = sender.View.ControlSize.Height * 0.5f;
+
+        var speed = sender.View.ZoomingSpeed;
+        speed = speed < 0.1 ? 0.1 : (speed > 0.95 ? 0.95 : speed);
+        speed = 1 - speed;
+
+        var oldZoom = _viewportTransform.Zoom;
+        var newZoom = direction == ZoomDirection.ZoomIn
+            ? (float)(oldZoom / speed)
+            : (float)(oldZoom * speed);
+
+        var minZoom = (float)sender.View.MinZoomLevel;
+        var maxZoom = (float)sender.View.MaxZoomLevel;
+
+        // Allow slight overshoot past min for bounce-back feel
+        if (newZoom < minZoom * 0.8f) newZoom = minZoom * 0.8f;
+        if (newZoom > maxZoom) newZoom = maxZoom;
+
+        // Adjust pan so the pivot point stays in place.
+        // screen = base * zoom + (center*(1-zoom) + pan)
+        // Solve: pivotScreen stays same => newPan = oldPan + (pivot - oldPan - center) * (1 - newZoom/oldZoom)
+        // Simpler: pan_new = pivot - (pivot - tx_old) * newZoom / oldZoom  where tx = center*(1-zoom)+pan
+        var cx = _viewportTransform.CenterX;
+        var cy = _viewportTransform.CenterY;
+        var txOld = cx * (1 - oldZoom) + _viewportTransform.PanX;
+        var tyOld = cy * (1 - oldZoom) + _viewportTransform.PanY;
+
+        var txNew = pivot.X - (pivot.X - txOld) * newZoom / oldZoom;
+        var tyNew = pivot.Y - (pivot.Y - tyOld) * newZoom / oldZoom;
+
+        var newPanX = txNew - cx * (1 - newZoom);
+        var newPanY = tyNew - cy * (1 - newZoom);
+
+        _viewportTransform.Zoom = newZoom;
+        _viewportTransform.PanX = newPanX;
+        _viewportTransform.PanY = newPanY;
+
+
+        sender.ZoomLevel = newZoom;
+        sender.PanOffset = new LvcPoint(newPanX, newPanY);
+        sender.View.CoreCanvas.Invalidate();
+    }
+
+    /// <inheritdoc cref="IMapFactory.SetViewport(GeoMapChart, float, LvcPoint)"/>
+    public void SetViewport(GeoMapChart sender, float zoom, LvcPoint panOffset)
+    {
+        _viewportTransform.Zoom = zoom;
+        _viewportTransform.PanX = panOffset.X;
+        _viewportTransform.PanY = panOffset.Y;
+        _viewportTransform.CenterX = sender.View.ControlSize.Width * 0.5f;
+        _viewportTransform.CenterY = sender.View.ControlSize.Height * 0.5f;
+
+        sender.ZoomLevel = zoom;
+        sender.PanOffset = panOffset;
+        sender.View.CoreCanvas.Invalidate();
+    }
 
     /// <summary>
     /// Disposes the map factory.
@@ -185,7 +265,7 @@ public class MapFactory : IMapFactory
                         if (shape is null) continue;
 
                         stroke?.RemoveGeometryFromPaintTask(_mapView.CoreCanvas, shape);
-                        fill?.AddGeometryToPaintTask(_mapView.CoreCanvas, shape);
+                        fill?.RemoveGeometryFromPaintTask(_mapView.CoreCanvas, shape);
 
                         landData.Shape = null;
                     }

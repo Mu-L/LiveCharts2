@@ -94,6 +94,15 @@ public partial class SourceGenMapChart
     /// <inheritdoc cref="IGeoMapView.TooltipTextSize"/>
     static UIProperty<double>                   tooltipTextSize     = new(defaultValue: 14d);
 
+    /// <inheritdoc cref="IGeoMapView.ZoomingSpeed"/>
+    static UIProperty<double>                   zoomingSpeed        = new(defaultValue: LiveCharts.DefaultSettings.ZoomSpeed);
+
+    /// <inheritdoc cref="IGeoMapView.MinZoomLevel"/>
+    static UIProperty<double>                   minZoomLevel        = new(defaultValue: 1d);
+
+    /// <inheritdoc cref="IGeoMapView.MaxZoomLevel"/>
+    static UIProperty<double>                   maxZoomLevel        = new(defaultValue: 100d);
+
     static void OnSyncContextChanged(SGChart chart, object oldValue, object newValue)
     {
 #if BLAZOR_LVC

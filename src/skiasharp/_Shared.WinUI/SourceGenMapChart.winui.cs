@@ -24,9 +24,11 @@ using System;
 using System.Runtime.InteropServices;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView.WinUI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using LiveChartsCore.Motion;
 using LiveChartsCore.Geo;
 
@@ -53,6 +55,12 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
         SizeChanged += (s, e) =>
             CoreChart.Update();
 
+        PointerWheelChanged += OnPointerWheelChanged;
+        PointerPressed += OnPointerPressed;
+        PointerMoved += OnPointerMoved;
+        PointerReleased += OnPointerReleased;
+        PointerExited += OnPointerExited;
+
         Unloaded += OnUnloaded;
     }
 
@@ -78,5 +86,39 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
 
         _ = DispatcherQueue.TryEnqueue(
             Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () => action());
+    }
+
+    private void OnPointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        var pp = e.GetCurrentPoint(this);
+        var p = pp.Position;
+        var delta = pp.Properties.MouseWheelDelta;
+        CoreChart?.InvokePointerWheel(
+            new LvcPoint((float)p.X, (float)p.Y),
+            delta > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
+        e.Handled = true;
+    }
+
+    private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        var p = e.GetCurrentPoint(this).Position;
+        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        var p = e.GetCurrentPoint(this).Position;
+        CoreChart?.InvokePointerMove(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        var p = e.GetCurrentPoint(this).Position;
+        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnPointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        CoreChart?.InvokePointerLeft();
     }
 }
