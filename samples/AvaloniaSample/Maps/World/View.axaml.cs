@@ -1,7 +1,10 @@
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using LiveChartsCore.Measure;
+using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Avalonia;
+using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
 
@@ -31,7 +34,25 @@ public partial class View : UserControl
         resetBtn.Click += (_, _) => geoMap.CoreChart.ResetViewport();
 
         var clearBtn = this.Find<Button>("ClearSeriesBtn")!;
-        clearBtn.Click += (_, _) => geoMap.Series = [];
+        HeatLand[]? savedLands = null;
+        clearBtn.Click += (_, _) =>
+        {
+            var series = geoMap.Series?.Cast<HeatLandSeries>().FirstOrDefault();
+            if (series is null) return;
+
+            if (savedLands is null)
+            {
+                savedLands = series.Lands?.Cast<HeatLand>().ToArray();
+                series.Lands = [];
+                clearBtn.Content = "Restore Series";
+            }
+            else
+            {
+                series.Lands = savedLands;
+                savedLands = null;
+                clearBtn.Content = "Clear Series";
+            }
+        };
 
         var borderColorCombo = this.Find<ComboBox>("BorderColorCombo")!;
         borderColorCombo.SelectionChanged += (_, _) =>
@@ -62,7 +83,10 @@ public partial class View : UserControl
     {
         var geoMap = this.Find<GeoMap>("geoMap");
         if (geoMap?.Stroke is not null && e.NewValue.HasValue)
+        {
             geoMap.Stroke.StrokeThickness = (float)e.NewValue.Value;
+            geoMap.CoreChart.Update();
+        }
     }
 
     private void OnTextSizeChanged(object? sender, NumericUpDownValueChangedEventArgs e)

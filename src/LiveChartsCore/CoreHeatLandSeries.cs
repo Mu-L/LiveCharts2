@@ -196,18 +196,11 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
     {
         foreach (var mapLand in toRemove)
         {
-            // THIS SEEEMS UNECESARY,
-            // I KEEP THIS CODE AS COMMENT BECAUSE IN GENERAL
-            // HEATMAPS REQUIRE A DEEPER REVIEW.
-
-            //var shapesQuery = mapLand.Data
-            //    .Select(x => x.Shape)
-            //    .Where(x => x is not null);
-
-            //foreach (var pathShape in shapesQuery)
-            //{
-            //    pathShape!.Fill = null;
-            //}
+            foreach (var data in mapLand.Data)
+            {
+                if (data.Shape is not null)
+                    data.Shape.Fill = null;
+            }
 
             _ = _everUsed.Remove(mapLand);
         }

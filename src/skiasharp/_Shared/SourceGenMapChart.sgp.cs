@@ -134,6 +134,11 @@ public partial class SourceGenMapChart
             newPaint.PaintStyle = propertyName == nameof(Fill)
                 ? PaintStyle.Fill
                 : PaintStyle.Stroke;
+
+#if BLAZOR_LVC
+            if (chart.CoreChart is null) return;
+#endif
+            chart.CoreChart.Update();
         };
 
     static Paint GetPaint(LvcColor color, PaintStyle style)
