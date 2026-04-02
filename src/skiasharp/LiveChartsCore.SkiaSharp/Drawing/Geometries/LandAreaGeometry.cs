@@ -60,7 +60,17 @@ public class MapViewportTransform
     /// <summary>
     /// Gets whether this transform is non-identity.
     /// </summary>
-    public bool IsActive => Zoom != 1f || PanX != 0 || PanY != 0;
+    public bool IsActive
+    {
+        get
+        {
+            const float epsilon = 1e-5f;
+            var zoomIsIdentity = System.Math.Abs(Zoom - 1f) < epsilon;
+            var panXIsIdentity = System.Math.Abs(PanX) < epsilon;
+            var panYIsIdentity = System.Math.Abs(PanY) < epsilon;
+            return !(zoomIsIdentity && panXIsIdentity && panYIsIdentity);
+        }
+    }
 
     /// <summary>
     /// Builds the SKMatrix for the current viewport transform.
