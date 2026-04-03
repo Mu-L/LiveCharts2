@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,41 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore;
-using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel.Observers;
-using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.Drawing;
 
-namespace LiveChartsGeneratedCode;
+namespace LiveChartsCore.Geo;
 
-// ==============================================================
-// this file contains the shared code between all UI frameworks
-// ==============================================================
-
-/// <inheritdoc cref="IGeoMapView" />
-#if SKIA_IMAGE_LVC
-public partial class SourceGenSKMapChart : IGeoMapView
-#else
-public partial class SourceGenMapChart : IGeoMapView
-#endif
+/// <summary>
+/// Provides data for the <see cref="GeoMapChart.LandClicked"/> event.
+/// </summary>
+public class LandClickedEventArgs
 {
-    private CollectionDeepObserver _seriesObserver = null!;
+    /// <summary>
+    /// Gets the land definition that was clicked.
+    /// </summary>
+    public LandDefinition Land { get; set; } = null!;
 
     /// <summary>
-    /// Gets the core chart.
+    /// Gets the heat value of the land, or 0 if no value is assigned.
     /// </summary>
-    public GeoMapChart CoreChart { get; private set; } = null!;
+    public double Value { get; set; }
 
-    /// <inheritdoc cref="IGeoMapView.AutoUpdateEnabled" />
-    public bool AutoUpdateEnabled { get; set; } = true;
-
-    private void InitializeChartControl()
-    {
-        CoreChart = new GeoMapChart(this);
-        _seriesObserver = new CollectionDeepObserver(() => CoreChart?.Update());
-
-        ActiveMap = Maps.GetWorldMap();
-        SyncContext = new object();
-        Tooltip = new SKDefaultGeoTooltip();
-    }
+    /// <summary>
+    /// Gets the pointer position in control coordinates where the click occurred.
+    /// </summary>
+    public LvcPoint Position { get; set; }
 }

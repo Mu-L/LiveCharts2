@@ -24,9 +24,11 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.WPF;
 
@@ -52,6 +54,12 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
 
         InitializeChartControl();
 
+        MouseWheel += OnMouseWheel;
+        MouseDown += OnMouseDown;
+        MouseMove += OnMouseMove;
+        MouseUp += OnMouseUp;
+        MouseLeave += OnMouseLeave;
+
         Unloaded += OnUnloaded;
     }
 
@@ -61,6 +69,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
     bool IGeoMapView.DesignerMode => DesignerProperties.GetIsInDesignMode(this);
+    bool IGeoMapView.IsDarkMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
 
     private void OnUnloaded(object sender, RoutedEventArgs e) =>
@@ -68,4 +77,35 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
 
     void IGeoMapView.InvokeOnUIThread(Action action) =>
         Dispatcher.Invoke(action);
+
+    private void OnMouseWheel(object? sender, MouseWheelEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerWheel(
+            new LvcPoint((float)p.X, (float)p.Y),
+            e.Delta > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
+    }
+
+    private void OnMouseDown(object? sender, MouseButtonEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnMouseMove(object? sender, MouseEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerMove(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnMouseUp(object? sender, MouseButtonEventArgs e)
+    {
+        var p = e.GetPosition(this);
+        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y));
+    }
+
+    private void OnMouseLeave(object? sender, MouseEventArgs e)
+    {
+        CoreChart?.InvokePointerLeft();
+    }
 }

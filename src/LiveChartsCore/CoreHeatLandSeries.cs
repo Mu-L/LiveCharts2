@@ -146,6 +146,25 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
         ClearHeat(toRemove);
     }
 
+    /// <inheritdoc cref="IGeoSeries.TryGetValue(string, out double)"/>
+    public bool TryGetValue(string landShortName, out double value)
+    {
+        if (Lands is not null)
+        {
+            foreach (var land in Lands)
+            {
+                if (string.Equals(land.Name, landShortName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = land.Value;
+                    return true;
+                }
+            }
+        }
+
+        value = 0;
+        return false;
+    }
+
     /// <inheritdoc cref="IGeoSeries.Delete(MapContext)"/>
     public void Delete(MapContext context)
     {
@@ -177,18 +196,11 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
     {
         foreach (var mapLand in toRemove)
         {
-            // THIS SEEEMS UNECESARY,
-            // I KEEP THIS CODE AS COMMENT BECAUSE IN GENERAL
-            // HEATMAPS REQUIRE A DEEPER REVIEW.
-
-            //var shapesQuery = mapLand.Data
-            //    .Select(x => x.Shape)
-            //    .Where(x => x is not null);
-
-            //foreach (var pathShape in shapesQuery)
-            //{
-            //    pathShape!.Fill = null;
-            //}
+            foreach (var data in mapLand.Data)
+            {
+                if (data.Shape is not null)
+                    data.Shape.Fill = null;
+            }
 
             _ = _everUsed.Remove(mapLand);
         }

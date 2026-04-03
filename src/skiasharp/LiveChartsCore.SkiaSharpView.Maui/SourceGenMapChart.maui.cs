@@ -24,6 +24,7 @@ using System;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Maui;
 using Microsoft.Maui.ApplicationModel;
@@ -58,6 +59,7 @@ public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
     public CoreMotionCanvas CoreCanvas => CanvasView.CanvasCore;
 
     bool IGeoMapView.DesignerMode => false;
+    bool IGeoMapView.IsDarkMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)Width, Height = (float)Height };
 
     private void OnUnloaded(object? sender, EventArgs e) =>
@@ -65,4 +67,21 @@ public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
 
     void IGeoMapView.InvokeOnUIThread(Action action) =>
         MainThread.BeginInvokeOnMainThread(action);
+
+    internal override void OnPressed(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args) =>
+        CoreChart?.InvokePointerDown(args.Location);
+
+    internal override void OnMoved(object? sender, LiveChartsCore.Native.Events.ScreenEventArgs args) =>
+        CoreChart?.InvokePointerMove(args.Location);
+
+    internal override void OnReleased(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args) =>
+        CoreChart?.InvokePointerUp(args.Location);
+
+    internal override void OnExited(object? sender, LiveChartsCore.Native.Events.EventArgs args) =>
+        CoreChart?.InvokePointerLeft();
+
+    internal override void OnScrolled(object? sender, LiveChartsCore.Native.Events.ScrollEventArgs args) =>
+        CoreChart?.InvokePointerWheel(
+            args.Location,
+            args.ScrollDelta > 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
 }

@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,41 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore;
-using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel.Observers;
-using LiveChartsCore.SkiaSharpView.SKCharts;
+namespace LiveChartsCore.Geo;
 
-namespace LiveChartsGeneratedCode;
-
-// ==============================================================
-// this file contains the shared code between all UI frameworks
-// ==============================================================
-
-/// <inheritdoc cref="IGeoMapView" />
-#if SKIA_IMAGE_LVC
-public partial class SourceGenSKMapChart : IGeoMapView
-#else
-public partial class SourceGenMapChart : IGeoMapView
-#endif
+/// <summary>
+/// Defines a tooltip for geo map charts.
+/// </summary>
+public interface IGeoMapTooltip
 {
-    private CollectionDeepObserver _seriesObserver = null!;
+    /// <summary>
+    /// Shows the tooltip for the specified land.
+    /// </summary>
+    /// <param name="point">The hovered land data.</param>
+    /// <param name="chart">The geo map chart.</param>
+    void Show(GeoTooltipPoint point, GeoMapChart chart);
 
     /// <summary>
-    /// Gets the core chart.
+    /// Hides the tooltip.
     /// </summary>
-    public GeoMapChart CoreChart { get; private set; } = null!;
-
-    /// <inheritdoc cref="IGeoMapView.AutoUpdateEnabled" />
-    public bool AutoUpdateEnabled { get; set; } = true;
-
-    private void InitializeChartControl()
-    {
-        CoreChart = new GeoMapChart(this);
-        _seriesObserver = new CollectionDeepObserver(() => CoreChart?.Update());
-
-        ActiveMap = Maps.GetWorldMap();
-        SyncContext = new object();
-        Tooltip = new SKDefaultGeoTooltip();
-    }
+    /// <param name="chart">The geo map chart.</param>
+    void Hide(GeoMapChart chart);
 }

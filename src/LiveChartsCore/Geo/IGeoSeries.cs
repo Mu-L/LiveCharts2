@@ -43,4 +43,12 @@ public interface IGeoSeries
     /// </summary>
     /// <param name="context">The map context.</param>
     void Delete(MapContext context);
+
+    /// <summary>
+    /// Gets the value for the specified land, if any.
+    /// </summary>
+    /// <param name="landShortName">The short name (ISO code) of the land.</param>
+    /// <param name="value">The value, if found.</param>
+    /// <returns><c>true</c> if the land has a value; otherwise, <c>false</c>.</returns>
+    bool TryGetValue(string landShortName, out double value);
 }

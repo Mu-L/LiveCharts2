@@ -26,6 +26,7 @@
 using LiveChartsCore;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Generators;
+using LiveChartsCore.Measure;
 using System.Windows.Input;
 using System;
 using LiveChartsCore.Painting;
@@ -78,6 +79,30 @@ public partial class SourceGenMapChart
     /// <inheritdoc cref="IGeoMapView.Series"/>
     static UIProperty<IEnumerable<IGeoSeries>>  series              = new(onChanged: OnSeriesPropertyChanged);
 
+    /// <inheritdoc cref="IGeoMapView.Tooltip"/>
+    static UIProperty<IGeoMapTooltip>           tooltip;
+
+    /// <inheritdoc cref="IGeoMapView.TooltipPosition"/>
+    static UIProperty<TooltipPosition>          tooltipPosition     = new(defaultValue: TooltipPosition.Auto);
+
+    /// <inheritdoc cref="IGeoMapView.TooltipTextPaint"/>
+    static UIProperty<Paint>                    tooltipTextPaint;
+
+    /// <inheritdoc cref="IGeoMapView.TooltipBackgroundPaint"/>
+    static UIProperty<Paint>                    tooltipBackgroundPaint;
+
+    /// <inheritdoc cref="IGeoMapView.TooltipTextSize"/>
+    static UIProperty<double>                   tooltipTextSize     = new(defaultValue: 14d);
+
+    /// <inheritdoc cref="IGeoMapView.ZoomingSpeed"/>
+    static UIProperty<double>                   zoomingSpeed        = new(defaultValue: LiveCharts.DefaultSettings.ZoomSpeed);
+
+    /// <inheritdoc cref="IGeoMapView.MinZoomLevel"/>
+    static UIProperty<double>                   minZoomLevel        = new(defaultValue: 1d);
+
+    /// <inheritdoc cref="IGeoMapView.MaxZoomLevel"/>
+    static UIProperty<double>                   maxZoomLevel        = new(defaultValue: 100d);
+
     static void OnSyncContextChanged(SGChart chart, object oldValue, object newValue)
     {
 #if BLAZOR_LVC
@@ -109,6 +134,11 @@ public partial class SourceGenMapChart
             newPaint.PaintStyle = propertyName == nameof(Fill)
                 ? PaintStyle.Fill
                 : PaintStyle.Stroke;
+
+#if BLAZOR_LVC
+            if (chart.CoreChart is null) return;
+#endif
+            chart.CoreChart.Update();
         };
 
     static Paint GetPaint(LvcColor color, PaintStyle style)

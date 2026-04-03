@@ -23,10 +23,12 @@
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Blazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace LiveChartsGeneratedCode;
 
@@ -53,6 +55,7 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
     public CoreMotionCanvas CoreCanvas => _motionCanvas.CanvasCore;
 
     bool IGeoMapView.DesignerMode => false;
+    bool IGeoMapView.IsDarkMode => false;
 
     LvcSize IDrawnView.ControlSize => new()
     {
@@ -66,7 +69,12 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
     protected override void BuildRenderTree(RenderTreeBuilder builder)
     {
         builder.OpenComponent<MotionCanvas>(0);
-        builder.AddComponentReferenceCapture(1, r => _motionCanvas = (MotionCanvas)r);
+        builder.AddAttribute(1, "OnPointerDownCallback", EventCallback.Factory.Create<PointerEventArgs>(this, OnPointerDown));
+        builder.AddAttribute(2, "OnPointerMoveCallback", EventCallback.Factory.Create<PointerEventArgs>(this, OnPointerMove));
+        builder.AddAttribute(3, "OnPointerUpCallback", EventCallback.Factory.Create<PointerEventArgs>(this, OnPointerUp));
+        builder.AddAttribute(4, "OnPointerOutCallback", EventCallback.Factory.Create<PointerEventArgs>(this, OnPointerOut));
+        builder.AddAttribute(5, "OnWheelCallback", EventCallback.Factory.Create<WheelEventArgs>(this, OnWheel));
+        builder.AddComponentReferenceCapture(7, r => _motionCanvas = (MotionCanvas)r);
         builder.CloseComponent();
     }
 
@@ -89,4 +97,21 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
 
     void IDisposable.Dispose() =>
         CoreChart.Unload();
+
+    private void OnPointerDown(PointerEventArgs e) =>
+        CoreChart?.InvokePointerDown(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
+
+    private void OnPointerMove(PointerEventArgs e) =>
+        CoreChart?.InvokePointerMove(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
+
+    private void OnPointerUp(PointerEventArgs e) =>
+        CoreChart?.InvokePointerUp(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
+
+    private void OnPointerOut(PointerEventArgs e) =>
+        CoreChart?.InvokePointerLeft();
+
+    private void OnWheel(WheelEventArgs e) =>
+        CoreChart?.InvokePointerWheel(
+            new LvcPoint((float)e.OffsetX, (float)e.OffsetY),
+            e.DeltaY < 0 ? ZoomDirection.ZoomIn : ZoomDirection.ZoomOut);
 }
