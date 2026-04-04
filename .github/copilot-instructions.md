@@ -2,24 +2,6 @@
 
 This document helps coding agents work efficiently with the LiveCharts2 repository.
 
-## ⚠️ IMPORTANT: Branch Structure
-
-**The `dev` branch contains the most complete and up-to-date structure**, including:
-- UI Testing infrastructure (`tests/UITests` and `tests/SharedUITests`)
-- More complete test coverage (`tests/CoreTests` - renamed from `LiveChartsCore.UnitTesting`)
-- Latest features and improvements
-- **Simplified target frameworks** - Core and SkiaSharp projects do NOT require mobile workloads
-
-**The `master` branch** may be behind `dev` and missing some directories/features mentioned in this document. Additionally:
-- Core and SkiaSharp projects include mobile platform targets (Android, iOS, MacCatalyst)
-- These mobile targets require workloads to be installed
-
-**Critical Build Difference**:
-- **Dev branch**: `LiveChartsCore` and `LiveChartsCore.SkiaSharp` target only `net462`, `netstandard2.0`, `net8.0`, `net8.0-windows` - NO workloads required
-- **Master branch**: Same projects include `net8.0-android`, `net8.0-ios`, `net8.0-maccatalyst` - workloads ARE required
-
-**When working on this repository**: Always check which branch you're on and prefer the `dev` branch for the most complete view of the codebase.
-
 ## Repository Overview
 
 LiveCharts2 is a flexible, cross-platform charting library for .NET. It follows a layered architecture where:
@@ -55,16 +37,16 @@ LiveCharts2/
 │   ├── VorticeSample/                     # DirectX sample (core without SkiaSharp)
 │   └── [other platforms]/
 ├── tests/
-│   ├── CoreTests/                         # Core unit tests using MSTest (dev branch)
+│   ├── CoreTests/                         # Core unit tests using MSTest
 │   │   ├── ChartTests/                    # High-level chart tests
 │   │   ├── SeriesTests/                   # Series-specific tests
 │   │   ├── LayoutTests/                   # Layout tests
 │   │   ├── CoreObjectsTests/              # Core objects tests
 │   │   └── OtherTests/                    # Axes, events, etc.
-│   ├── LiveChartsCore.UnitTesting/        # Core unit tests (master branch - older name)
-│   ├── UITests/                           # UI testing orchestrator (dev branch)
+│   ├── SnapshotTests/                     # Snapshot/image comparison tests (net10.0)
+│   ├── UITests/                           # UI testing orchestrator
 │   │   └── Program.cs                     # Factos-based multi-platform test runner
-│   └── SharedUITests/                     # Shared UI tests (dev branch)
+│   └── SharedUITests/                     # Shared UI tests (referenced by sample apps)
 │       ├── CartesianChartTests.cs
 │       ├── PieChartTests.cs
 │       ├── PolarChartTests.cs
@@ -78,8 +60,6 @@ LiveCharts2/
 └── generators/                            # Code generators
 ```
 
-**Note**: The `build/` folder is obsolete and will be removed soon.
-
 ## Key Architecture Concepts
 
 ### 1. Layered Design
@@ -89,13 +69,9 @@ LiveCharts2/
 
 ### 2. Multi-Platform Targeting
 
-**Dev branch** - Core projects (`LiveChartsCore`, `LiveChartsCore.SkiaSharp`) target:
+Core projects (`LiveChartsCore`, `LiveChartsCore.SkiaSharp`) target:
 - `net462`, `netstandard2.0`, `net8.0`, `net8.0-windows`
-- **No mobile workloads required**
-
-**Master branch** - Core projects include additional mobile targets:
-- `net8.0-android`, `net8.0-ios`, `net8.0-maccatalyst`
-- **Requires Android/iOS/MacCatalyst workloads**
+- **No mobile workloads required** to build the core library
 
 **Platform-specific view projects** (WPF, Avalonia, MAUI, etc.) have their own target framework requirements based on the platform.
 
@@ -110,21 +86,18 @@ A special sample demonstrating how to use LiveChartsCore without SkiaSharp, usin
 ## Building the Repository
 
 ### Prerequisites
-- .NET SDK 9.0.101 or later (see `global.json`)
-- **Dev branch**: No workloads required for core projects
-- **Master branch or platform-specific projects**: Required workloads for multi-platform builds:
+- .NET SDK (see `global.json` for minimum version)
+- No workloads required for core projects
+- Platform-specific projects (MAUI, UNO, Avalonia Browser) require relevant workloads:
   ```bash
-  dotnet workload install android
-  dotnet workload install ios
-  dotnet workload install maccatalyst
   dotnet workload install maui
+  dotnet workload install wasm-tools
   ```
 
 ### Build Methods
 
-#### Quick Build - Core Projects (Dev Branch)
+#### Quick Build - Core Projects
 ```bash
-# Dev branch - no workloads needed!
 dotnet build src/LiveChartsCore/LiveChartsCore.csproj
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj
 ```
@@ -144,8 +117,6 @@ dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WinForms/LiveChartsCore.Skia
 # Or use platform-specific solution files (see below)
 ```
 
-**Note**: The `build/build-windows.ps1` script is obsolete and will be removed soon.
-
 #### Build with Solution Files
 ```bash
 # Use platform-specific solution files
@@ -158,19 +129,15 @@ dotnet build LiveCharts.Maui.slnx
 
 #### Issue: Missing workload errors (NETSDK1147)
 ```
-error NETSDK1147: To build this project, the following workloads must be installed: android
+error NETSDK1147: To build this project, the following workloads must be installed: maui
 ```
 
-**Context**: This error occurs in the **master branch** when building `LiveChartsCore` or `LiveChartsCore.SkiaSharp` because they multi-target mobile platforms.
-
-**In dev branch**: Core and SkiaSharp projects do NOT require workloads - they only target desktop/standard frameworks.
+**Context**: This error occurs when building platform-specific view projects (MAUI, UNO, Avalonia Browser) that require specific workloads. Core projects (`LiveChartsCore`, `LiveChartsCore.SkiaSharp`) do NOT require workloads.
 
 **Workaround Options:**
-1. **Switch to dev branch** (recommended if you don't need mobile targets)
-2. Install the required workload: `dotnet workload install android`
-3. Build only the platform you need (e.g., WPF on Windows)
-4. Use platform-specific solution files that don't include all targets
-5. Temporarily remove platform targets from .csproj if only working on desktop platforms
+1. Install the required workload: `dotnet workload install maui`
+2. Build only the platform you need (e.g., WPF or Avalonia desktop on Windows)
+3. Use platform-specific solution files that don't include all targets
 
 #### Issue: SkiaSharp version conflicts
 The project supports multiple SkiaSharp versions:
@@ -188,18 +155,13 @@ When building fails for specific targets, you can:
 
 ### Unit Tests (Core Library)
 
-**Location (dev branch)**: `tests/CoreTests/`
-**Location (master branch)**: `tests/LiveChartsCore.UnitTesting/`
+**Location**: `tests/CoreTests/`
 
 **Framework**: MSTest with coverlet for code coverage
 
 **Run Tests:**
 ```bash
-# On dev branch
 dotnet test tests/CoreTests/
-
-# On master branch
-dotnet test tests/LiveChartsCore.UnitTesting/
 
 # Run for specific framework
 dotnet test tests/CoreTests/ --framework net8.0
@@ -219,7 +181,20 @@ dotnet test tests/CoreTests/ --collect:"XPlat Code Coverage"
 
 **Important**: Tests use `CoreMotionCanvas.IsTesting = true` to disable animations during testing.
 
-### UI Testing (dev branch only)
+### Snapshot Tests
+
+**Location**: `tests/SnapshotTests/`
+
+**Framework**: MSTest, targets `net10.0`
+
+Snapshot tests render charts to images and compare them against stored reference snapshots. They are run in CI on Windows.
+
+**Run Tests:**
+```bash
+dotnet test tests/SnapshotTests/
+```
+
+### UI Testing
 
 **Location**: `tests/UITests/` (orchestrator) and `tests/SharedUITests/` (shared tests)
 
@@ -261,8 +236,6 @@ dotnet run --project tests/UITests/ -- --select maui --test-env "tf=net10.0-wind
 
 **Build Configuration for UI Tests:**
 UI test configuration is managed through MSBuild properties. When `UITesting=true` is set, samples include the shared UI test project.
-
-**Note**: The `build/UITestsLinks.Build.props` file is obsolete and will be removed soon.
 
 ## Running Samples
 
@@ -314,7 +287,7 @@ Defined in `Directory.Build.props`:
 - `LiveChartsVersion`: Current version (2.0.0-rc6.1)
 - `MinSkiaSharpVersion`: 2.88.9
 - `LatestSkiaSharpVersion`: 3.119.0
-- `GlobalLangVersion`: preview (C# preview features enabled)
+- `LangVersion`: 14.0 (C# 14)
 
 ## Build Configuration Properties
 
@@ -327,8 +300,6 @@ Rendering settings are configured via MSBuild properties:
 
 These create conditional compilation symbols for testing different rendering modes.
 
-**Note**: The `build/RenderSettings.Build.props` file is obsolete and will be removed soon.
-
 ### Development Flags
 In `Directory.Build.props`:
 - `UseNuGetForSamples`: Use NuGet packages vs project references (default: false)
@@ -338,39 +309,28 @@ In `Directory.Build.props`:
 
 ### GitHub Actions Workflows
 
-#### 1. Unit Tests (`run-unit-tests.yml`)
-- Runs on: `windows-2022`
-- Triggers: Push/PR to `master` or `dev`, weekly schedule
-- Command: `dotnet test ./tests/LiveChartsCore.UnitTesting`
+#### 1. Main CI (`livecharts.yml`)
+- Triggers: Pull requests
+- Runs on: `windows-2025` (pack/test), `ubuntu-24.04` (Linux/browser), `macos-26` (Mac/iOS)
+- Steps:
+  1. **Pack**: Builds NuGet packages for all platform libraries (core, skiasharp, WPF, Avalonia, MAUI, Blazor, WinUI, UNO, WinForms, Eto)
+  2. **test-core**: Runs `CoreTests` on `net8.0` and `net462`
+  3. **test-snapshot**: Runs `SnapshotTests`
+  4. **test-windows/linux/mac/browser/android/ios**: Runs Factos UI tests for each platform
+- On tag pushes (after tests pass): publishes packages to NuGet.org
 
-#### 2. Compile All Views (`compile-all-views.yml`)
-- Runs on: `windows-2022`
-- Installs MAUI workload
-- Tests compilation of all platform views
+#### 2. Publish (`publish.yml`)
+- Handles NuGet package publishing
 
-**Note**: Both workflows require Windows runners due to platform-specific dependencies (WPF, WinUI, etc.)
+**Note**: The CI uses NuGet packages (not project references) when running UI tests in Release mode.
 
 ## Common Development Workflows
-
-### Working with Branches
-```bash
-# Check current branch
-git branch
-
-# Switch to dev branch for latest features
-git checkout dev
-
-# Create feature branch from dev
-git checkout -b feature/my-feature dev
-```
-
-**Recommendation**: Start development from the `dev` branch to access the latest features and testing infrastructure.
 
 ### Adding a New Series Type
 1. Create series class in `src/LiveChartsCore/[SeriesType]/`
 2. Implement series interfaces (`ISeries`, etc.)
 3. Create SkiaSharp drawable in `src/skiasharp/LiveChartsCore.SkiaSharp/Drawing/Geometries/`
-4. Add tests in `tests/LiveChartsCore.UnitTesting/SeriesTests/`
+4. Add tests in `tests/CoreTests/SeriesTests/`
 5. Create sample ViewModel in `samples/ViewModelsSamples/`
 6. Update `samples/ViewModelsSamples/Index.cs`
 
@@ -463,44 +423,30 @@ git checkout -b feature/my-feature dev
 ## Quick Reference Commands
 
 ```bash
-# === Branch Management ===
-# Check current branch
-git branch
-
-# Switch to dev branch (recommended)
-git checkout dev
-
 # === Building ===
-# Build core library (dev branch - NO workloads needed!)
+# Build core library (no workloads needed)
 dotnet build src/LiveChartsCore/LiveChartsCore.csproj
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj
 
-# Build core library (master branch - requires workloads OR see workarounds)
-# Use -f to target specific framework if workloads not installed
-dotnet build src/LiveChartsCore/LiveChartsCore.csproj -f net8.0
-
-# Build platform-specific projects (no workload required)
+# Build platform-specific projects
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia/LiveChartsCore.SkiaSharpView.Avalonia.csproj
 
-# === Install Workloads (master branch only) ===
-# Install Android workload
-dotnet workload install android --skip-sign-check
-
-# Install all mobile workloads
-dotnet workload install android ios maccatalyst maui --skip-sign-check
+# === Install Workloads (for platform-specific projects) ===
+dotnet workload install maui --skip-sign-check
+dotnet workload install wasm-tools --skip-sign-check
 
 # Check installed workloads
 dotnet workload list
 
 # === Testing ===
-# Run core unit tests (dev branch)
+# Run core unit tests
 dotnet test tests/CoreTests/ --framework net8.0
 
-# Run core unit tests (master branch)
-dotnet test tests/LiveChartsCore.UnitTesting/ --framework net8.0
+# Run snapshot tests
+dotnet test tests/SnapshotTests/
 
-# Run UI tests (dev branch only)
+# Run UI tests (requires sample apps to build)
 dotnet run --project tests/UITests/
 
 # Run UI tests for specific platform
@@ -537,69 +483,30 @@ This section documents actual errors encountered when working with this reposito
 
 **Error Message:**
 ```
-error NETSDK1147: To build this project, the following workloads must be installed: android
+error NETSDK1147: To build this project, the following workloads must be installed: maui
 To install these workloads, run the following command: dotnet workload restore
 ```
 
-**Context**: This occurs in the **master branch** when trying to build `LiveChartsCore` or `LiveChartsCore.SkiaSharp` projects because they multi-target mobile platforms (Android, iOS, macOS Catalyst).
-
-**IMPORTANT**: This error does NOT occur in the **dev branch** where core projects only target desktop/standard frameworks.
-
-**Why it happens (master branch only)**: The core library includes mobile platform targets:
-- `net8.0-android`
-- `net8.0-ios`
-- `net8.0-maccatalyst`
-- `net8.0-windows10.0.19041.0`
-
-Even when building with `-f netstandard2.0`, MSBuild evaluates all target frameworks.
+**Context**: This occurs when building platform-specific view projects (MAUI, UNO, Avalonia Browser) that require specific workloads. Core projects (`LiveChartsCore`, `LiveChartsCore.SkiaSharp`) do NOT require any workloads.
 
 **Workarounds:**
 
-**Option 0: Switch to Dev Branch** (Recommended - no workloads needed!)
+**Option 1: Install Required Workloads**
 ```bash
-git checkout dev
-# Core projects build without any workloads
-dotnet build src/LiveChartsCore/LiveChartsCore.csproj
-dotnet build src/skiasharp/LiveChartsCore.SkiaSharp/LiveChartsCore.SkiaSharpView.csproj
+dotnet workload install maui --skip-sign-check
+dotnet workload install wasm-tools --skip-sign-check
 ```
 
-**Option 1: Install Required Workloads** (For master branch development)
-```bash
-# Install Android workload
-dotnet workload install android --skip-sign-check
-
-# Install iOS workload (macOS only)
-dotnet workload install ios --skip-sign-check
-
-# Install macOS workload (macOS only)
-dotnet workload install maccatalyst --skip-sign-check
-
-# Or install all at once
-dotnet workload install android ios maccatalyst maui --skip-sign-check
-```
-
-**Note**: After running `dotnet workload restore`, you still need to explicitly install workloads with `dotnet workload install`.
-
-**Option 2: Build Platform-Specific Projects** (For focused development)
+**Option 2: Build Platform-Specific Projects that don't need workloads**
 ```bash
 # Build only WPF (Windows only)
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.WPF/LiveChartsCore.SkiaSharpView.Wpf.csproj
 
-# Build only Avalonia (cross-platform)
+# Build only Avalonia desktop (cross-platform)
 dotnet build src/skiasharp/LiveChartsCore.SkiaSharp.Avalonia/LiveChartsCore.SkiaSharpView.Avalonia.csproj
 
 # Use platform-specific solution files
 dotnet build LiveCharts.WPF.slnx
-```
-
-**Option 3: Modify Target Frameworks Temporarily** (Not recommended for commits)
-Edit the `.csproj` file to remove platforms you don't need:
-```xml
-<!-- Before -->
-<TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net8.0-android;net8.0-ios;net8.0-maccatalyst;</TargetFrameworks>
-
-<!-- After (for desktop-only development) -->
-<TargetFrameworks>netstandard2.0;netstandard2.1;net8.0</TargetFrameworks>
 ```
 
 ### Error 2: Visual Studio Component Required
@@ -621,10 +528,10 @@ Unhandled exception: The imported file "$(MSBuildExtensionsPath32)/Microsoft/Vis
 
 **Error Message:**
 ```
-fatal: ambiguous argument 'origin/dev': unknown revision or path not in the working tree.
+fatal: ambiguous argument 'origin/branch-name': unknown revision or path not in the working tree.
 ```
 
-**Context**: After fetching a branch with `git fetch origin dev`, trying to reference it as `origin/dev`.
+**Context**: After fetching a branch with `git fetch origin branch-name`, trying to reference it as `origin/branch-name`.
 
 **Why it happens**: Git fetch stores the ref as `FETCH_HEAD`, not as a trackable remote branch.
 
@@ -634,11 +541,11 @@ fatal: ambiguous argument 'origin/dev': unknown revision or path not in the work
 git log FETCH_HEAD
 
 # Option 2: Create tracking branch
-git fetch origin dev
-git checkout -b dev --track origin/dev
+git fetch origin main
+git checkout -b main --track origin/main
 
 # Option 3: Fetch with branch creation
-git fetch origin dev:dev
+git fetch origin main:main
 ```
 
 ### Error 4: Package Not Found During Build
@@ -688,10 +595,8 @@ MSBuildArg isTest = new("IsTestBuild", "true");
 
 ## Troubleshooting
 
-### Problem: Can't build core projects - workload errors
-**Solution**: 
-- **Dev branch**: No workloads needed - projects should build directly
-- **Master branch**: Install required workloads OR switch to dev branch OR build platform-specific projects only
+### Problem: Can't build platform-specific projects - workload errors
+**Solution**: Install the required workload for the platform you're targeting (e.g., `dotnet workload install maui`). Core projects (`LiveChartsCore`, `LiveChartsCore.SkiaSharp`) build without any workloads.
 
 ### Problem: SkiaSharp errors
 **Solution**: Check SkiaSharp version in `Directory.Build.props`, ensure NuGet restore succeeded
@@ -716,6 +621,6 @@ MSBuildArg isTest = new("IsTestBuild", "true");
 ## Version Information
 
 - **Current Version**: 2.0.0-rc6.1 (Release Candidate)
-- **SDK Version**: 9.0.101 (minimum, see `global.json`)
+- **C# Language Version**: 14.0
 - **SkiaSharp**: 2.88.9 (min) to 3.119.0 (latest)
-- **Target Frameworks**: netstandard2.0/2.1, net462, net6.0, net8.0, plus mobile platforms
+- **Target Frameworks**: `net462`, `netstandard2.0`, `net8.0`, `net8.0-windows` (core); plus platform-specific targets for view projects
