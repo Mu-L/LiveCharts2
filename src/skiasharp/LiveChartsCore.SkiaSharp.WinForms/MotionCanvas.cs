@@ -24,6 +24,7 @@ using System.ComponentModel;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Drawing;
+using LiveChartsCore.SkiaSharpView.WinForms.Rendering;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 
@@ -65,7 +66,7 @@ public partial class MotionCanvas : UserControl, IRenderMode
     protected override void CreateHandle()
     {
         base.CreateHandle();
-        _ticker = new AsyncLoopTicker();
+        _ticker = new ApplicationIdleTicker();
         _ticker.InitializeTicker(CanvasCore, this);
         _skControl?.Invalidate();
         _skglControl?.Invalidate();
