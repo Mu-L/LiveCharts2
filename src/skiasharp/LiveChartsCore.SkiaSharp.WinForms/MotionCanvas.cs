@@ -66,7 +66,9 @@ public partial class MotionCanvas : UserControl, IRenderMode
     protected override void CreateHandle()
     {
         base.CreateHandle();
-        _ticker = new ApplicationIdleTicker();
+        _ticker = LiveCharts.RenderingSettings.TryUseVSync
+            ? new ApplicationIdleTicker()
+            : new AsyncLoopTicker();
         _ticker.InitializeTicker(CanvasCore, this);
         _skControl?.Invalidate();
         _skglControl?.Invalidate();
