@@ -49,7 +49,6 @@
   <PropertyGroup Condition="'$(IsPacking)' != 'true'">
     <GPU>default</GPU>            <!-- false, true, default (ignore ms build symbols) -->
     <VSYNC>default</VSYNC>        <!-- false, true, default (ignore ms build symbols) -->
-    <FPS>30</FPS>                 <!-- see RenderSettings.Build, but this is normally not used. -->
     <Diagnose>false</Diagnose>    <!-- false, true -->
   </PropertyGroup>
 
