@@ -61,30 +61,6 @@ public static class LiveChartsSkiaSharp
 #if __VSYNC_FALSE__
         defaultRenderSettings.TryUseVSync = false;
 #endif
-#if __FPS_10__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 10;
-#endif
-#if __FPS_20__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 20;
-#endif
-#if __FPS_30__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 30;
-#endif
-#if __FPS_45__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 45;
-#endif
-#if __FPS_60__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 60;
-#endif
-#if __FPS_75__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 75;
-#endif
-#if __FPS_90__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 90;
-#endif
-#if __FPS_120__
-        defaultRenderSettings.LiveChartsRenderLoopFPS = 120;
-#endif
 #if __DIAGNOSE__
         defaultRenderSettings.ShowFPS = true;
 #endif
