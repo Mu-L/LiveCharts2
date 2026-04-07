@@ -23,12 +23,26 @@ public static class Extensions
             if (!Directory.Exists("SnapshotsNew")) _ = Directory.CreateDirectory("SnapshotsNew");
             if (!Directory.Exists("SnapshotsDiff")) _ = Directory.CreateDirectory("SnapshotsDiff");
 
-            chart.SaveImage(Path.Combine("SnapshotsNew", $"{name}.png"));
+            var newPath = Path.Combine("SnapshotsNew", $"{name}.png");
+            var referencePath = Path.Combine("Snapshots", $"{name}.png");
+
+            chart.SaveImage(newPath);
+
+            if (!File.Exists(referencePath))
+            {
+                File.Copy(newPath, Path.Combine("SnapshotsDiff", $"{name}[NEW].png"), overwrite: true);
+                Assert.Fail(
+                    $"Reference snapshot not found for '{name}'. " +
+                    $"A new snapshot was generated at '{newPath}'. " +
+                    $"Review it and commit it to the Snapshots folder as '{referencePath}'.");
+                return;
+            }
+
             ImageComparisonResult result;
 
-            using (var data = SKData.Create(Path.Combine("Snapshots", $"{name}.png")))
+            using (var data = SKData.Create(referencePath))
             using (var expectedEncoded = SKImage.FromEncodedData(data))
-            using (var resultData = SKData.Create(Path.Combine("SnapshotsNew", $"{name}.png")))
+            using (var resultData = SKData.Create(newPath))
             using (var resultImage = SKImage.FromEncodedData(resultData))
             using (var expectedBitmap = SKBitmap.FromImage(expectedEncoded))
             using (var expectedCpu = SKImage.FromBitmap(expectedBitmap))
@@ -42,11 +56,11 @@ public static class Extensions
             if (!result.IsSuccessful)
             {
                 File.Copy(
-                    Path.Combine("Snapshots", $"{name}.png"),
+                    referencePath,
                     Path.Combine("SnapshotsDiff", $"{name}[EXPECTED].png"));
 
                 File.Copy(
-                    Path.Combine("SnapshotsNew", $"{name}.png"),
+                    newPath,
                     Path.Combine("SnapshotsDiff", $"{name}[RESULT].png"));
             }
 
