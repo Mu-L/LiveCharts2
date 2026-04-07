@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -63,6 +63,9 @@ public class GeoMapChart
     private bool _isPointerDown = false;
     private LvcPoint _pointerDownPosition = new(-10, -10);
     private bool _pointerDownIsClick = false;
+    private double _rotationX;
+    private double _rotationY;
+    private System.Threading.Timer? _rotationTimer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
@@ -120,6 +123,32 @@ public class GeoMapChart
     }
 
     /// <summary>
+    /// Gets or sets the rotation center longitude (used for Orthographic projection).
+    /// </summary>
+    public double RotationX
+    {
+        get => _rotationX;
+        set
+        {
+            _rotationX = value;
+            Update(new ChartUpdateParams { Throttling = false });
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the rotation center latitude (used for Orthographic projection).
+    /// </summary>
+    public double RotationY
+    {
+        get => _rotationY;
+        set
+        {
+            _rotationY = value;
+            Update(new ChartUpdateParams { Throttling = false });
+        }
+    }
+
+    /// <summary>
     /// Gets the active theme, ensuring it is set up for the current dark/light mode.
     /// </summary>
     public Theme GetTheme()
@@ -146,6 +175,20 @@ public class GeoMapChart
     {
         _isBouncing = false;
         _mapFactory.SetViewport(this, 1f, new LvcPoint(0, 0));
+    }
+
+    /// <summary>
+    /// Animates the globe rotation to the specified longitude and latitude.
+    /// Only has a visual effect when the projection is <see cref="Geo.MapProjection.Orthographic"/>.
+    /// </summary>
+    /// <param name="longitude">The target center longitude.</param>
+    /// <param name="latitude">The target center latitude.</param>
+    /// <param name="durationMs">The animation duration in milliseconds.</param>
+    public void RotateTo(double longitude, double latitude, int durationMs = 800)
+    {
+        _rotationTimer?.Dispose();
+        _rotationTimer = null;
+        AnimateRotation(longitude, latitude, durationMs);
     }
 
     /// <summary>
@@ -186,6 +229,9 @@ public class GeoMapChart
         _bounceTimer?.Dispose();
         _bounceTimer = null;
         _isBouncing = false;
+
+        _rotationTimer?.Dispose();
+        _rotationTimer = null;
 
         _everMeasuredSeries.Clear();
         _heatPaint = null!;
@@ -300,7 +346,10 @@ public class GeoMapChart
 
         var context = new MapContext(
             this, View, View.ActiveMap,
-            Maps.BuildProjector(View.MapProjection, [View.ControlSize.Width, View.ControlSize.Height]));
+            Maps.BuildProjector(
+                View.MapProjection,
+                [View.ControlSize.Width, View.ControlSize.Height],
+                _rotationX, _rotationY));
 
         _mapFactory.GenerateLands(context);
 
@@ -330,30 +379,8 @@ public class GeoMapChart
                 { hasValue = true; break; }
             }
 
-            // Compute screen-space center from the first data shape
-            var center = _pointerPosition;
-            foreach (var data in _hoveredLand.Data)
-            {
-                if (data.Shape is null) continue;
-                float minX = float.MaxValue, minY = float.MaxValue;
-                float maxX = float.MinValue, maxY = float.MinValue;
-                foreach (var seg in data.Shape.Commands)
-                {
-                    if (seg.Xi < minX) minX = seg.Xi;
-                    if (seg.Yi < minY) minY = seg.Yi;
-                    if (seg.Xi > maxX) maxX = seg.Xi;
-                    if (seg.Yi > maxY) maxY = seg.Yi;
-                }
-                // Transform base center to screen space
-                var baseCx = (minX + maxX) / 2f;
-                var baseCy = (minY + maxY) / 2f;
-                var ctrlCx = View.ControlSize.Width * 0.5f;
-                var ctrlCy = View.ControlSize.Height * 0.5f;
-                var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
-                var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
-                center = new LvcPoint(baseCx * _zoomLevel + tx, baseCy * _zoomLevel + ty);
-                break;
-            }
+            // Compute screen-space center from geographic coordinates via projector
+            var center = ComputeLandScreenCenter(_hoveredLand, context.Projector);
 
             View.Tooltip.Show(
                 new GeoTooltipPoint
@@ -414,26 +441,12 @@ public class GeoMapChart
                         { hasValue = true; break; }
                     }
 
-                    // Compute screen-space center from the shape's segments (base coordinates)
-                    var commands = landData.Shape.Commands;
-                    float minX = float.MaxValue, minY = float.MaxValue;
-                    float maxX = float.MinValue, maxY = float.MinValue;
-                    foreach (var seg in commands)
-                    {
-                        if (seg.Xi < minX) minX = seg.Xi;
-                        if (seg.Yi < minY) minY = seg.Yi;
-                        if (seg.Xi > maxX) maxX = seg.Xi;
-                        if (seg.Yi > maxY) maxY = seg.Yi;
-                    }
-
-                    // Transform base center to screen space
-                    var baseCx = (minX + maxX) / 2f;
-                    var baseCy = (minY + maxY) / 2f;
-                    var ctrlCx = View.ControlSize.Width * 0.5f;
-                    var ctrlCy = View.ControlSize.Height * 0.5f;
-                    var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
-                    var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
-                    var center = new LvcPoint(baseCx * _zoomLevel + tx, baseCy * _zoomLevel + ty);
+                    // Compute screen-space center using the projector (works for all projections)
+                    var projector = Maps.BuildProjector(
+                        View.MapProjection,
+                        [View.ControlSize.Width, View.ControlSize.Height],
+                        _rotationX, _rotationY);
+                    var center = ComputeLandScreenCenter(landDefinition, projector);
 
                     return (landDefinition, value, hasValue, center);
                 }
@@ -441,6 +454,39 @@ public class GeoMapChart
         }
 
         return null;
+    }
+
+    private LvcPoint ComputeLandScreenCenter(LandDefinition land, MapProjector projector)
+    {
+        float minX = float.MaxValue, minY = float.MaxValue;
+        float maxX = float.MinValue, maxY = float.MinValue;
+        var hasPoints = false;
+
+        foreach (var data in land.Data)
+        {
+            foreach (var coord in data.Coordinates)
+            {
+                if (!projector.IsVisible(coord.X, coord.Y)) continue;
+                var projected = projector.ToMap([coord.X, coord.Y]);
+                var px = projected[0];
+                var py = projected[1];
+                if (px < minX) minX = px;
+                if (py < minY) minY = py;
+                if (px > maxX) maxX = px;
+                if (py > maxY) maxY = py;
+                hasPoints = true;
+            }
+        }
+
+        if (!hasPoints) return _pointerPosition;
+
+        var baseCx = (minX + maxX) / 2f;
+        var baseCy = (minY + maxY) / 2f;
+        var ctrlCx = View.ControlSize.Width * 0.5f;
+        var ctrlCy = View.ControlSize.Height * 0.5f;
+        var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+        var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+        return new LvcPoint(baseCx * _zoomLevel + tx, baseCy * _zoomLevel + ty);
     }
 
     private Task TooltipThrottlerUnlocked()
@@ -679,6 +725,59 @@ public class GeoMapChart
                 _isBouncing = false;
                 _bounceTimer?.Dispose();
                 _bounceTimer = null;
+            }
+        }, null, intervalMs, intervalMs);
+    }
+
+    private void AnimateRotation(double targetLon, double targetLat, int durationMs)
+    {
+        const int intervalMs = 16;
+        var totalSteps = Math.Max(1, durationMs / intervalMs);
+        var step = 0;
+
+        var startLon = _rotationX;
+        var startLat = _rotationY;
+
+        // Normalize longitude difference to shortest path [-180, 180]
+        var deltaLon = targetLon - startLon;
+        if (deltaLon > 180) deltaLon -= 360;
+        if (deltaLon < -180) deltaLon += 360;
+
+        _rotationTimer = new System.Threading.Timer(_ =>
+        {
+            if (_isUnloaded)
+            {
+                _rotationTimer?.Dispose();
+                _rotationTimer = null;
+                return;
+            }
+
+            step++;
+            var t = (float)step / totalSteps;
+
+            // ease-in-out cubic
+            t = t < 0.5f
+                ? 4 * t * t * t
+                : 1 - (float)Math.Pow(-2 * t + 2, 3) / 2;
+
+            _rotationX = startLon + deltaLon * t;
+            _rotationY = startLat + (targetLat - startLat) * t;
+
+            View.InvokeOnUIThread(() =>
+            {
+                if (_isUnloaded) return;
+                lock (View.CoreCanvas.Sync)
+                {
+                    Measure();
+                }
+            });
+
+            if (step >= totalSteps)
+            {
+                _rotationX = targetLon;
+                _rotationY = targetLat;
+                _rotationTimer?.Dispose();
+                _rotationTimer = null;
             }
         }, null, intervalMs, intervalMs);
     }

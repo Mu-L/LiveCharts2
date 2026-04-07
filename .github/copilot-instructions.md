@@ -258,6 +258,95 @@ dotnet run --project samples/ConsoleSample/ConsoleSample.csproj
 2. Add path to `samples/ViewModelsSamples/Index.cs`
 3. Create platform-specific view files in each sample project (WPF, Avalonia, etc.)
 
+### Sample Platforms Reference
+
+The following platforms each need a view for every sample. **ConsoleSample** and **VorticeSample** are excluded — they don't follow this pattern.
+
+| Platform | Root path | View file(s) | Base class | LVC namespace (xmlns:lvc) |
+|---|---|---|---|---|
+| **Avalonia** | `samples/AvaloniaSample/[Category]/[Name]/` | `View.axaml` + `View.axaml.cs` | `UserControl` | `using:LiveChartsCore.SkiaSharpView.Avalonia` |
+| **WPF** | `samples/WPFSample/[Category]/[Name]/` | `View.xaml` + `View.xaml.cs` | `UserControl` | `clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF` |
+| **MAUI** | `samples/MauiSample/[Category]/[Name]/` | `View.xaml` + `View.xaml.cs` | `ContentPage` | `clr-namespace:LiveChartsCore.SkiaSharpView.Maui;assembly=LiveChartsCore.SkiaSharpView.Maui` |
+| **WinUI** | `samples/WinUISample/WinUISample/Samples/[Category]/[Name]/` | `View.xaml` + `View.xaml.cs` | `UserControl` (`sealed partial`) | `using:LiveChartsCore.SkiaSharpView.WinUI` |
+| **WinForms** | `samples/WinFormsSample/[Category]/[Name]/` | `View.cs` + `View.Designer.cs` + `View.resx` | `UserControl` (`partial`) | N/A — code-only |
+| **Blazor** | `samples/BlazorSample/Pages/[Category]/[Name]/` | `View.razor` | N/A — Razor component | `@using LiveChartsCore.SkiaSharpView.Blazor` |
+| **EtoForms** | `samples/EtoFormsSample/[Category]/[Name]/` | `View.cs` | `Panel` (non-partial) | N/A — code-only |
+| **UnoPlatform** | *(no separate files)* | Reuses `WinUISample` views via reflection | — | — |
+
+**Key facts for each platform:**
+
+- **All XAML platforms (Avalonia, WPF, MAUI, WinUI)** use `Activator.CreateInstance` with the pattern `{Platform}.{Category}.{Name}.View` to load views — so the **C# namespace must exactly match** `{PlatformPrefix}.{Category}.{Name}` and the class must be named `View`.
+- **WinForms** and **EtoForms** use the same reflection pattern. The view class must be `partial class View : UserControl` (WinForms) or `class View : Panel` (EtoForms).
+- **Blazor** uses Razor's `@page "/{Category}/{Name}"` directive for routing. The nav menu reads `ViewModelsSamples.Index.Samples` automatically.
+- **UnoPlatform** (`samples/UnoPlatformSample/`) loads views from the `WinUISample` assembly — no separate files are needed.
+
+**XAML DataContext / BindingContext patterns:**
+
+```xml
+<!-- Avalonia (View.axaml) -->
+<UserControl xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:vms="using:ViewModelsSamples.[Category].[Name]"
+             x:DataType="vms:ViewModel">
+    <UserControl.DataContext><vms:ViewModel/></UserControl.DataContext>
+</UserControl>
+
+<!-- WPF (View.xaml) -->
+<UserControl xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             xmlns:vms="clr-namespace:ViewModelsSamples.[Category].[Name];assembly=ViewModelsSamples">
+    <UserControl.DataContext><vms:ViewModel/></UserControl.DataContext>
+</UserControl>
+
+<!-- MAUI (View.xaml) — ContentPage + XamlCompilation attribute on code-behind -->
+<ContentPage xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Maui;assembly=LiveChartsCore.SkiaSharpView.Maui"
+             xmlns:vms="clr-namespace:ViewModelsSamples.[Category].[Name];assembly=ViewModelsSamples"
+             x:DataType="vms:ViewModel">
+    <ContentPage.BindingContext><vms:ViewModel/></ContentPage.BindingContext>
+</ContentPage>
+
+<!-- WinUI (View.xaml) — sealed partial class -->
+<UserControl xmlns:lvc="using:LiveChartsCore.SkiaSharpView.WinUI"
+             xmlns:vms="using:ViewModelsSamples.[Category].[Name]">
+    <UserControl.DataContext><vms:ViewModel/></UserControl.DataContext>
+</UserControl>
+```
+
+**Code-only platforms (WinForms / EtoForms)** typically instantiate the ViewModel directly or inline the data:
+
+```csharp
+// WinForms — partial class View : UserControl
+var vm = new ViewModel();
+var chart = new GeoMap { Series = vm.Series, ... };
+chart.Location = new System.Drawing.Point(0, 0);
+chart.Size = new System.Drawing.Size(50, 50);
+chart.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
+Controls.Add(chart);
+
+// EtoForms — class View : Panel (non-partial, no Designer file)
+var vm = new ViewModel();
+var chart = new GeoMap { Series = vm.Series, ... };
+Content = new DynamicLayout(chart);
+```
+
+**WinForms `View.Designer.cs`** is always a minimal boilerplate — copy from any existing sample, just update the namespace.
+
+**UI-testing accessor** — most XAML views expose a `Chart` property under `#if UI_TESTING` for the Factos test runner:
+
+```csharp
+// XAML platforms (WPF, Avalonia, MAUI, WinUI)
+#if UI_TESTING
+    public SomeChartType Chart => chartNamedInXaml;
+#endif
+
+// EtoForms / WinForms
+public SomeChartType Chart;  // public field, always present
+```
+
+**Blazor** exposes the chart via `@ref`:
+```razor
+<CartesianChart @ref="Chart" .../>
+@code { public CartesianChart Chart; }
+```
+
 ## Code Style and Conventions
 
 ### Editor Config

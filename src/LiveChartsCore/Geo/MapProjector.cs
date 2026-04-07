@@ -53,4 +53,13 @@ public abstract class MapProjector
     /// <param name="point">The point.</param>
     /// <returns></returns>
     public abstract float[] ToMap(double[] point);
+
+    /// <summary>
+    /// Determines whether a point at the given longitude and latitude is visible
+    /// in this projection. Always returns true for flat projections.
+    /// </summary>
+    /// <param name="longitude">The longitude.</param>
+    /// <param name="latitude">The latitude.</param>
+    /// <returns>True if the point is visible.</returns>
+    public virtual bool IsVisible(double longitude, double latitude) => true;
 }

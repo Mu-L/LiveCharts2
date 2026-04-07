@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using LiveChartsCore.Drawing;
@@ -28,6 +29,7 @@ using LiveChartsCore.Geo;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
+using SkiaSharp;
 
 namespace LiveChartsCore.SkiaSharpView;
 
@@ -41,6 +43,7 @@ public class MapFactory : IMapFactory
     private readonly HashSet<string> _usedLayers = [];
     private readonly MapViewportTransform _viewportTransform = new();
     private IGeoMapView? _mapView;
+    private LandAreaGeometry? _globeCircle;
 
     /// <inheritdoc cref="IMapFactory.GenerateLands(MapContext)"/>
     public void GenerateLands(MapContext context)
@@ -54,6 +57,32 @@ public class MapFactory : IMapFactory
         _viewportTransform.CenterX = context.View.ControlSize.Width * 0.5f;
         _viewportTransform.CenterY = context.View.ControlSize.Height * 0.5f;
 
+
+        var isOrtho = projector is OrthographicProjector;
+        var ortho = projector as OrthographicProjector;
+
+        // Manage globe circle background for orthographic projection
+        if (isOrtho && ortho is not null)
+        {
+            if (_globeCircle is null)
+            {
+                _globeCircle = new LandAreaGeometry();
+            }
+
+            var circlePath = new SKPath();
+            circlePath.AddCircle(ortho.ScreenCenterX, ortho.ScreenCenterY, ortho.Radius);
+            _globeCircle.SetBasePath(circlePath);
+            _globeCircle.ViewportTransform = _viewportTransform;
+
+            if (context.View.Fill is not null)
+                context.View.Fill.AddGeometryToPaintTask(context.View.CoreCanvas, _globeCircle);
+        }
+        else if (_globeCircle is not null)
+        {
+            context.View.Fill?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, _globeCircle);
+            context.View.Stroke?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, _globeCircle);
+            _globeCircle = null;
+        }
 
         var toRemoveLayers = new HashSet<string>(_usedLayers);
         var toRemovePathShapes = new HashSet<LandAreaGeometry>(_usedPathShapes);
@@ -108,37 +137,58 @@ public class MapFactory : IMapFactory
 
                     shape.ViewportTransform = _viewportTransform;
 
-                    stroke?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
-                    fill?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
-
-                    shape.Commands.Clear();
-
-                    var isFirst = true;
-                    float xp = 0, yp = 0;
-
-                    foreach (var point in landData.Coordinates)
+                    if (isOrtho && ortho is not null)
                     {
-                        var p = projector.ToMap([point.X, point.Y]);
-
-                        var x = p[0];
-                        var y = p[1];
-
-                        if (isFirst)
+                        var skPath = BuildOrthographicPath(ortho, landData.Coordinates);
+                        if (skPath is null)
                         {
-                            xp = x;
-                            yp = y;
+                            // Entire polygon is on the far side — hide it
+                            stroke?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
+                            fill?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
+                            shape.Commands.Clear();
+                            shape.SetBasePath(new SKPath());
+                            continue;
                         }
 
-                        _ = shape.Commands.AddLast(new Segment
-                        {
-                            Xi = xp,
-                            Yi = yp,
-                            Xj = x,
-                            Yj = y,
-                        });
+                        stroke?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
+                        fill?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
+                        shape.Commands.Clear();
+                        shape.SetBasePath(skPath);
                     }
+                    else
+                    {
+                        stroke?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
+                        fill?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
 
-                    shape.MarkPathDirty();
+                        shape.Commands.Clear();
+
+                        var isFirst = true;
+                        float xp = 0, yp = 0;
+
+                        foreach (var point in landData.Coordinates)
+                        {
+                            var p = projector.ToMap([point.X, point.Y]);
+
+                            var x = p[0];
+                            var y = p[1];
+
+                            if (isFirst)
+                            {
+                                xp = x;
+                                yp = y;
+                            }
+
+                            _ = shape.Commands.AddLast(new Segment
+                            {
+                                Xi = xp,
+                                Yi = yp,
+                                Xj = x,
+                                Yj = y,
+                            });
+                        }
+
+                        shape.MarkPathDirty();
+                    }
                 }
             }
 
@@ -241,6 +291,107 @@ public class MapFactory : IMapFactory
         sender.View.CoreCanvas.Invalidate();
     }
 
+    private static SKPath? BuildOrthographicPath(OrthographicProjector ortho, LvcPointD[] coordinates)
+    {
+        if (coordinates.Length == 0) return null;
+
+        // Check if any point is visible
+        var anyVisible = false;
+        for (var i = 0; i < coordinates.Length; i++)
+        {
+            if (ortho.IsVisible(coordinates[i].X, coordinates[i].Y))
+            {
+                anyVisible = true;
+                break;
+            }
+        }
+
+        if (!anyVisible) return null;
+
+        var path = new SKPath();
+        var started = false;
+
+        for (var i = 0; i < coordinates.Length; i++)
+        {
+            var cur = coordinates[i];
+            var next = coordinates[(i + 1) % coordinates.Length];
+
+            var curVis = ortho.IsVisible(cur.X, cur.Y);
+            var nextVis = ortho.IsVisible(next.X, next.Y);
+
+            if (curVis)
+            {
+                var p = ortho.ToMap([cur.X, cur.Y]);
+                if (!started)
+                {
+                    path.MoveTo(p[0], p[1]);
+                    started = true;
+                }
+                else
+                {
+                    path.LineTo(p[0], p[1]);
+                }
+
+                if (!nextVis && i < coordinates.Length - 1)
+                {
+                    // Transition visible → invisible: find horizon point
+                    var hp = FindHorizonPoint(ortho, cur.X, cur.Y, next.X, next.Y);
+                    var hpp = ortho.ToMap([hp[0], hp[1]]);
+                    path.LineTo(hpp[0], hpp[1]);
+                }
+            }
+            else if (nextVis)
+            {
+                // Transition invisible → visible: find horizon point and start from there
+                var hp = FindHorizonPoint(ortho, next.X, next.Y, cur.X, cur.Y);
+                var hpp = ortho.ToMap([hp[0], hp[1]]);
+                if (!started)
+                {
+                    path.MoveTo(hpp[0], hpp[1]);
+                    started = true;
+                }
+                else
+                {
+                    path.LineTo(hpp[0], hpp[1]);
+                }
+            }
+        }
+
+        path.Close();
+        return path;
+    }
+
+    private static double[] FindHorizonPoint(
+        OrthographicProjector ortho,
+        double visLon, double visLat,
+        double invisLon, double invisLat)
+    {
+        // Binary search to find the point on the horizon between visible and invisible
+        var aLon = visLon;
+        var aLat = visLat;
+        var bLon = invisLon;
+        var bLat = invisLat;
+
+        for (var i = 0; i < 15; i++)
+        {
+            var midLon = (aLon + bLon) * 0.5;
+            var midLat = (aLat + bLat) * 0.5;
+
+            if (ortho.IsVisible(midLon, midLat))
+            {
+                aLon = midLon;
+                aLat = midLat;
+            }
+            else
+            {
+                bLon = midLon;
+                bLat = midLat;
+            }
+        }
+
+        return [(aLon + bLon) * 0.5, (aLat + bLat) * 0.5];
+    }
+
     /// <summary>
     /// Disposes the map factory.
     /// </summary>
@@ -284,5 +435,6 @@ public class MapFactory : IMapFactory
         _usedPathShapes.Clear();
         _usedLayers.Clear();
         _usedPaints.Clear();
+        _globeCircle = null;
     }
 }

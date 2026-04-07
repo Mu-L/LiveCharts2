@@ -128,6 +128,7 @@ public static class Index
         "Test/Dispose",
         "Test/MotionCanvasDispose",
 
-        "Maps/World"
+        "Maps/World",
+        "Maps/OrthographicWorld"
     ];
 }

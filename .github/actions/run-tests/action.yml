@@ -153,6 +153,12 @@ runs:
       with:
         name: snapshot-diffs
         path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsDiff/**/*
+    - name: Upload new snapshots
+      if: failure() && inputs.test-type == 'snapshot'
+      uses: actions/upload-artifact@v6.0.0
+      with:
+        name: snapshots-new
+        path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsNew/**/*
 
     - name: Upload test results
       if: always()

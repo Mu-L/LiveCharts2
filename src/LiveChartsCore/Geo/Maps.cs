@@ -69,12 +69,17 @@ public static class Maps
     /// </summary>
     /// <param name="projection">The projection.</param>
     /// <param name="mapSize">Size of the map.</param>
+    /// <param name="centerLon">The center longitude (used for Orthographic projection).</param>
+    /// <param name="centerLat">The center latitude (used for Orthographic projection).</param>
     /// <returns></returns>
-    public static MapProjector BuildProjector(MapProjection projection, float[] mapSize)
+    public static MapProjector BuildProjector(
+        MapProjection projection, float[] mapSize, double centerLon = 0, double centerLat = 0)
     {
         var mapRatio =
             projection == MapProjection.Default
             ? ControlCoordinatesProjector.PreferredRatio
+            : projection == MapProjection.Orthographic
+            ? OrthographicProjector.PreferredRatio
             : MercatorProjector.PreferredRatio;
 
         var normalizedW = mapSize[0] / mapRatio[0];
@@ -94,9 +99,11 @@ public static class Maps
             mapSize[0] = w;
         }
 
-        return
-            projection == MapProjection.Default
-                ? new ControlCoordinatesProjector(mapSize[0], mapSize[1], ox, oy)
-                : new MercatorProjector(mapSize[0], mapSize[1], ox, oy);
+        return projection switch
+        {
+            MapProjection.Default => new ControlCoordinatesProjector(mapSize[0], mapSize[1], ox, oy),
+            MapProjection.Orthographic => new OrthographicProjector(mapSize[0], mapSize[1], ox, oy, centerLon, centerLat),
+            _ => new MercatorProjector(mapSize[0], mapSize[1], ox, oy)
+        };
     }
 }
