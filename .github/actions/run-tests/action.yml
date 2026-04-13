@@ -46,6 +46,11 @@ runs:
       with:
         workloads: ${{ inputs.workloads }}
 
+    - name: Install Coverage Tools
+      shell: pwsh
+      run:
+        dotnet tool install -g dotnet-coverage
+
     - name: Download local packages
       uses: actions/download-artifact@v7.0.0
       with:
@@ -137,7 +142,7 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}
+        command: dotnet-coverage collect "dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}" -o core.coverage
 
     - name: Run snapshot tests
       uses: nick-fields/retry@v3.0.2
@@ -146,7 +151,7 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}
+        command: dotnet-soverage collect "dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}" -o snapshot.coverage
     - name: Upload snapshot diffs
       if: failure() && inputs.test-type == 'snapshot'
       uses: actions/upload-artifact@v6.0.0
@@ -159,6 +164,13 @@ runs:
       with:
         name: snapshots-new
         path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsNew/**/*
+
+    - name: Upload coverage results
+      if: ${{ inputs.test-type == 'core' || inputs.test-type == 'snapshot' }}
+      uses: actions/upload-artifact@v6.0.0
+      with:
+        name: coverage-results
+        path: "**/*.coverage"
 
     - name: Upload test results
       if: always()
