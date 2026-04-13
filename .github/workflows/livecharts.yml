@@ -19,6 +19,7 @@ jobs:
       - uses: ./.github/actions/comment-progress
         id: create-comment
         with:
+          marker: pr-${{ github.event.pull_request.number }}
           content: | 
             #### Thanks for your contribution!
 
