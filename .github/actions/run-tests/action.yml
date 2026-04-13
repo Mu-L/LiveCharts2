@@ -158,12 +158,14 @@ runs:
       with:
         name: snapshot-diffs
         path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsDiff/**/*
+        overwrite: true
     - name: Upload new snapshots
       if: failure() && inputs.test-type == 'snapshot'
       uses: actions/upload-artifact@v6.0.0
       with:
         name: snapshots-new
         path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsNew/**/*
+        overwrite: true
 
     - name: Upload coverage results
       if: ${{ inputs.test-type == 'core' || inputs.test-type == 'snapshot' }}
@@ -171,6 +173,7 @@ runs:
       with:
         name: coverage-results
         path: "**/*.coverage"
+        overwrite: true
 
     - name: Upload test results
       if: always()
@@ -179,3 +182,4 @@ runs:
           name: test-results-${{ inputs.test-id }}-${{ github.job }}-${{ inputs.target-framework }}
           retention-days: 30
           path: "**/*.trx"
+          overwrite: true
