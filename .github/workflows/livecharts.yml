@@ -105,7 +105,6 @@ jobs:
           pattern: "*-package"
           retention-days: 30
           delete-merged: true
-          overwrite: true
 
       - name: Update Comment
         uses: ./.github/actions/comment-progress
