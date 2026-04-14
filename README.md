@@ -1,7 +1,7 @@
 # LiveCharts2
 
-[![LiveCharts](https://github.com/Live-Charts/LiveCharts2/actions/workflows/livecharts.yml/badge.svg)](https://github.com/Live-Charts/LiveCharts2/actions/workflows/livecharts.yml)
-[![Line Coverage](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/badges/badge_linecoverage.svg)](https://live-charts.github.io/LiveCharts2/coverage/index.html)
+[![LiveCharts](https://github.com/Live-Charts/LiveCharts2/actions/workflows/livecharts.yml/badge.svg?branch=master)](https://github.com/Live-Charts/LiveCharts2/actions/workflows/livecharts.yml)
+[![Line Coverage](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/badges/badge_linecoverage.svg)](https://live-charts.github.io/LiveCharts2/)
 ![NuGet Downloads](https://img.shields.io/nuget/dt/LiveChartsCore)
 
 [Watch Blazor WASM demo](https://blazor-livecharts.controli.app/) (only designed for desktop devices for now)

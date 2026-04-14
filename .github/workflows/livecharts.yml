@@ -7,6 +7,9 @@ permissions:
   issues: write
 
 on:
+  push:
+    branches:
+      - master
   pull_request:
 
 jobs:
