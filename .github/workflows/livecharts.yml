@@ -421,10 +421,10 @@ jobs:
           dotnet tool install -g dotnet-reportgenerator-globaltool
 
       - name: Merge coverage results
-        run: dotnet-coverage merge -o coverage.xml ./artifacts/*.coverage
+        run: dotnet-coverage merge ./artifacts/*.coverage -f xml -o coverage.xml
 
       - name : Generate Badge
-        run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:Html,Badges -filters:"-ViewModelSamples"
+        run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:HtmlSummary,Badges  -filters:"-ViewModelSamples"
 
       - name: Deploy Badge to Branch
         uses: peaceiris/actions-gh-pages@v4.0.0
