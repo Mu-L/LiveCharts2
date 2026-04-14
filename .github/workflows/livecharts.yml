@@ -406,7 +406,7 @@ jobs:
           
   report-code-coverage:
     runs-on: ubuntu-24.04
-    needs: after-tests
+    needs: [after-tests, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -429,6 +429,48 @@ jobs:
       - name : Generate Badge
         run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:HtmlSummary,Badges  -filters:"-ViewModelsSamples*;-CommunityToolkit*;-Analyzer*;-MSTest*;-SnapshotTests*;-CoreTests*"
 
+      - name: Get previous coverage from badges branch
+        id: old-coverage
+        run: |
+          git fetch origin badges:refs/remotes/origin/badges 2>/dev/null || true
+
+          OLD_COVERAGE=$(git show origin/badges:badge_linecoverage.svg 2>/dev/null \
+            | grep -oP '>\K[0-9]+\.?[0-9]*%' | head -1 || echo "N/A")
+
+          echo "value=${OLD_COVERAGE}" >> $GITHUB_OUTPUT
+
+      - name: Get new coverage from generated badge
+        id: new-coverage
+        run: |
+          NEW_COVERAGE=$(grep -oP '>\K[0-9]+\.?[0-9]*%' badge-out/badge_linecoverage.svg | head -1 || echo "N/A")
+          echo "value=${NEW_COVERAGE}" >> $GITHUB_OUTPUT
+
+      - name: Compute coverage delta
+        id: delta
+        run: |
+          OLD="${{ steps.old-coverage.outputs.value }}"
+          NEW="${{ steps.new-coverage.outputs.value }}"
+
+          if [[ "$OLD" == "N/A" || "$NEW" == "N/A" ]]; then
+            echo "value=N/A" >> $GITHUB_OUTPUT
+            echo "emoji=📊" >> $GITHUB_OUTPUT
+          else
+            OLD_NUM=$(echo "$OLD" | tr -d '%')
+            NEW_NUM=$(echo "$NEW" | tr -d '%')
+            DELTA=$(echo "$NEW_NUM - $OLD_NUM" | bc)
+
+            if (( $(echo "$DELTA > 0" | bc -l) )); then
+              echo "value=+${DELTA}%" >> $GITHUB_OUTPUT
+              echo "emoji=📈" >> $GITHUB_OUTPUT
+            elif (( $(echo "$DELTA < 0" | bc -l) )); then
+              echo "value=${DELTA}%" >> $GITHUB_OUTPUT
+              echo "emoji=📉" >> $GITHUB_OUTPUT
+            else
+              echo "value=0%" >> $GITHUB_OUTPUT
+              echo "emoji=➡️" >> $GITHUB_OUTPUT
+            fi
+          fi
+
       - name: Deploy Badge to Branch
         uses: peaceiris/actions-gh-pages@v4.0.0
         with:
@@ -436,3 +478,16 @@ jobs:
           publish_dir: ./badge-out
           publish_branch: badges
 
+      - name: Report coverage comparison
+        uses: ./.github/actions/comment-progress
+        with:
+          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+          content: |
+
+            #### Code Coverage ${{ steps.delta.outputs.emoji }}
+
+            | | Line Coverage |
+            |---|---|
+            | **Before** | ${{ steps.old-coverage.outputs.value }} |
+            | **After** | ${{ steps.new-coverage.outputs.value }} |
+            | **Delta** | ${{ steps.delta.outputs.value }} |
