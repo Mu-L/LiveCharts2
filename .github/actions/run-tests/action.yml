@@ -52,11 +52,13 @@ runs:
         dotnet tool install -g dotnet-coverage
 
     - name: Download local packages
+      if: ${{ inputs.test-type == 'factos' || inputs.test-type == 'factos-android' || inputs.test-type == 'factos-ios' }}
       uses: actions/download-artifact@v7.0.0
       with:
         path: ./artifacts
 
     - name: Configure NuGet sources 
+      if: ${{ inputs.test-type == 'factos' || inputs.test-type == 'factos-android' || inputs.test-type == 'factos-ios' }}
       shell: pwsh
       run:
         dotnet nuget add source ${{ github.workspace }}/artifacts --name local
@@ -142,7 +144,7 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet-coverage collect "dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}" -o core-${{ inputs.target-framework }}.coverage
+        command: dotnet-coverage collect "dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx" -o core-${{ inputs.target-framework }}.coverage
 
     - name: Run snapshot tests
       uses: nick-fields/retry@v3.0.2
@@ -151,7 +153,7 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet-coverage collect "dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}" -o snapshot.coverage
+        command: dotnet-coverage collect "dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx" -o snapshot.coverage
     - name: Upload snapshot diffs
       if: failure() && inputs.test-type == 'snapshot'
       uses: actions/upload-artifact@v6.0.0
