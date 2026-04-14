@@ -502,19 +502,6 @@ jobs:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
 
-      - name: Download all test results
-        uses: actions/download-artifact@v7.0.0
-        with:
-          path: ./artifacts
-
-      - name: Publish all test results
-        id: report
-        uses: dorny/test-reporter@v2.4.0
-        with:
-          name: all-test-results
-          path: "./artifacts/**/*.trx"
-          reporter: dotnet-trx
-
       - name: Report UI tests passed
         if: ${{ always() && github.event_name == 'pull_request' && needs.test-windows.result == 'success' && needs.test-linux.result == 'success' && needs.test-mac.result == 'success' && needs.test-browser.result == 'success' && needs.test-android.result == 'success' && needs.test-ios.result == 'success' }}
         uses: ./.github/actions/comment-progress
