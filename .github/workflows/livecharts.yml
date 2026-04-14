@@ -265,6 +265,7 @@ jobs:
           fi
 
       - name: Deploy Badge to Branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v4.0.0
         with:
           github_token: ${{ secrets.GH_TOKEN }}
