@@ -47,8 +47,9 @@ Located in `tests/UITests/` (orchestrator) and `tests/SharedUITests/` (shared te
 **How it works:**
 
 1. Shared tests are defined in `tests/SharedUITests/` (e.g. `CartesianChartTests.cs`, `PieChartTests.cs`, `PolarChartTests.cs`, `MapChartTests.cs`).
-2. Each sample application references the `SharedUITests` project when `UITesting=true`.
-3. The orchestrator in `tests/UITests/Program.cs` builds and starts each sample app, connects to it via Factos, and runs the shared tests.
+2. When `UITesting=true`, sample apps include those shared test sources by linking the `.cs` files from `tests/SharedUITests/` via `build/UITestsLinks.Build.props` (rather than by adding a project reference to `SharedUITests`).
+3. There are platform-specific exceptions to this wiring, notably the WinUI/Uno setup, but the overall goal is the same: the shared UI test code becomes part of the sample app being tested.
+4. The orchestrator in `tests/UITests/Program.cs` builds and starts each sample app, connects to it via Factos, and runs the shared tests.
 
 **Run:**
 
