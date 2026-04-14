@@ -46,6 +46,11 @@ runs:
       with:
         workloads: ${{ inputs.workloads }}
 
+    - name: Install Coverage Tools
+      shell: pwsh
+      run:
+        dotnet tool install -g dotnet-coverage
+
     - name: Download local packages
       uses: actions/download-artifact@v7.0.0
       with:
@@ -137,7 +142,7 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}
+        command: dotnet-coverage collect "dotnet run --project tests/CoreTests/CoreTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}" -o core-${{ inputs.target-framework }}.coverage
 
     - name: Run snapshot tests
       uses: nick-fields/retry@v3.0.2
@@ -146,19 +151,29 @@ runs:
         timeout_minutes: 8
         max_attempts: 3
         shell: pwsh
-        command: dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}
+        command: dotnet-coverage collect "dotnet run --project tests/SnapshotTests/SnapshotTests.csproj -c Release --report-trx -p:UseNuGetPackages=true -p:LiveChartsVersionSuffix=-${{ inputs.livecharts-suffix }}" -o snapshot.coverage
     - name: Upload snapshot diffs
       if: failure() && inputs.test-type == 'snapshot'
       uses: actions/upload-artifact@v6.0.0
       with:
         name: snapshot-diffs
         path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsDiff/**/*
+        overwrite: true
     - name: Upload new snapshots
       if: failure() && inputs.test-type == 'snapshot'
       uses: actions/upload-artifact@v6.0.0
       with:
         name: snapshots-new
         path: tests/SnapshotTests/bin/Release/net10.0/SnapshotsNew/**/*
+        overwrite: true
+
+    - name: Upload coverage results
+      if: ${{ inputs.test-type == 'core' || inputs.test-type == 'snapshot' }}
+      uses: actions/upload-artifact@v6.0.0
+      with:
+        name: coverage-${{ inputs.test-type }}-${{ inputs.target-framework }}
+        path: "**/*.coverage"
+        overwrite: true
 
     - name: Upload test results
       if: always()
@@ -167,3 +182,4 @@ runs:
           name: test-results-${{ inputs.test-id }}-${{ github.job }}-${{ inputs.target-framework }}
           retention-days: 30
           path: "**/*.trx"
+          overwrite: true

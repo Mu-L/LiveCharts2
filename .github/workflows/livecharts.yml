@@ -7,6 +7,9 @@ permissions:
   issues: write
 
 on:
+  push:
+    branches:
+      - master
   pull_request:
 
 jobs:
@@ -19,6 +22,7 @@ jobs:
       - uses: ./.github/actions/comment-progress
         id: create-comment
         with:
+          marker: pr-${{ github.event.pull_request.number }}
           content: | 
             #### Thanks for your contribution!
 
@@ -114,10 +118,6 @@ jobs:
 
             You can download the NuGet packages for this build [here (dev-${{ github.run_number }})](${{ steps.merge.outputs.artifact-url }}).
             The packages will be available for 30 days, you can either [use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet), or wait for this PR to be merged to have them published to NuGet.org.
-
-            #### Running tests 🧪
-            
-            Tests are running now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
 
   test-core:
     runs-on: windows-2025
@@ -403,13 +403,36 @@ jobs:
             Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }} | Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
             #### Test Results Summary (Failure) ❌
+          
+  report-code-coverage:
+    runs-on: ubuntu-24.04
+    needs: after-tests
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v6.0.1
 
-      - name: Setup .NET
-        if: ${{ github.ref_type == 'tag' && !contains(join(needs.*.result, ' '), 'failure') && !contains(join(needs.*.result, ' '), 'cancelled') && !contains(join(needs.*.result, ' '), 'skipped') }}
-        uses: ./.github/actions/setup-dotnet-and-workloads
+      - name: Download coverage results
+        uses: actions/download-artifact@v7.0.0
+        with:
+          path: ./artifacts
+          pattern: coverage-*
+          merge-multiple: true
 
-      - name: Publish to NuGet
-        shell: bash
-        if: ${{ github.ref_type == 'tag' && !contains(join(needs.*.result, ' '), 'failure') && !contains(join(needs.*.result, ' '), 'cancelled') && !contains(join(needs.*.result, ' '), 'skipped') }}
-        run:
-          dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - name: Install coverage tools
+        run: |
+          dotnet tool install -g dotnet-coverage
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Merge coverage results
+        run: dotnet-coverage merge ./artifacts/*.coverage -f xml -o coverage.xml
+
+      - name : Generate Badge
+        run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:HtmlSummary,Badges  -filters:"-ViewModelsSamples*;-CommunityToolkit*;-Analyzer*;-MSTest*;-SnapshotTests*;-CoreTests*"
+
+      - name: Deploy Badge to Branch
+        uses: peaceiris/actions-gh-pages@v4.0.0
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          publish_dir: ./badge-out
+          publish_branch: badges
+

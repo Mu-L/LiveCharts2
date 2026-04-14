@@ -1,8 +1,8 @@
 # LiveCharts2
 
-[![CodeFactor](https://www.codefactor.io/repository/github/beto-rodriguez/livecharts2/badge)](https://www.codefactor.io/repository/github/beto-rodriguez/livecharts2)
-![Unit tests](https://github.com/beto-rodriguez/LiveCharts2/actions/workflows/run-unit-tests.yml/badge.svg)
-![SkiaSharp Views](https://github.com/beto-rodriguez/LiveCharts2/actions/workflows/compile-all-views.yml/badge.svg)
+[![LiveCharts](https://github.com/Live-Charts/LiveCharts2/actions/workflows/livecharts.yml/badge.svg?branch=master)](https://github.com/Live-Charts/LiveCharts2/actions/workflows/livecharts.yml)
+[![Line Coverage](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/badges/badge_linecoverage.svg)](https://live-charts.github.io/LiveCharts2/)
+![NuGet Downloads](https://img.shields.io/nuget/dt/LiveChartsCore)
 
 [Watch Blazor WASM demo](https://blazor-livecharts.controli.app/) (only designed for desktop devices for now)
 
