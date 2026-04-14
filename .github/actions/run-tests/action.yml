@@ -171,7 +171,7 @@ runs:
       if: ${{ inputs.test-type == 'core' || inputs.test-type == 'snapshot' }}
       uses: actions/upload-artifact@v6.0.0
       with:
-        name: coverage-results
+        name: coverage-${{ inputs.test-type }}-${{ inputs.target-framework }}
         path: "**/*.coverage"
         overwrite: true
 
