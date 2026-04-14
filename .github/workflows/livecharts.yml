@@ -424,7 +424,7 @@ jobs:
         run: dotnet-coverage merge ./artifacts/*.coverage -f xml -o coverage.xml
 
       - name : Generate Badge
-        run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:HtmlSummary,Badges  -filters:"-ViewModelsSamples*;-CommunityToolkit*;-Analyzer*;-MSTest*;-SnapshotTests*;-CoreTests"
+        run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:HtmlSummary,Badges  -filters:"-ViewModelsSamples*;-CommunityToolkit*;-Analyzer*;-MSTest*;-SnapshotTests*;-CoreTests*"
 
       - name: Deploy Badge to Branch
         uses: peaceiris/actions-gh-pages@v4.0.0
