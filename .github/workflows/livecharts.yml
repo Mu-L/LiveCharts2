@@ -195,7 +195,7 @@ jobs:
 
   report-code-coverage:
     runs-on: ubuntu-24.04
-    needs: [after-core-tests, report-progress-starting, test-core, test-snapshot]
+    needs: [after-core-tests, report-progress-starting]
     steps:
       - name: Checkout 
         uses: actions/checkout@v6.0.1
@@ -511,7 +511,7 @@ jobs:
           reporter: dotnet-trx
 
       - name: Report UI tests passed
-        if: ${{ always() && !contains(join(needs.*.result, ' '), 'failure') && !contains(join(needs.*.result, ' '), 'cancelled') && !contains(join(needs.*.result, ' '), 'skipped') }}
+        if: ${{ always() && needs.test-windows.result == 'success' && needs.test-linux.result == 'success' && needs.test-mac.result == 'success' && needs.test-browser.result == 'success' && needs.test-android.result == 'success' && needs.test-ios.result == 'success' }}
         uses: ./.github/actions/comment-progress
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
@@ -522,7 +522,7 @@ jobs:
             Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
 
       - name: Report UI tests failure
-        if: ${{ always() && (contains(join(needs.*.result, ' '), 'failure') || contains(join(needs.*.result, ' '), 'cancelled') || contains(join(needs.*.result, ' '), 'skipped')) }}
+        if: ${{ always() && (needs.test-windows.result != 'success' || needs.test-linux.result != 'success' || needs.test-mac.result != 'success' || needs.test-browser.result != 'success' || needs.test-android.result != 'success' || needs.test-ios.result != 'success') }}
         uses: ./.github/actions/comment-progress
         with:
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
