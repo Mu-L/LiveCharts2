@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.9" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net462'">
