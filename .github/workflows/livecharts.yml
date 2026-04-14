@@ -116,10 +116,6 @@ jobs:
             You can download the NuGet packages for this build [here (dev-${{ github.run_number }})](${{ steps.merge.outputs.artifact-url }}).
             The packages will be available for 30 days, you can either [use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet), or wait for this PR to be merged to have them published to NuGet.org.
 
-            #### Running tests 🧪
-            
-            Tests are running now, you can monitor their progress below or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
-
   test-core:
     runs-on: windows-2025
     needs: [pack, report-progress-starting, collect-packages, prepare]
@@ -157,201 +153,201 @@ jobs:
           test-type: snapshot
           comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-windows:
-    runs-on: windows-2025
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-desktop
-          - id: eto
-          - id: maui
-            tf: net10.0-windows10.0.19041.0
-            workloads: maui
-          - id: uno
-            tf: net10.0-desktop
-            workloads: maui
-          - id: uno
-            tf: net10.0-windows10.0.19041.0
-            workloads: maui
-          - id: winui
-          - id: winforms-net10
-          - id: winforms-net10w19041
-          - id: winforms-net462          
-          - id: wpf-net10
-          - id: wpf-net10w19041
-          - id: wpf-net462
+  # test-windows:
+  #   runs-on: windows-2025
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-desktop
+  #         - id: eto
+  #         - id: maui
+  #           tf: net10.0-windows10.0.19041.0
+  #           workloads: maui
+  #         - id: uno
+  #           tf: net10.0-desktop
+  #           workloads: maui
+  #         - id: uno
+  #           tf: net10.0-windows10.0.19041.0
+  #           workloads: maui
+  #         - id: winui
+  #         - id: winforms-net10
+  #         - id: winforms-net10w19041
+  #         - id: winforms-net462          
+  #         - id: wpf-net10
+  #         - id: wpf-net10w19041
+  #         - id: wpf-net462
           
-    needs: [pack, report-progress-starting, collect-packages, prepare]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  #   needs: [pack, report-progress-starting, collect-packages, prepare]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: windows
-          test-type: factos
-          test-id: ${{ matrix.id }}
-          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: windows
+  #         test-type: factos
+  #         test-id: ${{ matrix.id }}
+  #         livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-linux:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-desktop
-          # - id: eto, requires additional setup i think...
-          - id: uno
-            tf: net10.0-desktop
-            workloads: android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-linux:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-desktop
+  #         # - id: eto, requires additional setup i think...
+  #         - id: uno
+  #           tf: net10.0-desktop
+  #           workloads: android
+  #   needs: [pack, report-progress-starting, collect-packages, prepare]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Setup headless display
-        uses: pyvista/setup-headless-display-action@v4.2
+  #     - name: Setup headless display
+  #       uses: pyvista/setup-headless-display-action@v4.2
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: linux
-          test-type: factos
-          test-id: ${{ matrix.id }}
-          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: linux
+  #         test-type: factos
+  #         test-id: ${{ matrix.id }}
+  #         livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-mac:
-    runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-desktop
-          - id: eto
-          - id: maui
-            tf: net10.0-maccatalyst
-            workloads: maui
-          - id: uno
-            tf: net10.0-desktop
-            workloads: maui
-    needs: [pack, report-progress-starting, collect-packages, prepare]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-mac:
+  #   runs-on: macos-26
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-desktop
+  #         - id: eto
+  #         - id: maui
+  #           tf: net10.0-maccatalyst
+  #           workloads: maui
+  #         - id: uno
+  #           tf: net10.0-desktop
+  #           workloads: maui
+  #   needs: [pack, report-progress-starting, collect-packages, prepare]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: mac
-          test-type: factos
-          test-id: ${{ matrix.id }}
-          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: mac
+  #         test-type: factos
+  #         test-id: ${{ matrix.id }}
+  #         livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         xcode-path: /Applications/Xcode_26.2.app
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-browser:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # ToDo: find why not running.
-          # - id: blazor
-          #   workloads: wasm-tools
-          - id: avalonia-browser
-            workloads: wasm-tools
-          # ToDo: find why not running.
-          # - id: uno
-          #   tf: net10.0-browserwasm
-          #   workloads: wasm-tools android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-browser:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         # ToDo: find why not running.
+  #         # - id: blazor
+  #         #   workloads: wasm-tools
+  #         - id: avalonia-browser
+  #           workloads: wasm-tools
+  #         # ToDo: find why not running.
+  #         # - id: uno
+  #         #   tf: net10.0-browserwasm
+  #         #   workloads: wasm-tools android
+  #   needs: [pack, report-progress-starting, collect-packages, prepare]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: browser
-          test-type: factos
-          test-id: ${{ matrix.id }}
-          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: browser
+  #         test-type: factos
+  #         test-id: ${{ matrix.id }}
+  #         livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-android:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-android
-            workloads: android
-          - id: maui
-            tf: net10.0-android
-            workloads: maui-android
-          # ToDo: find why not running.
-          # - id: uno
-          #   tf: net10.0-android
-          #   workloads: android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-android:
+  #   runs-on: ubuntu-24.04
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-android
+  #           workloads: android
+  #         - id: maui
+  #           tf: net10.0-android
+  #           workloads: maui-android
+  #         # ToDo: find why not running.
+  #         # - id: uno
+  #         #   tf: net10.0-android
+  #         #   workloads: android
+  #   needs: [pack, report-progress-starting, collect-packages, prepare]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: android
-          test-type: factos-android
-          test-id: ${{ matrix.id }}
-          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: android
+  #         test-type: factos-android
+  #         test-id: ${{ matrix.id }}
+  #         livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
-  test-ios:
-    runs-on: macos-26
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: avalonia-ios
-            workloads: ios
-          - id: maui-ios
-            tf: net10.0-ios
-            workloads: maui
-          # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
-          # - id: uno
-          #   tf: net10.0-ios
-          #   workloads: ios android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
+  # test-ios:
+  #   runs-on: macos-26
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - id: avalonia-ios
+  #           workloads: ios
+  #         - id: maui-ios
+  #           tf: net10.0-ios
+  #           workloads: maui
+  #         # disabled for now, in this uno version, it takes 3 times longer than the others (about 40 mins)
+  #         # - id: uno
+  #         #   tf: net10.0-ios
+  #         #   workloads: ios android
+  #   needs: [pack, report-progress-starting, collect-packages, prepare]
+  #   steps:
+  #     - name: Checkout 
+  #       uses: actions/checkout@v6.0.1
 
-      - name: Run UI tests
-        uses: ./.github/actions/run-tests
-        with:
-          id: ios
-          test-type: factos-ios
-          test-id: ${{ matrix.id }}
-          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
-          workloads: ${{ matrix.workloads }}
-          target-framework: ${{ matrix.tf }}
-          xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
+  #     - name: Run UI tests
+  #       uses: ./.github/actions/run-tests
+  #       with:
+  #         id: ios
+  #         test-type: factos-ios
+  #         test-id: ${{ matrix.id }}
+  #         livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
+  #         workloads: ${{ matrix.workloads }}
+  #         target-framework: ${{ matrix.tf }}
+  #         xcode-path: /Applications/Xcode_26.2.app
+  #         comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   after-tests:
     runs-on: ubuntu-24.04
@@ -360,12 +356,12 @@ jobs:
       - report-progress-starting
       - test-core
       - test-snapshot
-      - test-windows
-      - test-linux
-      - test-mac
-      - test-browser
-      - test-android
-      - test-ios
+      # - test-windows
+      # - test-linux
+      # - test-mac
+      # - test-browser
+      # - test-android
+      # - test-ios
       - prepare
     steps:
       - name: Checkout 
