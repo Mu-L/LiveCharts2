@@ -17,8 +17,8 @@ public class MeasureTesting
     {
         var bounds = new Bounds();
         Assert.IsTrue(bounds.IsEmpty);
-        Assert.IsTrue(bounds.Max == double.MinValue);
-        Assert.IsTrue(bounds.Min == double.MaxValue);
+        Assert.IsTrue(Math.Abs(bounds.Max - double.MinValue) < 0.001);
+        Assert.IsTrue(Math.Abs(bounds.Min - double.MaxValue) < 0.001);
     }
 
     [TestMethod]
