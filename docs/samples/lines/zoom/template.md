@@ -1,5 +1,5 @@
 <!--
-To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/dev/docs/readme.md
+To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/master/docs/readme.md
 content is normally pulled from the examples in the repository.
 -->
 
@@ -80,7 +80,7 @@ myChart.ZoomMode = flags;
 
 
 <div class="text-center sample-img">
-    <img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/{{ unique_name }}/zoom-both-nofit.gif" alt="sample image" />
+    <img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/{{ unique_name }}/zoom-both-nofit.gif" alt="sample image" />
 </div>
 
 # Bouncing distance
@@ -120,7 +120,7 @@ when zooming is enabled, this feature is also enabled by default, you can also c
 find more info [here](https://lvcharts.com/docs/{{ platform }}/{{ version }}/CartesianChart.Axes%20properties#zooming-and-panning).
 
 <div class="text-center sample-img">
-    <img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/{{ unique_name }}/selection-zoom.gif" alt="sample image" />
+    <img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/{{ unique_name }}/selection-zoom.gif" alt="sample image" />
 </div>
 
 

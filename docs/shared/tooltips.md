@@ -1,5 +1,5 @@
 <!--
-To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/dev/docs/readme.md
+To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/master/docs/readme.md
 content is normally pulled from the examples in the repository.
 -->
 
@@ -20,7 +20,7 @@ This is a brief sample about how to use the main features of the `IChartTooltip<
 <b>Go to the full tooltips article</b>
 </a>
 
-![tooltips](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/_assets/tooltips.gif)
+![tooltips](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/tooltips.gif)
 
 You can place a tooltip at `Top`, `Bottom`, `Left`, `Right`, `Center` or `Hidden` positions, for now 
 tooltips for the `PieChart` class only support the `Center` position, default value is `Top`.
