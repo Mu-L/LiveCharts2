@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using LiveChartsCore.Measure;
+using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
@@ -80,5 +82,68 @@ public class VisualElementsTests
         Assert.IsTrue(
             chart.CoreCanvas.CountGeometries() == g &&
             chart.CoreCanvas.CountPaintTasks() == p);
+    }
+
+    [TestMethod]
+    public void LineVisual_InChartExercisesMeasureAndInvalidate()
+    {
+        // LineVisual<TGeometry> has no non-generic SkiaSharp counterpart and is missing
+        // from the Dispose() test above; add it here so OnInvalidated + Measure run.
+        var chart = new SKCartesianChart
+        {
+            Width = 400,
+            Height = 400,
+            Series = [
+                new LineSeries<double> { Values = [1d, 2d, 3d] }
+            ],
+            VisualElements = new List<IChartElement>
+            {
+                new LineVisual<LineGeometry>
+                {
+                    X = 10,
+                    Y = 10,
+                    Width = 100,
+                    Height = 60,
+                    Stroke = new SolidColorPaint(SKColors.Red, 2),
+                    Fill = new SolidColorPaint(SKColors.Blue),
+                    LocationUnit = MeasureUnit.Pixels,
+                    SizeUnit = MeasureUnit.Pixels
+                }
+            }
+        };
+
+        using var image = chart.GetImage();
+        Assert.IsNotNull(image);
+    }
+
+    [TestMethod]
+    public void GeometryVisual_WithLabelInChartExercisesLabelPaintBranch()
+    {
+        // Existing VisualElementsTests.Dispose uses GeometryVisual without a Label/LabelPaint,
+        // leaving the label branch in OnInvalidated uncovered. Exercise it here.
+        var chart = new SKCartesianChart
+        {
+            Width = 400,
+            Height = 400,
+            Series = [
+                new LineSeries<double> { Values = [1d, 2d, 3d] }
+            ],
+            VisualElements = new List<IChartElement>
+            {
+                new GeometryVisual<RectangleGeometry>
+                {
+                    X = 10, Y = 10, Width = 50, Height = 50,
+                    Fill = new SolidColorPaint(SKColors.Blue),
+                    Label = "hello",
+                    LabelPaint = new SolidColorPaint(SKColors.Red),
+                    LabelSize = 12,
+                    LocationUnit = MeasureUnit.Pixels,
+                    SizeUnit = MeasureUnit.Pixels
+                }
+            }
+        };
+
+        using var image = chart.GetImage();
+        Assert.IsNotNull(image);
     }
 }

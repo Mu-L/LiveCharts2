@@ -62,4 +62,5 @@ public class LiveChartsSkiaSharpTests
         Assert.AreEqual((byte)30, color.B);
         Assert.AreEqual((byte)200, color.A);
     }
+
 }

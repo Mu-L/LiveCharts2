@@ -124,6 +124,20 @@ public class ImageFiltersTests
     }
 
     [TestMethod]
+    public void DropShadow_TransitionateBlendsBetweenSameType()
+    {
+        // Calls the static helper which in turn dispatches to DropShadow.Transitionate.
+        var from = new DropShadow(0f, 0f, 0f, 0f, SKColors.Black);
+        var to = new DropShadow(10f, 20f, 5f, 5f, SKColors.Red);
+
+        var blended = (DropShadow?)ImageFilter.Transitionate(from, to, 0.5f);
+
+        Assert.IsNotNull(blended);
+        Assert.AreNotSame(from, blended);
+        Assert.AreNotSame(to, blended);
+    }
+
+    [TestMethod]
     public void DropShadow_AppliedThroughChartRendersWithoutError()
     {
         var paint = new SolidColorPaint(SKColors.Red, 6)
