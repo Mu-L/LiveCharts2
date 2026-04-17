@@ -11,7 +11,13 @@ namespace CoreTests.OtherTests;
 [TestClass]
 public class SeriesSourceObserverTests
 {
-    private sealed record Source(double[] Values);
+    // A plain sealed class rather than a `record` — `record` requires
+    // System.Runtime.CompilerServices.IsExternalInit which is missing on net462.
+    private sealed class Source
+    {
+        public Source(double[] values) => Values = values;
+        public double[] Values { get; }
+    }
 
     private static SeriesSourceObserver CreateObserverFor(SKCartesianChart chart, bool canBuild = true) =>
         new(chart,
