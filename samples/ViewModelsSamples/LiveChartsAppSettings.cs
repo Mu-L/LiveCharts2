@@ -20,7 +20,7 @@ public static partial class CustomLiveChartsExtensions
             // use XAML based themes if your platform supports them.
             .AddDefaultTheme(
                 // if neccessary, override the default theme, for more info see:
-                // https://github.com/beto-rodriguez/LiveCharts2/blob/dev/samples/ViewModelsSamples/LiveChartsThemeExtensions.cs
+                // https://github.com/beto-rodriguez/LiveCharts2/blob/master/samples/ViewModelsSamples/LiveChartsThemeExtensions.cs
 
                 //theme =>
                 //    theme.OnInitialized(() =>

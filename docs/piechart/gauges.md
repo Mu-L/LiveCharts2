@@ -1,5 +1,5 @@
 <!--
-To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/dev/docs/readme.md
+To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/master/docs/readme.md
 -->
 
 ## Gauges

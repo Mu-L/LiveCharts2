@@ -1,5 +1,5 @@
 <!--
-To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/dev/docs/readme.md
+To get help on editing this file, see https://github.com/beto-rodriguez/LiveCharts2/blob/master/docs/readme.md
 content is normally pulled from the examples in the repository.
 -->
 
@@ -16,5 +16,5 @@ This sample uses C# 13 preview features such as partial properties, it also uses
 {{~ end ~}}
 
 <div class="text-center sample-img">
-    <img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/dev/docs/{{ unique_name }}/result.gif" alt="sample image" />
+    <img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/{{ unique_name }}/result.gif" alt="sample image" />
 </div>
