@@ -47,6 +47,38 @@ public class ColorTesting
     }
 
     [TestMethod]
+    public void TryParseThreeDigitHexExpandsEachNibble()
+    {
+        // "#F80" expands each nibble: R=FF, G=88, B=00, A defaults to FF.
+        Assert.IsTrue(LvcColor.TryParse("#F80", out var c));
+        Assert.AreEqual((byte)0xFF, c.R);
+        Assert.AreEqual((byte)0x88, c.G);
+        Assert.AreEqual((byte)0x00, c.B);
+        Assert.AreEqual((byte)0xFF, c.A);
+    }
+
+    [TestMethod]
+    public void TryParseFourDigitHexExpandsEachNibbleIncludingAlpha()
+    {
+        // "#8F80" uses the first nibble as alpha: A=88, R=FF, G=88, B=00.
+        Assert.IsTrue(LvcColor.TryParse("#8F80", out var c));
+        Assert.AreEqual((byte)0x88, c.A);
+        Assert.AreEqual((byte)0xFF, c.R);
+        Assert.AreEqual((byte)0x88, c.G);
+        Assert.AreEqual((byte)0x00, c.B);
+    }
+
+    [TestMethod]
+    public void TryParseThreeDigitHexWithoutHash()
+    {
+        Assert.IsTrue(LvcColor.TryParse("F80", out var c));
+        Assert.AreEqual((byte)0xFF, c.R);
+        Assert.AreEqual((byte)0x88, c.G);
+        Assert.AreEqual((byte)0x00, c.B);
+        Assert.AreEqual((byte)0xFF, c.A);
+    }
+
+    [TestMethod]
     public void TryParseSixDigitHex()
     {
         Assert.IsTrue(LvcColor.TryParse("#FF8040", out var c));

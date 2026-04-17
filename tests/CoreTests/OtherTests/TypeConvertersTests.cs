@@ -1,5 +1,7 @@
 using System;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView.Painting;
@@ -11,6 +13,30 @@ namespace CoreTests.OtherTests;
 [TestClass]
 public class TypeConvertersTests
 {
+    // The numeric converters (Margin/Padding/Point/PointD/Values/StringToDoubleArray)
+    // call float.TryParse / double.TryParse without passing a CultureInfo, which means
+    // they honor the current culture's decimal separator. Pin the culture for the
+    // duration of this test class so inputs like "12.5" are interpreted the same way
+    // on every machine (e.g. fr-FR uses ',' by default and would otherwise fail).
+    private static CultureInfo? s_originalCulture;
+    private static CultureInfo? s_originalUICulture;
+
+    [ClassInitialize]
+    public static void ClassInit(TestContext _)
+    {
+        s_originalCulture = Thread.CurrentThread.CurrentCulture;
+        s_originalUICulture = Thread.CurrentThread.CurrentUICulture;
+        Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+        Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+    }
+
+    [ClassCleanup]
+    public static void ClassCleanupMethod()
+    {
+        if (s_originalCulture is not null) Thread.CurrentThread.CurrentCulture = s_originalCulture;
+        if (s_originalUICulture is not null) Thread.CurrentThread.CurrentUICulture = s_originalUICulture;
+    }
+
     [TestMethod]
     public void HexToLvcColor_ConvertsKnownHexStrings()
     {
