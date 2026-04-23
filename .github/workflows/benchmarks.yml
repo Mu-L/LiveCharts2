@@ -1,0 +1,89 @@
+name: Benchmarks
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+on:
+  pull_request:
+    paths:
+      - 'src/LiveChartsCore/**'
+      - 'src/skiasharp/LiveChartsCore.SkiaSharp/**'
+      - 'tests/Benchmarks/**'
+      - '.github/workflows/benchmarks.yml'
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout PR HEAD
+        uses: actions/checkout@v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: ./.github/actions/setup-dotnet-and-workloads
+
+      - name: Run benchmarks on PR HEAD
+        run: |
+          dotnet run -c Release --project tests/Benchmarks/Benchmarks.csproj -- \
+            --filter '*' --artifacts bench-head
+          mkdir -p bench-head-results
+          cp -r bench-head/results/. bench-head-results/
+
+      - name: Checkout base ref into a worktree and run there
+        id: base-run
+        continue-on-error: true
+        run: |
+          git worktree add -d .base-tree "origin/${{ github.base_ref }}"
+          if [ ! -f .base-tree/tests/Benchmarks/Benchmarks.csproj ]; then
+            echo "Base ref has no benchmarks project — skipping baseline."
+            echo "has_base=false" >> "$GITHUB_OUTPUT"
+            mkdir -p bench-base-results
+            exit 0
+          fi
+          (cd .base-tree && dotnet run -c Release --project tests/Benchmarks/Benchmarks.csproj -- \
+            --filter '*' --artifacts ../bench-base)
+          mkdir -p bench-base-results
+          cp -r bench-base/results/. bench-base-results/
+          echo "has_base=true" >> "$GITHUB_OUTPUT"
+
+      - name: Compare results
+        run: |
+          dotnet run -c Release --project tests/Benchmarks/Benchmarks.csproj --no-build -- \
+            compare bench-base-results bench-head-results delta.md
+          echo "--- delta.md ---"
+          cat delta.md
+
+      - name: Load delta into env
+        run: |
+          {
+            echo 'DELTA_TABLE<<BENCHEOF'
+            cat delta.md
+            echo 'BENCHEOF'
+          } >> "$GITHUB_ENV"
+
+      - name: Post benchmark delta on PR
+        uses: ./.github/actions/comment-progress
+        with:
+          marker: perf-${{ github.event.pull_request.number }}
+          content: |
+            #### Benchmark delta
+
+            Base: `${{ github.base_ref }}` — Head: `${{ github.event.pull_request.head.sha }}`
+            Thresholds: 🔴 > +10% slower, 🟢 > -10% faster. Numbers on GitHub-hosted runners are noisy — treat double-digit deltas on non-trivial benchmarks as signal, single-digit as noise.
+
+            ${{ env.DELTA_TABLE }}
+
+      - name: Upload raw artifacts
+        if: always()
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: benchmark-results
+          path: |
+            bench-head/
+            bench-base/
+            delta.md
+          retention-days: 30
