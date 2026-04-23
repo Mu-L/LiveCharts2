@@ -4,6 +4,7 @@ using System.Linq;
 using CoreTests.CoreObjectsTests;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
+using LiveChartsCore.Kernel;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using LiveChartsGeneratedCode;
@@ -40,6 +41,55 @@ public class _MemoryTests
 
     [TestMethod] public void PieSeries_Releases() => AssertPieReleases();
     [TestMethod] public void PolarLineSeries_Releases() => AssertPolarReleases();
+
+    // --- Indexed-values path ---------------------------------------------------------
+
+    // Exercises DataFactory.EnumerateIndexedEntities and its _chartIndexEntityMap — the
+    // path taken when Values is a collection of a reference type that does NOT implement
+    // IChartEntity. The model instances are referenced via ChartPoint.Context.DataSource;
+    // the test asserts they are released once Values is detached.
+    [TestMethod]
+    public void MappedModel_Releases_OnIndexedPath()
+    {
+        var series = new LineSeries<MappedModel>
+        {
+            Mapping = (model, index) => new Coordinate(index, model.Value)
+        };
+        var chart = new SKCartesianChart
+        {
+            Series = [series],
+            Width = 300,
+            Height = 200
+        };
+        var refs = WireAndDetachMapped(series, chart);
+        AssertAllDead(refs, "mapped");
+    }
+
+    private sealed class MappedModel
+    {
+        public double Value { get; set; }
+    }
+
+    private static List<WeakReference> WireAndDetachMapped(
+        LineSeries<MappedModel> series, SourceGenSKChart chart)
+    {
+        var refs = new List<WeakReference>(PointCount);
+        var values = new MappedModel[PointCount];
+        for (var i = 0; i < PointCount; i++)
+        {
+            values[i] = new MappedModel { Value = i + 1 };
+            refs.Add(new WeakReference(values[i]));
+        }
+        series.Values = values;
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        series.Values = Array.Empty<MappedModel>();
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        return refs;
+    }
 
     // --- Assertion helpers -----------------------------------------------------------
 
@@ -84,8 +134,8 @@ public class _MemoryTests
 
     // Create N observables, render once so they become ChartPoints, then replace Values
     // with an empty collection and render again so the cleanup pass runs. Returns weak
-    // references that should be dead after the caller forces GC. Runs in its own method
-    // scope so the local `values` array is off the stack before GC time.
+    // references that should be dead after the caller forces GC. The local `values`
+    // array is on the stack of this method and goes away when the method returns.
     private static List<WeakReference> WireAndDetach(ISeries series, SourceGenSKChart chart)
     {
         var refs = new List<WeakReference>(PointCount);
@@ -107,7 +157,6 @@ public class _MemoryTests
         // releasing their entity references.
         _ = ChangingPaintTasks.DrawChart(chart, animated: false);
 
-        values = null;
         return refs;
     }
 
