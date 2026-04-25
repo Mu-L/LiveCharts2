@@ -2,8 +2,6 @@ name: Benchmarks
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
 
 on:
   pull_request:
@@ -63,27 +61,13 @@ jobs:
           echo "--- delta.md ---"
           cat delta.md
 
-      - name: Load delta into env
+      - name: Upload delta for PR comment
         if: steps.compare.outputs.has_interesting == 'true'
-        run: |
-          {
-            echo 'DELTA_TABLE<<BENCHEOF'
-            cat delta.md
-            echo 'BENCHEOF'
-          } >> "$GITHUB_ENV"
-
-      - name: Post benchmark delta on PR
-        if: steps.compare.outputs.has_interesting == 'true'
-        uses: ./.github/actions/comment-progress
+        uses: actions/upload-artifact@v6.0.0
         with:
-          marker: perf-${{ github.event.pull_request.number }}
-          content: |
-            #### Benchmark delta
-
-            Base: **${{ github.base_ref }}** — Head: **${{ github.event.pull_request.head.sha }}**
-            Thresholds: 🔴 > +10% slower, 🟢 > -10% faster. Numbers on GitHub-hosted runners are noisy — treat double-digit deltas on non-trivial benchmarks as signal, single-digit as noise.
-
-            ${{ env.DELTA_TABLE }}
+          name: benchmark-delta
+          path: delta.md
+          retention-days: 7
 
       - name: Upload raw artifacts
         if: always()
