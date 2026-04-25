@@ -2,9 +2,6 @@ name: LiveCharts
 permissions:
   contents: read
   actions: read
-  checks: write
-  pull-requests: write
-  issues: write
 
 on:
   push:
@@ -13,25 +10,6 @@ on:
   pull_request:
 
 jobs:
-
-  report-progress-starting:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout 
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v6.0.1        
-      - uses: ./.github/actions/comment-progress
-        if: github.event_name == 'pull_request'
-        id: create-comment
-        with:
-          marker: pr-${{ github.event.pull_request.number }}
-          content: | 
-            #### Thanks for your contribution!
-
-            The build and test process is starting. This may take a while.
-            You can find more details below as the process continues or at the [actions tab](https://github.com/Live-Charts/LiveCharts2/actions/runs/${{ github.run_id }}).
-    outputs: 
-      comment_id: ${{ steps.create-comment.outputs.comment_id }}
 
   prepare:
     runs-on: ubuntu-latest
@@ -42,9 +20,9 @@ jobs:
         run:
           echo "suffix=dev-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-  pack: 
+  pack:
     runs-on: windows-2025
-    needs: [report-progress-starting, prepare]
+    needs: [prepare]
     strategy:
       matrix:
         include:
@@ -67,12 +45,12 @@ jobs:
             workloads: wasm-tools, maui
           - short-name: winui-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharpView.WinUI
-          - short-name: winforms-skiasharp            
+          - short-name: winforms-skiasharp
             project: src/skiasharp/LiveChartsCore.SkiaSharp.WinForms
           - short-name: wpf-skiasharp
-            project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF          
+            project: src/skiasharp/LiveChartsCore.SkiaSharp.WPF
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Setup .NET and Workloads
@@ -81,7 +59,7 @@ jobs:
           workloads: ${{ matrix.workloads }}
 
       - name: Pack
-        run: 
+        run:
           dotnet pack ${{ matrix.project }} -c Release -o artifacts /p:IsPacking=true /p:LiveChartsVersionSuffix=-${{ needs.prepare.outputs.suffix }}
 
       - name: Upload packages
@@ -96,31 +74,16 @@ jobs:
 
   collect-packages:
     runs-on: ubuntu-24.04
-    needs: [pack, report-progress-starting, prepare]
+    needs: [pack]
     steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-    
-      - name: Merge all package artifacts into one 
+      - name: Merge all package artifacts into one
         uses: actions/upload-artifact/merge@v6
         id: merge
-        with: 
-          name: nuget-packages 
+        with:
+          name: nuget-packages
           pattern: "*-package"
           retention-days: 30
           delete-merged: true
-
-      - name: Update Comment
-        if: github.event_name == 'pull_request'
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          content: |
-            
-            #### Packing complete!
-
-            You can download the NuGet packages for this build [here (dev-${{ github.run_number }})](${{ steps.merge.outputs.artifact-url }}).
-            The packages will be available for 30 days, you can either [use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet), or wait for this PR to be merged to have them published to NuGet.org.
 
   # ============================================================
   # Section 1: Core & Snapshot Tests (no pack dependency needed)
@@ -128,13 +91,13 @@ jobs:
 
   test-core:
     runs-on: windows-2025
-    needs: [report-progress-starting, prepare]
+    needs: [prepare]
     strategy:
       fail-fast: false
       matrix:
         framework: [ net8.0, net462 ]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Run tests
@@ -145,13 +108,12 @@ jobs:
           livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           test-type: core
           target-framework: ${{ matrix.framework }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-snapshot:
     runs-on: windows-2025
-    needs: [report-progress-starting, prepare]
+    needs: [prepare]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Run tests
@@ -161,47 +123,13 @@ jobs:
           test-id: snapshot
           livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           test-type: snapshot
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  after-core-tests:
-    runs-on: ubuntu-24.04
-    if: always()
-    needs:
-      - report-progress-starting
-      - test-core
-      - test-snapshot
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Report core tests passed
-        if: ${{ always() && github.event_name == 'pull_request' && needs.test-core.result == 'success' && needs.test-snapshot.result == 'success' }}
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          content: |
-
-            #### Section 1: Core & Snapshot Tests ✅
-
-            Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }}
-
-      - name: Report core tests failure
-        if: ${{ always() && github.event_name == 'pull_request' && (needs.test-core.result != 'success' || needs.test-snapshot.result != 'success') }}
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          content: |
-
-            #### Section 1: Core & Snapshot Tests ❌
-
-            Core #${{ needs.test-core.result }} | Snapshot #${{ needs.test-snapshot.result }}
 
   report-code-coverage:
     runs-on: ubuntu-24.04
     if: ${{ needs.test-core.result == 'success' && needs.test-snapshot.result == 'success' }}
-    needs: [after-core-tests, report-progress-starting, test-core, test-snapshot]
+    needs: [test-core, test-snapshot]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Download coverage results
@@ -272,20 +200,26 @@ jobs:
           publish_dir: ./badge-out
           publish_branch: badges
 
-      - name: Report coverage comparison
+      - name: Write coverage summary for PR comment
         if: github.event_name == 'pull_request'
-        uses: ./.github/actions/comment-progress
+        run: |
+          mkdir -p coverage-summary
+          cat > coverage-summary/coverage-summary.json << EOF
+          {
+            "old": "${{ steps.old-coverage.outputs.value }}",
+            "new": "${{ steps.new-coverage.outputs.value }}",
+            "delta": "${{ steps.delta.outputs.value }}",
+            "emoji": "${{ steps.delta.outputs.emoji }}"
+          }
+          EOF
+
+      - name: Upload coverage summary
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v6.0.0
         with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          content: |
-
-            #### Code Coverage ${{ steps.delta.outputs.emoji }}
-
-            | | Line Coverage |
-            |---|---|
-            | **Before** | ${{ steps.old-coverage.outputs.value }} |
-            | **After** | ${{ steps.new-coverage.outputs.value }} |
-            | **Delta** | ${{ steps.delta.outputs.value }} |
+          name: coverage-summary
+          path: coverage-summary/
+          retention-days: 1
 
   # ============================================================
   # Section 2: UI Tests (require NuGet packages from pack job)
@@ -311,14 +245,14 @@ jobs:
           - id: winui
           - id: winforms-net10
           - id: winforms-net10w19041
-          - id: winforms-net462          
+          - id: winforms-net462
           - id: wpf-net10
           - id: wpf-net10w19041
           - id: wpf-net462
-          
-    needs: [pack, report-progress-starting, collect-packages, prepare]
+
+    needs: [pack, collect-packages, prepare]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Run UI tests
@@ -330,7 +264,6 @@ jobs:
           livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-linux:
     runs-on: ubuntu-24.04
@@ -343,9 +276,9 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
+    needs: [pack, collect-packages, prepare]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Setup headless display
@@ -360,7 +293,6 @@ jobs:
           livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-mac:
     runs-on: macos-26
@@ -376,9 +308,9 @@ jobs:
           - id: uno
             tf: net10.0-desktop
             workloads: maui
-    needs: [pack, report-progress-starting, collect-packages, prepare]
+    needs: [pack, collect-packages, prepare]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Run UI tests
@@ -391,7 +323,6 @@ jobs:
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-browser:
     runs-on: ubuntu-24.04
@@ -408,9 +339,9 @@ jobs:
           # - id: uno
           #   tf: net10.0-browserwasm
           #   workloads: wasm-tools android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
+    needs: [pack, collect-packages, prepare]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Run UI tests
@@ -422,7 +353,6 @@ jobs:
           livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-android:
     runs-on: ubuntu-24.04
@@ -439,9 +369,9 @@ jobs:
           # - id: uno
           #   tf: net10.0-android
           #   workloads: android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
+    needs: [pack, collect-packages, prepare]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Run UI tests
@@ -453,7 +383,6 @@ jobs:
           livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
 
   test-ios:
     runs-on: macos-26
@@ -470,9 +399,9 @@ jobs:
           # - id: uno
           #   tf: net10.0-ios
           #   workloads: ios android
-    needs: [pack, report-progress-starting, collect-packages, prepare]
+    needs: [pack, collect-packages, prepare]
     steps:
-      - name: Checkout 
+      - name: Checkout
         uses: actions/checkout@v6.0.1
 
       - name: Run UI tests
@@ -485,42 +414,3 @@ jobs:
           workloads: ${{ matrix.workloads }}
           target-framework: ${{ matrix.tf }}
           xcode-path: /Applications/Xcode_26.2.app
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-
-  after-ui-tests:
-    runs-on: ubuntu-24.04
-    if: always()
-    needs:
-      - report-progress-starting
-      - test-windows
-      - test-linux
-      - test-mac
-      - test-browser
-      - test-android
-      - test-ios
-      - prepare
-    steps:
-      - name: Checkout 
-        uses: actions/checkout@v6.0.1
-
-      - name: Report UI tests passed
-        if: ${{ always() && github.event_name == 'pull_request' && needs.test-windows.result == 'success' && needs.test-linux.result == 'success' && needs.test-mac.result == 'success' && needs.test-browser.result == 'success' && needs.test-android.result == 'success' && needs.test-ios.result == 'success' }}
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          content: |
-
-            #### Section 2: UI Tests ✅
-
-            Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}
-
-      - name: Report UI tests failure
-        if: ${{ always() && github.event_name == 'pull_request' && (needs.test-windows.result != 'success' || needs.test-linux.result != 'success' || needs.test-mac.result != 'success' || needs.test-browser.result != 'success' || needs.test-android.result != 'success' || needs.test-ios.result != 'success') }}
-        uses: ./.github/actions/comment-progress
-        with:
-          comment_id: ${{ needs.report-progress-starting.outputs.comment_id }}
-          content: |
-          
-            #### Section 2: UI Tests ❌
-
-            Windows #${{ needs.test-windows.result }} | Linux #${{ needs.test-linux.result }} | Mac #${{ needs.test-mac.result }} | Browser #${{ needs.test-browser.result }} | Android #${{ needs.test-android.result }} | iOS #${{ needs.test-ios.result }}

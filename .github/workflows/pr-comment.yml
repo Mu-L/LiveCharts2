@@ -1,0 +1,156 @@
+name: PR Comment
+
+# Posts a single consolidated comment to the PR after the LiveCharts workflow finishes.
+# This runs in the base repo's context (not the fork's), so the GITHUB_TOKEN has the
+# write permissions that the LiveCharts workflow itself does not get on fork PRs.
+
+on:
+  workflow_run:
+    workflows: [LiveCharts]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download coverage summary
+        id: cov
+        continue-on-error: true
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: coverage-summary
+          path: coverage-summary
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and post comment
+        uses: actions/github-script@v8
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runId = Number(process.env.RUN_ID);
+            const runNumber = process.env.RUN_NUMBER;
+            const headSha = process.env.HEAD_SHA;
+
+            // Resolve the PR number from the head SHA. Works for both same-repo and
+            // fork PRs (workflow_run.pull_requests is empty for forks).
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner, repo, commit_sha: headSha,
+            });
+            const pr = prs.find(p => p.state === 'open') || prs[0];
+            if (!pr) {
+              core.warning(`No PR found for head_sha ${headSha}; nothing to comment on.`);
+              return;
+            }
+            const prNumber = pr.number;
+
+            // Pull all jobs of the upstream run and aggregate by base name. Matrix
+            // jobs render as "name (matrix, values)" so we match the literal name
+            // OR the name followed by a space.
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner, repo, run_id: runId, per_page: 100,
+            });
+            const matching = (name) =>
+              jobs.filter(j => j.name === name || j.name.startsWith(name + ' '));
+            const aggregate = (list) => {
+              if (list.length === 0) return 'missing';
+              if (list.some(j => j.conclusion === 'failure' || j.conclusion === 'timed_out')) return 'failure';
+              if (list.some(j => j.conclusion === 'cancelled')) return 'cancelled';
+              if (list.every(j => j.conclusion === 'success')) return 'success';
+              if (list.some(j => j.conclusion === 'skipped')) return 'skipped';
+              return 'unknown';
+            };
+            const emoji = (s) => ({
+              success: '✅', failure: '❌', cancelled: '⚠️',
+              skipped: '⏭️', missing: '❔', unknown: '❔',
+            }[s] || '❔');
+
+            const sec = {
+              pack: aggregate(matching('pack')),
+              testCore: aggregate(matching('test-core')),
+              testSnapshot: aggregate(matching('test-snapshot')),
+              testWindows: aggregate(matching('test-windows')),
+              testLinux: aggregate(matching('test-linux')),
+              testMac: aggregate(matching('test-mac')),
+              testBrowser: aggregate(matching('test-browser')),
+              testAndroid: aggregate(matching('test-android')),
+              testIos: aggregate(matching('test-ios')),
+            };
+
+            // Resolve the merged nuget-packages artifact URL, if present.
+            const arts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner, repo, run_id: runId, per_page: 100,
+            });
+            const nuget = arts.find(a => a.name === 'nuget-packages' && !a.expired);
+            const nugetUrl = nuget
+              ? `https://github.com/${owner}/${repo}/actions/runs/${runId}/artifacts/${nuget.id}`
+              : null;
+
+            // Coverage summary, written by livecharts.yml when both core & snapshot pass.
+            let coverageBlock = '';
+            try {
+              const data = JSON.parse(fs.readFileSync('coverage-summary/coverage-summary.json', 'utf8'));
+              coverageBlock =
+                `\n\n#### Code Coverage ${data.emoji}\n\n` +
+                `| | Line Coverage |\n|---|---|\n` +
+                `| **Before** | ${data.old} |\n` +
+                `| **After** | ${data.new} |\n` +
+                `| **Delta** | ${data.delta} |`;
+            } catch (e) {
+              // No coverage data — likely tests failed or didn't run.
+            }
+
+            const sec1Ok = sec.testCore === 'success' && sec.testSnapshot === 'success';
+            const uiKeys = ['testWindows', 'testLinux', 'testMac', 'testBrowser', 'testAndroid', 'testIos'];
+            const sec2Ok = uiKeys.every(k => sec[k] === 'success');
+
+            const packBlock = nugetUrl
+              ? `#### Packing ${emoji(sec.pack)}\n\n` +
+                `Download the NuGet packages for this build [here (dev-${runNumber})](${nugetUrl}). ` +
+                `Available for 30 days — you can either ` +
+                `[use them directly](https://stackoverflow.com/questions/43400069/add-a-package-with-a-local-package-file-in-dotnet) ` +
+                `or wait for this PR to be merged to have them published to NuGet.org.`
+              : `#### Packing ${emoji(sec.pack)}\n\nNuGet packages were not produced.`;
+
+            const tag = `<!-- livecharts-bot:pr-${prNumber} -->`;
+            const body = [
+              tag,
+              `#### Thanks for your contribution!`,
+              ``,
+              `Build summary for [run #${runNumber}](https://github.com/${owner}/${repo}/actions/runs/${runId}).`,
+              ``,
+              packBlock,
+              ``,
+              `#### Section 1: Core & Snapshot Tests ${emoji(sec1Ok ? 'success' : 'failure')}`,
+              ``,
+              `Core ${emoji(sec.testCore)} | Snapshot ${emoji(sec.testSnapshot)}`,
+              ``,
+              `#### Section 2: UI Tests ${emoji(sec2Ok ? 'success' : 'failure')}`,
+              ``,
+              `Windows ${emoji(sec.testWindows)} | Linux ${emoji(sec.testLinux)} | Mac ${emoji(sec.testMac)} | Browser ${emoji(sec.testBrowser)} | Android ${emoji(sec.testAndroid)} | iOS ${emoji(sec.testIos)}`,
+              coverageBlock,
+            ].join('\n');
+
+            // Find existing comment by marker; create or update.
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number: prNumber, per_page: 100,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(tag));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+            }
