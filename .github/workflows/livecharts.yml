@@ -7,7 +7,21 @@ on:
   push:
     branches:
       - master
+    paths: &code-paths
+      - 'src/**'
+      - 'tests/**'
+      - 'samples/**'
+      - 'generators/**'
+      - 'build/**'
+      - 'Directory.Build.props'
+      - 'nuget.props'
+      - 'global.json'
+      - '**/*.slnx'
+      - 'LiveCharts.snk'
+      - '.editorconfig'
   pull_request:
+    paths: *code-paths
+  workflow_dispatch:
 
 jobs:
 
