@@ -1,12 +1,12 @@
 name: PR Comment
 
-# Posts a single consolidated comment to the PR after the LiveCharts workflow finishes.
+# Posts consolidated comments to the PR after upstream workflows finish.
 # This runs in the base repo's context (not the fork's), so the GITHUB_TOKEN has the
-# write permissions that the LiveCharts workflow itself does not get on fork PRs.
+# write permissions that the triggering workflows do not get on fork PRs.
 
 on:
   workflow_run:
-    workflows: [LiveCharts]
+    workflows: [LiveCharts, Benchmarks]
     types: [completed]
 
 permissions:
@@ -16,8 +16,10 @@ permissions:
   issues: write
 
 jobs:
-  comment:
-    if: github.event.workflow_run.event == 'pull_request'
+  livecharts:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.name == 'LiveCharts'
     runs-on: ubuntu-24.04
     steps:
       - name: Download coverage summary
@@ -35,7 +37,8 @@ jobs:
         env:
           RUN_ID: ${{ github.event.workflow_run.id }}
           RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         with:
           script: |
             const fs = require('fs');
@@ -43,19 +46,25 @@ jobs:
             const repo = context.repo.repo;
             const runId = Number(process.env.RUN_ID);
             const runNumber = process.env.RUN_NUMBER;
-            const headSha = process.env.HEAD_SHA;
+            const headOwner = process.env.HEAD_OWNER;
+            const headBranch = process.env.HEAD_BRANCH;
 
-            // Resolve the PR number from the head SHA. Works for both same-repo and
-            // fork PRs (workflow_run.pull_requests is empty for forks).
-            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner, repo, commit_sha: headSha,
-            });
-            const pr = prs.find(p => p.state === 'open') || prs[0];
-            if (!pr) {
-              core.warning(`No PR found for head_sha ${headSha}; nothing to comment on.`);
+            // Resolve the PR by head ref. Reliable for both same-repo and fork PRs;
+            // listPullRequestsAssociatedWithCommit is not (it only indexes commits
+            // reachable from the default branch / merge commits).
+            const wrPrs = context.payload.workflow_run.pull_requests || [];
+            let prNumber = wrPrs.find(p => p.number)?.number;
+            if (!prNumber) {
+              const { data: prs } = await github.rest.pulls.list({
+                owner, repo, state: 'open',
+                head: `${headOwner}:${headBranch}`,
+              });
+              prNumber = prs[0]?.number;
+            }
+            if (!prNumber) {
+              core.warning(`No open PR found for ${headOwner}:${headBranch}; nothing to comment on.`);
               return;
             }
-            const prNumber = pr.number;
 
             // Pull all jobs of the upstream run and aggregate by base name. Matrix
             // jobs render as "name (matrix, values)" so we match the literal name
@@ -145,6 +154,79 @@ jobs:
             ].join('\n');
 
             // Find existing comment by marker; create or update.
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number: prNumber, per_page: 100,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(tag));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+            }
+
+  benchmarks:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.name == 'Benchmarks'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download benchmark delta
+        id: delta
+        continue-on-error: true
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: benchmark-delta
+          path: benchmark-delta
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and post comment
+        if: steps.delta.outcome == 'success'
+        uses: actions/github-script@v8
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          BASE_REF: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runId = Number(process.env.RUN_ID);
+            const headSha = process.env.HEAD_SHA;
+            const headOwner = process.env.HEAD_OWNER;
+            const headBranch = process.env.HEAD_BRANCH;
+
+            const wrPrs = context.payload.workflow_run.pull_requests || [];
+            let prNumber = wrPrs.find(p => p.number)?.number;
+            let baseRef = process.env.BASE_REF;
+            if (!prNumber) {
+              const { data: prs } = await github.rest.pulls.list({
+                owner, repo, state: 'open',
+                head: `${headOwner}:${headBranch}`,
+              });
+              prNumber = prs[0]?.number;
+              baseRef = baseRef || prs[0]?.base?.ref;
+            }
+            if (!prNumber) {
+              core.warning(`No open PR found for ${headOwner}:${headBranch}; nothing to comment on.`);
+              return;
+            }
+
+            const delta = fs.readFileSync('benchmark-delta/delta.md', 'utf8');
+            const tag = `<!-- livecharts-bot:perf-pr-${prNumber} -->`;
+            const body = [
+              tag,
+              `#### Benchmark delta`,
+              ``,
+              `Base: **${baseRef || 'master'}** — Head: **${headSha}**`,
+              `Thresholds: 🔴 > +10% slower, 🟢 > -10% faster. Numbers on GitHub-hosted runners are noisy — treat double-digit deltas on non-trivial benchmarks as signal, single-digit as noise.`,
+              ``,
+              delta,
+            ].join('\n');
+
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner, repo, issue_number: prNumber, per_page: 100,
             });
