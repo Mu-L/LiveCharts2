@@ -25,9 +25,6 @@ inputs:
   xcode-path:
     description: 'The Xcode path to select'
     required: false
-  comment_id:
-    description: 'The ID of the comment to append to'
-    required: false
 runs:
   using: "composite"
   steps:
