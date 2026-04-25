@@ -143,11 +143,11 @@ jobs:
               ``,
               packBlock,
               ``,
-              `#### Section 1: Core & Snapshot Tests ${emoji(sec1Ok ? 'success' : 'failure')}`,
+              `#### Core & Snapshot Tests ${emoji(sec1Ok ? 'success' : 'failure')}`,
               ``,
               `Core ${emoji(sec.testCore)} | Snapshot ${emoji(sec.testSnapshot)}`,
               ``,
-              `#### Section 2: UI Tests ${emoji(sec2Ok ? 'success' : 'failure')}`,
+              `#### UI Tests ${emoji(sec2Ok ? 'success' : 'failure')}`,
               ``,
               `Windows ${emoji(sec.testWindows)} | Linux ${emoji(sec.testLinux)} | Mac ${emoji(sec.testMac)} | Browser ${emoji(sec.testBrowser)} | Android ${emoji(sec.testAndroid)} | iOS ${emoji(sec.testIos)}`,
               coverageBlock,
@@ -216,15 +216,29 @@ jobs:
             }
 
             const delta = fs.readFileSync('benchmark-delta/delta.md', 'utf8');
+            // Each table row in delta.md carries a 🔴 / 🟢 prefix in the Δ column when
+            // the benchmark moved past the ±10% threshold. Count them for the summary.
+            const regressions = (delta.match(/🔴/g) || []).length;
+            const improvements = (delta.match(/🟢/g) || []).length;
+            const summary = regressions > 0
+              ? `❌ ${regressions} regression${regressions === 1 ? '' : 's'}, ${improvements} improvement${improvements === 1 ? '' : 's'}`
+              : improvements > 0
+                ? `✅ ${improvements} improvement${improvements === 1 ? '' : 's'}, no regressions`
+                : `➖ No significant changes`;
+
             const tag = `<!-- livecharts-bot:perf-pr-${prNumber} -->`;
             const body = [
               tag,
-              `#### Benchmark delta`,
+              `#### Benchmark delta — ${summary}`,
+              ``,
+              `<details><summary>Show details</summary>`,
               ``,
               `Base: **${baseRef || 'master'}** — Head: **${headSha}**`,
               `Thresholds: 🔴 > +10% slower, 🟢 > -10% faster. Numbers on GitHub-hosted runners are noisy — treat double-digit deltas on non-trivial benchmarks as signal, single-digit as noise.`,
               ``,
               delta,
+              ``,
+              `</details>`,
             ].join('\n');
 
             const comments = await github.paginate(github.rest.issues.listComments, {
