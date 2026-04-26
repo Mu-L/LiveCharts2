@@ -69,7 +69,7 @@ public enum ZoomAndPanMode
 
     /// <summary>
     /// When this flag is present the panning will be triggered using the right click on desktop devices and the touch-and-hold gesture on touch devices.
-    /// The "Zoom by section" feature will be triggered to the left click on desktop devices and the touch-and-hold gesture on touch devices,
+    /// The "Zoom by section" feature will be triggered by the left click on desktop devices and the touch-and-hold gesture on touch devices,
     /// this flag must be used in conjunction with any of the pan/zoom flags
     /// (<see cref="PanX"/>, <see cref="ZoomX"/>, <see cref="PanY"/>, <see cref="ZoomY"/>,
     /// <see cref="X"/>, <see cref="Y"/>, or <see cref="Both"/>) to have an effect.

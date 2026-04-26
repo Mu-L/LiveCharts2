@@ -201,7 +201,7 @@ public class CartesianChartEngine(
     /// The flags, for example ZoomAndPanMode.ZoomX | ZoomAndPanMode.NoFit, will zoom only in the x axis
     /// and will ignore the fit to bounds feature.
     /// </param>
-    /// <param name="point">The point to start the panning operation.</param>
+    /// <param name="point">The point where the zooming section operation starts.</param>
     public void StartZoomingSection(ZoomAndPanMode flags, LvcPoint point)
     {
         var xMode = flags.HasFlag(ZoomAndPanMode.ZoomX);
