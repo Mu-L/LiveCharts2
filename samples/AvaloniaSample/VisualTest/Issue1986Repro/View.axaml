@@ -46,7 +46,7 @@
                         <lvc:PieChart Height="260" Series="{Binding PieA}" />
 
                         <TextBlock Text="Cartesian C (off-screen until you scroll)" FontWeight="Bold" />
-                        <lvc:CartesianChart Height="260" Series="{Binding CartesianC}" />
+                        <lvc:CartesianChart x:Name="chart1" Height="260" Series="{Binding CartesianC}" />
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -72,7 +72,7 @@
                         <lvc:PieChart Height="260" Series="{Binding PieB}" />
 
                         <TextBlock Text="Cartesian C copy (off-screen until you scroll)" FontWeight="Bold" />
-                        <lvc:CartesianChart Height="260" Series="{Binding CartesianC}" />
+                        <lvc:CartesianChart x:Name="chart2" Height="260" Series="{Binding CartesianC}" />
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
