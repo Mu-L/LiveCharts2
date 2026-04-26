@@ -162,6 +162,96 @@ function buildTestsBlock({ jobs, artifacts, runId, owner, repo }) {
   ].join('\n');
 }
 
+// Builds the Code Coverage block: an H4 header that announces direction (up /
+// down / unchanged) and the delta, then a collapsed <details> with the
+// before/after table, a link to the full report, and a per-class diff table
+// (when a baseline Summary.json was available on the badges branch).
+function buildCoverageBlock({ summary, oldClasses, newClasses, reportUrl }) {
+  let phrase;
+  if (summary.delta === 'N/A') {
+    phrase = `no baseline (current: ${summary.new})`;
+  } else if (summary.delta === '0%') {
+    phrase = `unchanged at ${summary.new}`;
+  } else if (summary.delta.startsWith('+')) {
+    phrase = `increased ${summary.delta} (${summary.old} → ${summary.new})`;
+  } else {
+    phrase = `decreased ${summary.delta} (${summary.old} → ${summary.new})`;
+  }
+
+  const flatten = (s) => {
+    const out = new Map();
+    const assemblies = s?.coverage?.assemblies || [];
+    for (const a of assemblies) {
+      for (const c of (a.classes || [])) {
+        out.set(`${a.name} / ${c.name}`, c.linecoverage);
+      }
+    }
+    return out;
+  };
+
+  const oldMap = flatten(oldClasses);
+  const newMap = flatten(newClasses);
+
+  let classesTable = '';
+  if (oldMap.size > 0 || newMap.size > 0) {
+    const allKeys = new Set([...oldMap.keys(), ...newMap.keys()]);
+    const changes = [];
+    for (const k of allKeys) {
+      const o = oldMap.get(k);
+      const n = newMap.get(k);
+      if (o === n) continue;
+      const delta = (o !== undefined && n !== undefined) ? (n - o) : null;
+      changes.push({ name: k, old: o, new: n, delta });
+    }
+    // Sort by absolute delta (added/removed classes — null delta — float to top).
+    changes.sort((a, b) => {
+      const av = a.delta === null ? Infinity : Math.abs(a.delta);
+      const bv = b.delta === null ? Infinity : Math.abs(b.delta);
+      return bv - av;
+    });
+
+    const fmt = (v) => v === undefined ? '_n/a_' : `${v.toFixed(1)}%`;
+    const fmtDelta = (d) => {
+      if (d === null) return '—';
+      if (d > 0) return `+${d.toFixed(1)}%`;
+      return `${d.toFixed(1)}%`;
+    };
+
+    if (oldMap.size === 0) {
+      classesTable = '\n\n_No baseline class data on the badges branch yet — per-class diff will populate on the next PR after this lands._';
+    } else if (changes.length === 0) {
+      classesTable = '\n\n_No per-class coverage changes._';
+    } else {
+      const cap = 50;
+      const top = changes.slice(0, cap);
+      classesTable =
+        '\n\n**Class coverage changes**\n\n' +
+        '| Class | Before | After | Delta |\n|---|---|---|---|\n' +
+        top.map(c => `| ${c.name} | ${fmt(c.old)} | ${fmt(c.new)} | ${fmtDelta(c.delta)} |`).join('\n');
+      if (changes.length > cap) {
+        classesTable += `\n\n_…and ${changes.length - cap} more not shown._`;
+      }
+    }
+  }
+
+  return [
+    `#### Code Coverage ${summary.emoji} ${phrase}`,
+    ``,
+    `<details><summary>Show details</summary>`,
+    ``,
+    `| | Line Coverage |`,
+    `|---|---|`,
+    `| **Before** | ${summary.old} |`,
+    `| **After** | ${summary.new} |`,
+    `| **Delta** | ${summary.delta} |`,
+    ``,
+    `Full coverage report: ${reportUrl}`,
+    classesTable,
+    ``,
+    `</details>`,
+  ].join('\n');
+}
+
 function upsertSection(body, section, content) {
   const { start, end } = SECTIONS[section];
   const startIdx = body.indexOf(start);
@@ -241,6 +331,7 @@ module.exports = {
   findMatrixJob,
   artifactUrl,
   buildTestsBlock,
+  buildCoverageBlock,
   upsertSection,
   buildSkeleton,
   resolvePr,

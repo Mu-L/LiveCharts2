@@ -99,13 +99,17 @@ jobs:
             // ---- Coverage (only when both core & snapshot passed and the artifact landed)
             let coverageBlock = '';
             try {
-              const data = JSON.parse(fs.readFileSync('coverage-summary/coverage-summary.json', 'utf8'));
-              coverageBlock =
-                `\n\n#### Code Coverage ${data.emoji}\n\n` +
-                `| | Line Coverage |\n|---|---|\n` +
-                `| **Before** | ${data.old} |\n` +
-                `| **After** | ${data.new} |\n` +
-                `| **Delta** | ${data.delta} |`;
+              const summary = JSON.parse(fs.readFileSync('coverage-summary/coverage-summary.json', 'utf8'));
+              let oldClasses = {};
+              let newClasses = {};
+              try { oldClasses = JSON.parse(fs.readFileSync('coverage-summary/classes-old.json', 'utf8')); } catch (e) {}
+              try { newClasses = JSON.parse(fs.readFileSync('coverage-summary/classes-new.json', 'utf8')); } catch (e) {}
+              coverageBlock = '\n\n' + lib.buildCoverageBlock({
+                summary,
+                oldClasses,
+                newClasses,
+                reportUrl: 'https://live-charts.github.io/LiveCharts2/',
+              });
             } catch (e) {
               // No coverage data — likely tests failed or didn't run.
             }

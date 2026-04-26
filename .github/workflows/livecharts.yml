@@ -162,7 +162,7 @@ jobs:
         run: dotnet-coverage merge ./artifacts/*.coverage -f xml -o coverage.xml
 
       - name : Generate Badge
-        run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:HtmlSummary,Badges  -filters:"-ViewModelsSamples*;-CommunityToolkit*;-Analyzer*;-MSTest*;-SnapshotTests*;-CoreTests*"
+        run: reportgenerator -reports:coverage.xml -targetdir:badge-out -reporttypes:HtmlSummary,Badges,JsonSummary -filters:"-ViewModelsSamples*;-CommunityToolkit*;-Analyzer*;-MSTest*;-SnapshotTests*;-CoreTests*"
 
       - name: Get previous coverage from badges branch
         id: old-coverage
@@ -173,6 +173,8 @@ jobs:
             | grep -oP '>\K[0-9]+\.?[0-9]*%' | head -1 || echo "N/A")
 
           echo "value=${OLD_COVERAGE}" >> $GITHUB_OUTPUT
+
+          git show origin/badges:Summary.json > old-summary.json 2>/dev/null || echo "{}" > old-summary.json
 
       - name: Get new coverage from generated badge
         id: new-coverage
@@ -226,6 +228,8 @@ jobs:
             "emoji": "${{ steps.delta.outputs.emoji }}"
           }
           EOF
+          cp badge-out/Summary.json coverage-summary/classes-new.json 2>/dev/null || echo "{}" > coverage-summary/classes-new.json
+          cp old-summary.json coverage-summary/classes-old.json
 
       - name: Upload coverage summary
         if: github.event_name == 'pull_request'
