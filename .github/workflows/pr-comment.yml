@@ -26,6 +26,13 @@ jobs:
       github.event.workflow_run.name == 'LiveCharts'
     runs-on: ubuntu-24.04
     steps:
+      - name: Mint LiveCharts bot token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout
         uses: actions/checkout@v6.0.1
 
@@ -37,7 +44,7 @@ jobs:
           name: coverage-summary
           path: coverage-summary
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
 
       - name: Build and post comment
         uses: actions/github-script@v8
@@ -47,6 +54,7 @@ jobs:
           HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         with:
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const fs = require('fs');
             const lib = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/pr-comment.js`);
@@ -119,6 +127,13 @@ jobs:
       github.event.workflow_run.name == 'Benchmarks'
     runs-on: ubuntu-24.04
     steps:
+      - name: Mint LiveCharts bot token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout
         uses: actions/checkout@v6.0.1
 
@@ -130,7 +145,7 @@ jobs:
           name: benchmark-delta
           path: benchmark-delta
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
 
       - name: Build and post comment
         uses: actions/github-script@v8
@@ -142,6 +157,7 @@ jobs:
           BASE_REF: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
           WF_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         with:
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const fs = require('fs');
             const lib = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/pr-comment.js`);
