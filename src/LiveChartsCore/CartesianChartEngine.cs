@@ -986,7 +986,10 @@ public class CartesianChartEngine(
 
     private void FitAllOnZoom(ZoomAndPanMode flags)
     {
-        if (_chartView.ZoomMode.HasFlag(ZoomAndPanMode.NoFit))
+        // Honor the flags passed to the public Zoom(...) call rather than the view's
+        // ZoomMode. Manual callers (e.g. a button-driven zoom) need NoFit to take
+        // effect even when the view's ZoomMode does not include it.
+        if (flags.HasFlag(ZoomAndPanMode.NoFit))
             return;
 
         void Fit(ICartesianAxis axis)

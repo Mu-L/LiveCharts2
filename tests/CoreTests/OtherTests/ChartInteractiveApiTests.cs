@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
@@ -257,6 +258,40 @@ public class ChartInteractiveApiTests
         Assert.IsTrue(xAxis.MaxLimit!.Value - xAxis.MinLimit!.Value < xRangeBefore);
         Assert.AreNotEqual(xMinBefore, xAxis.MinLimit!.Value);
         Assert.AreEqual(yRangeBefore, yAxis.MaxLimit!.Value - yAxis.MinLimit!.Value, 1e-9);
+    }
+
+    [TestMethod]
+    public async Task Zoom_NoFitArgumentIsHonored_EvenWhenViewZoomModeOmitsIt()
+    {
+        // Reproduces issue #2119: a manual core.Zoom(... | NoFit, ...) call must keep
+        // the zoomed range. Previously the post-zoom debounced fit checked the view's
+        // ZoomMode (None here) instead of the flags argument, snapping limits back.
+        var xAxis = new Axis { MinLimit = 50, MaxLimit = 60 };
+        var yAxis = new Axis { MinLimit = 50, MaxLimit = 60 };
+
+        var chart = new SKCartesianChart
+        {
+            Width = 400,
+            Height = 400,
+            ZoomMode = ZoomAndPanMode.None,
+            XAxes = [xAxis],
+            YAxes = [yAxis],
+            Series = [ new LineSeries<double> { Values = [1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d] } ]
+        };
+        _ = chart.GetImage();
+
+        var core = (CartesianChartEngine)chart.CoreChart;
+
+        // Pinned MaxLimit (60) sits above the data bounds (1..10). Without NoFit, the
+        // post-zoom Fit would clamp MaxLimit down toward the data max (~10).
+        core.Zoom(ZoomAndPanMode.Both | ZoomAndPanMode.NoFit, new LvcPoint(200, 200), ZoomDirection.ZoomIn);
+
+        // Wait past the 300 ms debounce so FitAllOnZoom has had a chance to fire.
+        await Task.Delay(450);
+        _ = chart.GetImage();
+
+        Assert.IsTrue(xAxis.MaxLimit!.Value > 50, $"NoFit must prevent X MaxLimit snap-to-data; X MaxLimit={xAxis.MaxLimit}.");
+        Assert.IsTrue(yAxis.MaxLimit!.Value > 50, $"NoFit must prevent Y MaxLimit snap-to-data; Y MaxLimit={yAxis.MaxLimit}.");
     }
 
     private static SKGeoMap CreateGeoMap(MapProjection projection = MapProjection.Mercator) =>
