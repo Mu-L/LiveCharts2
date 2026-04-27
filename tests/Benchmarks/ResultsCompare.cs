@@ -9,8 +9,14 @@ namespace Benchmarks;
 // a markdown table.
 internal static class ResultsCompare
 {
-    // Deltas beyond +/- Threshold are flagged. Tuned loose for noisy shared CI runners.
-    private const double Threshold = 0.10;
+    // A row is flagged only when its delta is BOTH:
+    //   * beyond the headline percentage floor (|pct| > PctThreshold), and
+    //   * statistically beyond the combined standard error (|pct| > NoiseFactor * relSE).
+    // The percentage floor catches meaningful real moves; the noise gate filters out
+    // jitter on small benches (Pie ~1 ms, Heat ~2 ms) where one bad sample on a shared
+    // GitHub runner can fake a 10–15% swing.
+    private const double PctThreshold = 0.15;
+    private const double NoiseFactor = 3.0;
 
     public static int Run(ReadOnlySpan<string> args)
     {
@@ -46,8 +52,8 @@ internal static class ResultsCompare
             Console.Write(md);
 
         // Expose flags to the workflow so it can decide whether to post a comment
-        // (any row outside ±Threshold) and whether to fail (any row slower by more
-        // than Threshold).
+        // (any row significantly outside noise) and whether to fail (any row slower
+        // beyond both the percentage floor and the noise gate).
         var githubOutput = Environment.GetEnvironmentVariable("GITHUB_OUTPUT");
         if (!string.IsNullOrEmpty(githubOutput))
         {
@@ -71,18 +77,22 @@ internal static class ResultsCompare
         foreach (var row in rows)
         {
             if (row.Base is null || row.Head is null) continue;
-            var pct = (row.Head.MeanNs - row.Base.MeanNs) / row.Base.MeanNs;
-            if (pct > Threshold)
-            {
-                regression = true;
-                interesting = true;
-            }
-            else if (pct < -Threshold)
-            {
-                interesting = true;
-            }
+            if (!IsSignificant(row.Base, row.Head, out var pct)) continue;
+            interesting = true;
+            if (pct > 0) regression = true;
         }
         return (interesting, regression);
+    }
+
+    // A delta is "significant" when it is both beyond the percentage floor AND
+    // beyond NoiseFactor x the combined relative standard error of base and head.
+    private static bool IsSignificant(BenchmarkStats @base, BenchmarkStats head, out double pct)
+    {
+        pct = (head.MeanNs - @base.MeanNs) / @base.MeanNs;
+        if (Math.Abs(pct) <= PctThreshold) return false;
+        var relSe = Math.Sqrt(@base.StandardErrorNs * @base.StandardErrorNs
+                              + head.StandardErrorNs * head.StandardErrorNs) / @base.MeanNs;
+        return Math.Abs(pct) > NoiseFactor * relSe;
     }
 
     private static Dictionary<string, BenchmarkStats> LoadAll(string dir)
@@ -146,11 +156,10 @@ internal static class ResultsCompare
     private static string DeltaCell(BenchmarkStats? @base, BenchmarkStats? head)
     {
         if (@base is null || head is null) return "—";
-        var pct = (head.MeanNs - @base.MeanNs) / @base.MeanNs;
+        var significant = IsSignificant(@base, head, out var pct);
         var str = (pct * 100).ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture) + "%";
-        if (pct > Threshold) return "🔴 " + str;
-        if (pct < -Threshold) return "🟢 " + str;
-        return str;
+        if (!significant) return str;
+        return (pct > 0 ? "🔴 " : "🟢 ") + str;
     }
 
     private static string FormatMs(double ns) => (ns / 1_000_000.0).ToString("N3", CultureInfo.InvariantCulture);
