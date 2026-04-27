@@ -132,6 +132,32 @@ public sealed class PieChartTests
     }
 
     [TestMethod]
+    public void GaugeValueExceedsRangeWithMinValue()
+    {
+        // issue #2131 (follow-up): when MinValue is non-zero the angle math uses
+        // (MaxValue - MinValue) as the range, so the clamp must use the same range
+        // or a value above the effective range still produces a sweep > 360deg.
+        var chart = new SKPieChart
+        {
+            Series = GaugeGenerator.BuildSolidGauge(
+                new GaugeItem(
+                    150,
+                    series =>
+                    {
+                        series.MaxRadialColumnWidth = 50;
+                        series.DataLabelsSize = 50;
+                    })),
+            InitialRotation = -90,
+            MinValue = 30,
+            MaxValue = 100,
+            Width = 600,
+            Height = 600
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(PieChartTests)}_{nameof(GaugeValueExceedsRangeWithMinValue)}");
+    }
+
+    [TestMethod]
     public void GaugeMultiple()
     {
         var chart = new SKPieChart
