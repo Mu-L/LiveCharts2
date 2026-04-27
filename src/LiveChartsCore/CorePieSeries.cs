@@ -304,22 +304,29 @@ public abstract class CorePieSeries<TModel, TVisual, TLabel, TMiniatureGeometry>
             }
             else
             {
+                // Clamp the stack to the total so a value greater than the chart's
+                // MaxValue (or a stacked total exceeding it) cannot produce a sweep
+                // larger than the chart's complete angle, which renders as a broken
+                // arc (issue #2131).
+                var clampedStackedValue = Math.Min(stackedValue, total);
+                var clampedTop = Math.Min(stackedValue + coordinate.PrimaryValue, total);
+
                 if (IsRelativeToMinValue)
                 {
                     // when the series is relative to min value,
                     // the start value is always the PieChart.MinValue
                     // this is normally used on angular gauge series.
                     var h = total - startValue;
-                    var h1 = stackedValue + coordinate.PrimaryValue;
-                    start = stackedValue / (total - startValue) * completeAngle;
+                    var h1 = clampedTop;
+                    start = clampedStackedValue / (total - startValue) * completeAngle;
                     sweep = h1 / h * completeAngle - start;
                     if (!isClockWise) start = completeAngle - start - sweep;
                 }
                 else
                 {
                     var h = total - startValue;
-                    var h1 = stackedValue + coordinate.PrimaryValue - startValue;
-                    start = stackedValue / total * completeAngle;
+                    var h1 = clampedTop - startValue;
+                    start = clampedStackedValue / total * completeAngle;
                     sweep = h1 / h * completeAngle - start;
                     if (!isClockWise) start = completeAngle - start - sweep;
                 }
