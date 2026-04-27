@@ -660,6 +660,16 @@ myChart.ZoomMode = ZoomAndPanMode.Both;
 myChart.ZoomMode = ZoomAndPanMode.None;
 ```
 
+Each gesture also has its own flag (`PanX`, `ZoomX`, `PanY`, `ZoomY`) so zoom and pan can be enabled independently. The composites `X = PanX | ZoomX`, `Y = PanY | ZoomY` and `Both = X | Y` keep their original pan+zoom semantics.
+
+```csharp
+// Allow zooming on the X axis but disable panning (e.g. so pan gestures don't hide tooltips on mobile):
+myChart.ZoomMode = ZoomAndPanMode.ZoomX;
+
+// Zoom on X, pan on Y:
+myChart.ZoomMode = ZoomAndPanMode.ZoomX | ZoomAndPanMode.PanY;
+```
+
 `ZoomAndPanMode` is a flags enum — combine values:
 ```csharp
 myChart.ZoomMode = ZoomAndPanMode.X | ZoomAndPanMode.NoFit | ZoomAndPanMode.NoZoomBySection;
