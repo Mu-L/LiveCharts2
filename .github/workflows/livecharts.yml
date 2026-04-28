@@ -23,6 +23,13 @@ on:
     paths: *code-paths
   workflow_dispatch:
 
+# Group runs by PR (or by branch on push) so a new commit cancels the in-progress
+# run for the same PR. Master pushes are NOT cancelled — every master build must
+# finish so the coverage badge and release-suffix sequence stay continuous.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
 
   prepare:

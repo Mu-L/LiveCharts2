@@ -80,8 +80,8 @@ jobs:
             delta.md
           retention-days: 30
 
-      - name: Fail job if a benchmark regressed by more than 10%
+      - name: Fail job if a benchmark regressed beyond the noise gate
         if: steps.compare.outputs.has_regression == 'true'
         run: |
-          echo "::error::One or more benchmarks regressed by more than 10%. See the PR comment for details."
+          echo "::error::One or more benchmarks regressed beyond the noise gate (>15% AND >3x combined standard error). See the PR comment for details."
           exit 1
