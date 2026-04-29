@@ -497,6 +497,11 @@ public class CartesianChartEngine(
         // measure and draw title.
         var m = new Margin();
         float ts = 0f, bs = 0f, ls = 0f, rs = 0f;
+        // X axes with InLineNamePlacement reserve horizontal space for the name on the
+        // left of their row (and half the leftmost label so it doesn't bleed into the
+        // name). Tracked separately so we can apply it AFTER the Y axis loop, which
+        // would otherwise overwrite m.Left/m.Right with smaller values.
+        float xInlineLeftReserve = 0f, xInlineRightReserve = 0f;
         if (View.Title is not null)
         {
             var titleSize = MeasureTitle();
@@ -550,7 +555,10 @@ public class CartesianChartEngine(
                     // so accumulate by h (not s.Height + ns.Height as in the stacked layout).
                     bs += h;
                     m.Bottom = bs;
-                    m.Left = ns.Width;
+
+                    var leftReserve = ns.Width + s.Width * 0.5f;
+                    if (leftReserve > xInlineLeftReserve) xInlineLeftReserve = leftReserve;
+                    if (s.Width * 0.5f > xInlineRightReserve) xInlineRightReserve = s.Width * 0.5f;
                 }
                 else
                 {
@@ -585,7 +593,10 @@ public class CartesianChartEngine(
                     // so accumulate by h (not s.Height + ns.Height as in the stacked layout).
                     ts += h;
                     m.Top = ts;
-                    m.Left = ns.Width;
+
+                    var leftReserve = ns.Width + s.Width * 0.5f;
+                    if (leftReserve > xInlineLeftReserve) xInlineLeftReserve = leftReserve;
+                    if (s.Width * 0.5f > xInlineRightReserve) xInlineRightReserve = s.Width * 0.5f;
                 }
                 else
                 {
@@ -686,6 +697,11 @@ public class CartesianChartEngine(
                 }
             }
         }
+
+        // Apply X-axis inline name reservations now so the Y axis loop's m.Left/m.Right
+        // assignments can't shrink the chart back into the X axis name area.
+        if (xInlineLeftReserve > m.Left) m.Left = xInlineLeftReserve;
+        if (xInlineRightReserve > m.Right) m.Right = xInlineRightReserve;
 
         var rm = viewDrawMargin ?? new Margin(Margin.Auto);
 
