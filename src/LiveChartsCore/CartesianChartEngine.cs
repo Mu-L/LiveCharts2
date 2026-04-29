@@ -546,8 +546,9 @@ public class CartesianChartEngine(
 
                     axis.Yo = m.Bottom + h * 0.5f;
 
-                    // Update bs so subsequent axes names are displayed properly
-                    bs += s.Height + ns.Height;
+                    // Inline placement renders name and labels in the same row of height h,
+                    // so accumulate by h (not s.Height + ns.Height as in the stacked layout).
+                    bs += h;
                     m.Bottom = bs;
                     m.Left = ns.Width;
                 }
@@ -580,8 +581,9 @@ public class CartesianChartEngine(
 
                     axis.Yo = m.Top + h * 0.5f;
 
-                    // Update ts so subsequent axes names are displayed properly
-                    ts += s.Height + ns.Height;
+                    // Inline placement renders name and labels in the same row of height h,
+                    // so accumulate by h (not s.Height + ns.Height as in the stacked layout).
+                    ts += h;
                     m.Top = ts;
                     m.Left = ns.Width;
                 }
