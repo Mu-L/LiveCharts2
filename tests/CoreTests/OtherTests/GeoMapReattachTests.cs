@@ -42,8 +42,10 @@ public class GeoMapReattachTests
     [TestMethod]
     public void Load_BeforeAnyUnload_IsNoOpAndDoesNotThrow()
     {
+        // SourceGenSKMapChart.DrawOnCanvas calls Unload() at the end of every
+        // render, so we deliberately skip GetImage() here — Load() must be
+        // exercised on a chart that has never been unloaded.
         var chart = NewChart();
-        using (chart.GetImage()) { }
 
         chart.CoreChart.Load();
 
