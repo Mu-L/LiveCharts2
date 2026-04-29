@@ -1,4 +1,7 @@
+using System.Reflection;
+using LiveChartsCore;
 using LiveChartsCore.Defaults;
+using LiveChartsCore.Geo;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -53,6 +56,31 @@ public class GeoMapReattachTests
         Assert.IsNotNull(image);
     }
 
+    [TestMethod]
+    public void Unload_HidesTooltipAndClearsHoveredLand()
+    {
+        // If a land is hovered when the chart is detached, Unload must hide the
+        // tooltip and clear hover state — otherwise Measure on the next Load
+        // re-shows the tooltip from a stale _hoveredLand.
+        var chart = NewChart();
+        var tooltip = new RecordingTooltip();
+        ((IGeoMapView)chart).Tooltip = tooltip;
+
+        var hoveredField = typeof(GeoMapChart).GetField(
+            "_hoveredLand", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var isOpenField = typeof(GeoMapChart).GetField(
+            "_isToolTipOpen", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        hoveredField.SetValue(chart.CoreChart, new LandDefinition("bra", "Brazil", "default"));
+        isOpenField.SetValue(chart.CoreChart, true);
+
+        chart.CoreChart.Unload();
+
+        Assert.AreEqual(1, tooltip.HideCalls, "Tooltip.Hide should be called once during Unload.");
+        Assert.IsNull(hoveredField.GetValue(chart.CoreChart), "_hoveredLand must be cleared.");
+        Assert.AreEqual(false, isOpenField.GetValue(chart.CoreChart), "_isToolTipOpen must be reset.");
+    }
+
     private static SKGeoMap NewChart() => new()
     {
         Width = 400,
@@ -61,4 +89,12 @@ public class GeoMapReattachTests
             new HeatLandSeries { Lands = [ new() { Name = "bra", Value = 13 } ] }
         ]
     };
+
+    private sealed class RecordingTooltip : IGeoMapTooltip
+    {
+        public int HideCalls { get; private set; }
+        public int ShowCalls { get; private set; }
+        public void Show(GeoTooltipPoint point, GeoMapChart chart) => ShowCalls++;
+        public void Hide(GeoMapChart chart) => HideCalls++;
+    }
 }
