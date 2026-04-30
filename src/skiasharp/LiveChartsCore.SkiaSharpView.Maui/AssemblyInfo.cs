@@ -20,9 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if UI_TESTING
+
 using System.Runtime.CompilerServices;
 
 // SharedUITests sources are linked into MauiSample when UITesting=true (see
 // build/UITestsLinks.Build.props), so Factos UI tests are compiled into
 // MauiSample.dll and need access to internals such as PointerController.
+// Gated to UI-testing builds so shipped packages do not expose internals.
 [assembly: InternalsVisibleTo("MauiSample")]
+
+#endif

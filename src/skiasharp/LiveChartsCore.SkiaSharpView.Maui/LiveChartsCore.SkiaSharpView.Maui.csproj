@@ -47,6 +47,13 @@
     <DefineConstants>$(DefineConstants);MAUI_LVC;XAML_LVC</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$(UITesting) == 'true'">
+    <!-- enables InternalsVisibleTo("MauiSample") in AssemblyInfo.cs so UI tests
+         linked into MauiSample.dll can reach internals such as PointerController.
+         only defined under UITesting builds, keeping shipped packages unaffected. -->
+    <DefineConstants>$(DefineConstants);UI_TESTING</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup>
     <!--
     hack for:
