@@ -117,8 +117,16 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
         var previousPrimaryScale = primaryAxis.GetActualScaler(cartesianChart);
         var previousSecondaryScale = secondaryAxis.GetActualScaler(cartesianChart);
 
-        var uws = secondaryScale.MeasureInPixels(secondaryAxis.UnitWidth);
-        var uwp = primaryScale.MeasureInPixels(primaryAxis.UnitWidth);
+        // Cell size is driven by the actual data spacing rather than Axis.UnitWidth
+        // (which defaults to 1 and is correct only for unit-stepped axes). When the
+        // data steps by, say, 0.1 on Y, sizing cells to UnitWidth=1 makes them 10x
+        // too tall and they overlap, hiding all but one row. See issue #1511.
+        var fetchedSource = Fetch(cartesianChart);
+        var fetched = fetchedSource as IReadOnlyList<ChartPoint> ?? [.. fetchedSource];
+        var (xStep, yStep) = GetCellSteps(
+            fetched, secondaryAxis.UnitWidth, primaryAxis.UnitWidth);
+        var uws = secondaryScale.MeasureInPixels(xStep);
+        var uwp = primaryScale.MeasureInPixels(yStep);
 
         var actualZIndex = ZIndex == 0 ? ((ISeries)this).SeriesId : ZIndex;
 
@@ -150,7 +158,7 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
 
         var provider = LiveCharts.DefaultSettings.GetProvider();
 
-        foreach (var point in Fetch(cartesianChart))
+        foreach (var point in fetched)
         {
             var coordinate = point.Coordinate;
             var visual = point.Context.Visual as TVisual;
@@ -353,5 +361,39 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
     {
         return SeriesProperties.Heat | SeriesProperties.PrimaryAxisVerticalOrientation |
             SeriesProperties.Solid | SeriesProperties.PrefersXYStrategyTooltips;
+    }
+
+    private static (double xStep, double yStep) GetCellSteps(
+        IReadOnlyList<ChartPoint> points, double xFallback, double yFallback)
+    {
+        if (points.Count < 2) return (xFallback, yFallback);
+
+        var xs = new HashSet<double>();
+        var ys = new HashSet<double>();
+        foreach (var point in points)
+        {
+            xs.Add(point.Coordinate.SecondaryValue);
+            ys.Add(point.Coordinate.PrimaryValue);
+        }
+
+        return (MinStep(xs, xFallback), MinStep(ys, yFallback));
+
+        static double MinStep(HashSet<double> values, double fallback)
+        {
+            if (values.Count < 2) return fallback;
+
+            var sorted = new double[values.Count];
+            values.CopyTo(sorted);
+            Array.Sort(sorted);
+
+            var min = double.PositiveInfinity;
+            for (var i = 1; i < sorted.Length; i++)
+            {
+                var delta = sorted[i] - sorted[i - 1];
+                if (delta > 0 && delta < min) min = delta;
+            }
+
+            return double.IsPositiveInfinity(min) ? fallback : min;
+        }
     }
 }
