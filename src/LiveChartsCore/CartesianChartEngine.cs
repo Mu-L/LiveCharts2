@@ -581,7 +581,7 @@ public class CartesianChartEngine(
                 {
                     var h = s.Height > ns.Height ? s.Height : ns.Height;
 
-                    // X Bottom
+                    // X Top
                     axis.NameDesiredSize = new LvcRectangle(
                         new LvcPoint(0, ts), new LvcSize(ns.Width, h));
                     axis.LabelsDesiredSize = new LvcRectangle(
