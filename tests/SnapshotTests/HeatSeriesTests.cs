@@ -75,4 +75,48 @@ public sealed class HeatSeriesTests
 
         chart.AssertSnapshotMatches($"{nameof(HeatSeriesTests)}_{nameof(Basic)}");
     }
+
+    // Regression for https://github.com/Live-Charts/LiveCharts2/issues/1511
+    // Continuous Y axis with 0.1 data step on a 0.5..1.0 range. Before the fix,
+    // cells were sized to Axis.UnitWidth (default 1) and overlapped each other,
+    // so the chart collapsed into an X-only gradient with no visible Y variation.
+    [TestMethod]
+    public void Issue1511_ContinuousYAxis_FractionalStep()
+    {
+        var values = new List<WeightedPoint>();
+        for (var x = 0; x < 16; x++)
+        {
+            for (var i = 0; i < 6; i++)
+            {
+                var y = 0.5 + i * 0.1;
+                var t = (x + (5 - i)) / 20.0;
+                var w = 1 + (int)((1 - t) * 399);
+                values.Add(new WeightedPoint(x, y, w));
+            }
+        }
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new HeatSeries<WeightedPoint>
+                {
+                    Values = values,
+                    HeatMap = [
+                        new SKColor(0xfff27a7d).AsLvcColor(),
+                        new SKColor(0xfff7d486).AsLvcColor(),
+                        new SKColor(0xffc5f9d7).AsLvcColor(),
+                    ],
+                    ColorStops = [0, 0.5, 1],
+                    PointPadding = new LiveChartsCore.Drawing.Padding(0)
+                }
+            ],
+            XAxes = [new Axis { MinLimit = 0, MaxLimit = 15 }],
+            YAxes = [new Axis { MinLimit = 0.5, MaxLimit = 1.0 }],
+            Width = 600,
+            Height = 400
+        };
+
+        chart.AssertSnapshotMatches(
+            $"{nameof(HeatSeriesTests)}_{nameof(Issue1511_ContinuousYAxis_FractionalStep)}");
+    }
 }
