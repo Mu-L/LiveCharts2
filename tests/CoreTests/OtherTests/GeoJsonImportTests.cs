@@ -85,4 +85,67 @@ public class GeoJsonImportTests
         Assert.IsTrue(world.Layers["default"].Lands.Count > 100, "world map lands should still load");
         Assert.IsNotNull(world.FindLand("bra"), "Brazil should be found by shortName");
     }
+
+    // RFC 7946 doesn't constrain property casing, and arbitrary GeoJson can produce
+    // duplicate names that resolve to the same shortName. Both must import cleanly.
+    private const string MixedCaseAndDuplicateNamesCollection = """
+        {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "Name": "Alpha", "SHORTNAME": "AL" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[0,0],[1,0],[1,1],[0,1],[0,0]]]
+              }
+            },
+            {
+              "type": "Feature",
+              "properties": { "name": "Duplicate" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[2,2],[3,2],[3,3],[2,3],[2,2]]]
+              }
+            },
+            {
+              "type": "Feature",
+              "properties": { "name": "Duplicate" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[4,4],[5,4],[5,5],[4,5],[4,4]]]
+              }
+            }
+          ]
+        }
+        """;
+
+    [TestMethod]
+    public void Import_MixedCasePropertyKeys_ResolveCaseInsensitively()
+    {
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(MixedCaseAndDuplicateNamesCollection));
+        using var sr = new StreamReader(stream);
+
+        var map = Maps.GetMapFromStreamReader(sr);
+
+        // "Name"/"SHORTNAME" must resolve through case-insensitive lookup; if the
+        // resolver reverted to exact-match it would fall back to feature_0 / the name.
+        Assert.IsNotNull(map.FindLand("al"), "SHORTNAME should resolve via case-insensitive lookup");
+    }
+
+    [TestMethod]
+    public void Import_DuplicateShortNames_DoNotAbortImport()
+    {
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(MixedCaseAndDuplicateNamesCollection));
+        using var sr = new StreamReader(stream);
+
+        var map = Maps.GetMapFromStreamReader(sr);
+
+        Assert.IsTrue(map.Layers.TryGetValue("default", out var layer), "default layer should exist");
+        // All three features must land. Without collision handling, the second
+        // "Duplicate" feature would throw ArgumentException from Lands.Add and
+        // GetMapFromStreamReader would never return.
+        Assert.AreEqual(3, layer!.Lands.Count, "duplicate shortName features should be suffixed, not dropped or thrown");
+        Assert.IsNotNull(map.FindLand("duplicate"), "first duplicate should keep the bare key");
+    }
 }
