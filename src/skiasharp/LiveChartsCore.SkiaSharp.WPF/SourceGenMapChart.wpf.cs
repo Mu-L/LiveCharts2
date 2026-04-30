@@ -60,6 +60,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
         MouseUp += OnMouseUp;
         MouseLeave += OnMouseLeave;
 
+        Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
 
@@ -71,6 +72,9 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     bool IGeoMapView.DesignerMode => DesignerProperties.GetIsInDesignMode(this);
     bool IGeoMapView.IsDarkMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
+
+    private void OnLoaded(object sender, RoutedEventArgs e) =>
+        CoreChart?.Load();
 
     private void OnUnloaded(object sender, RoutedEventArgs e) =>
         CoreChart?.Unload();
