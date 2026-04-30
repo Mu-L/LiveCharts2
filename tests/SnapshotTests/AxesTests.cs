@@ -520,10 +520,13 @@ public sealed class AxesTests
         chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(StyledAxes)}");
     }
 
-    // Layout matrix snapshots for issue #1419 — pin down axis name/label placement
-    // across [Position Start/End] x [InLineNamePlacement true/false] x [single/multi/mixed]
-    // for both X and Y, plus two corner combos. Each axis has a Name and a colored
-    // LabelsPaint so overlap between names and labels is visually detectable.
+    // Snapshot matrix for issue #1419 — exercises axis name/label placement
+    // when InLineNamePlacement is true, plus non-inline control samples for
+    // multi-axis and mixed Start+End configurations on both X and Y. Two
+    // corner combos at the end cover both axes inline simultaneously.
+    // (Single-axis non-inline cases are exercised by the basic tests above.)
+    // Each axis has a Name and a colored LabelsPaint so overlap between
+    // names and labels is visually detectable.
 
     [TestMethod]
     public void XAxis_Start_InLine()
