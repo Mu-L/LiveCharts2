@@ -43,9 +43,10 @@ public class HoverGestureRecognizerTests
     {
         var controller = new PointerController();
         var hover = GetHoverRecognizer(controller);
+        var longPress = GetLongPressRecognizer(controller);
 
         Assert.NotNull(hover.ShouldRecognizeSimultaneously);
-        Assert.True(hover.ShouldRecognizeSimultaneously(hover, hover));
+        Assert.True(hover.ShouldRecognizeSimultaneously(hover, longPress));
 
         return Task.CompletedTask;
     }
@@ -79,6 +80,14 @@ public class HoverGestureRecognizerTests
             "_hoverGestureRecognizer", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.NotNull(field);
         return (UIHoverGestureRecognizer)field!.GetValue(controller)!;
+    }
+
+    private static UILongPressGestureRecognizer GetLongPressRecognizer(PointerController controller)
+    {
+        var field = typeof(PointerController).GetField(
+            "_longPressGestureRecognizer", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(field);
+        return (UILongPressGestureRecognizer)field!.GetValue(controller)!;
     }
 
     private sealed class FakeHoverGestureRecognizer : UIHoverGestureRecognizer
