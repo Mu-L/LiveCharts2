@@ -131,7 +131,12 @@ public class MapLayer(string layerName, Paint stroke, Paint fill)
             }
 
             definition.Data = [.. dataCollection.OrderByDescending(x => x.BoundsHypotenuse)];
-            Lands.Add(shortName, definition);
+
+            // Two features can resolve to the same shortName (e.g., duplicate "name"
+            // properties). Suffix the index instead of throwing so arbitrary GeoJson
+            // imports don't abort halfway.
+            if (!Lands.TryAdd(shortName, definition))
+                Lands.Add($"{shortName}_{featureIndex}", definition);
         }
     }
 
@@ -179,7 +184,23 @@ public class MapLayer(string layerName, Paint stroke, Paint fill)
 
     private static string? GetProperty(Dictionary<string, JsonElement>? properties, string key)
     {
-        if (properties is null || !properties.TryGetValue(key, out var value)) return null;
+        if (properties is null) return null;
+
+        // RFC 7946 doesn't constrain property casing, so accept e.g. "Name" or "SHORTNAME"
+        // by falling back to a case-insensitive scan when the exact key isn't present.
+        if (!properties.TryGetValue(key, out var value))
+        {
+            var found = false;
+            foreach (var kvp in properties)
+            {
+                if (!string.Equals(kvp.Key, key, StringComparison.OrdinalIgnoreCase)) continue;
+                value = kvp.Value;
+                found = true;
+                break;
+            }
+            if (!found) return null;
+        }
+
         return value.ValueKind switch
         {
             JsonValueKind.String => value.GetString()?.ToLowerInvariant(),
