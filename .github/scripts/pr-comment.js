@@ -182,8 +182,8 @@ function buildCoverageBlock({ summary, oldClasses, newClasses, reportUrl }) {
     const out = new Map();
     const assemblies = s?.coverage?.assemblies || [];
     for (const a of assemblies) {
-      for (const c of (a.classes || [])) {
-        out.set(`${a.name} / ${c.name}`, c.linecoverage);
+      for (const c of (a.classesinassembly || [])) {
+        out.set(`${a.name} / ${c.name}`, c.coverage);
       }
     }
     return out;
