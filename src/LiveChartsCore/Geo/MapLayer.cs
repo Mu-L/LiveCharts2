@@ -135,8 +135,8 @@ public class MapLayer(string layerName, Paint stroke, Paint fill)
             // Two features can resolve to the same shortName (e.g., duplicate "name"
             // properties). Suffix the index instead of throwing so arbitrary GeoJson
             // imports don't abort halfway.
-            if (!Lands.TryAdd(shortName, definition))
-                Lands.Add($"{shortName}_{featureIndex}", definition);
+            var key = Lands.ContainsKey(shortName) ? $"{shortName}_{featureIndex}" : shortName;
+            Lands.Add(key, definition);
         }
     }
 
