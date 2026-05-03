@@ -119,4 +119,50 @@ public sealed class HeatSeriesTests
         chart.AssertSnapshotMatches(
             $"{nameof(HeatSeriesTests)}_{nameof(Issue1511_ContinuousYAxis_FractionalStep)}");
     }
+
+    // Regression for https://github.com/Live-Charts/LiveCharts2/pull/2196 review.
+    // Empty points carry Coordinate(0, 0). If they aren't skipped while deriving
+    // cell steps, the spurious 0 in the distinct-values set can land closer to
+    // real data than the natural step and shrink the computed step. Here Y data
+    // is half-integer (0.5..5.5 by 1), so the empty's 0 sits 0.5 from the lowest
+    // Y — half the real step — and unfixed code would size cells at half height.
+    [TestMethod]
+    public void Issue1511_EmptyPointsDoNotContaminateStep()
+    {
+        var values = new List<WeightedPoint>
+        {
+            new(null, null, null) // empty point contributes Coordinate(0, 0)
+        };
+        for (var x = 0; x < 6; x++)
+        {
+            for (var i = 0; i < 6; i++)
+            {
+                var y = 0.5 + i;
+                var w = 1 + (x + i) * 10;
+                values.Add(new WeightedPoint(x, y, w));
+            }
+        }
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new HeatSeries<WeightedPoint>
+                {
+                    Values = values,
+                    HeatMap = [
+                        new SKColor(0xfff27a7d).AsLvcColor(),
+                        new SKColor(0xffc5f9d7).AsLvcColor(),
+                    ],
+                    PointPadding = new LiveChartsCore.Drawing.Padding(0)
+                }
+            ],
+            XAxes = [new Axis { MinLimit = -0.5, MaxLimit = 5.5 }],
+            YAxes = [new Axis { MinLimit = 0, MaxLimit = 6 }],
+            Width = 600,
+            Height = 400
+        };
+
+        chart.AssertSnapshotMatches(
+            $"{nameof(HeatSeriesTests)}_{nameof(Issue1511_EmptyPointsDoNotContaminateStep)}");
+    }
 }
