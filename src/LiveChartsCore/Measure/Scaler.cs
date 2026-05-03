@@ -84,7 +84,7 @@ public class Scaler
         _m = _deltaPx / _deltaVal;
         _mInv = 1 / _m;
 
-        if (!double.IsNaN(_m) && !double.IsInfinity(_m)) return;
+        if (double.IsFinite(_m) && double.IsFinite(_mInv)) return;
         _m = 0;
         _mInv = 0;
     }
