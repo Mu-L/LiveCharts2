@@ -46,6 +46,8 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
     private Paint? _paintTaks;
     private int _heatKnownLength = 0;
     private List<Tuple<double, LvcColor>> _heatStops = [];
+    private double _xStep = double.NaN;
+    private double _yStep = double.NaN;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CoreHeatSeries{TModel, TVisual, TLabel}"/> class.
@@ -117,14 +119,11 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
         var previousPrimaryScale = primaryAxis.GetActualScaler(cartesianChart);
         var previousSecondaryScale = secondaryAxis.GetActualScaler(cartesianChart);
 
-        // Cell size is driven by the actual data spacing rather than Axis.UnitWidth
-        // (which defaults to 1 and is correct only for unit-stepped axes). When the
-        // data steps by, say, 0.1 on Y, sizing cells to UnitWidth=1 makes them 10x
-        // too tall and they overlap, hiding all but one row. See issue #1511.
-        var fetchedSource = Fetch(cartesianChart);
-        var fetched = fetchedSource as IReadOnlyList<ChartPoint> ?? [.. fetchedSource];
-        var (xStep, yStep) = GetCellSteps(
-            fetched, secondaryAxis.UnitWidth, primaryAxis.UnitWidth);
+        // Cell size is driven by the actual data spacing (computed once per measure
+        // cycle in GetBounds) rather than Axis.UnitWidth, which defaults to 1 and is
+        // correct only for unit-stepped axes. See issue #1511.
+        var xStep = double.IsNaN(_xStep) ? secondaryAxis.UnitWidth : _xStep;
+        var yStep = double.IsNaN(_yStep) ? primaryAxis.UnitWidth : _yStep;
         var uws = secondaryScale.MeasureInPixels(xStep);
         var uwp = primaryScale.MeasureInPixels(yStep);
 
@@ -158,7 +157,7 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
 
         var provider = LiveCharts.DefaultSettings.GetProvider();
 
-        foreach (var point in fetched)
+        foreach (var point in Fetch(cartesianChart))
         {
             var coordinate = point.Coordinate;
             var visual = point.Context.Visual as TVisual;
@@ -303,6 +302,10 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
     /// <inheritdoc cref="CartesianSeries{TModel, TVisual, TLabel}.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>
     public override SeriesBounds GetBounds(Chart chart, ICartesianAxis secondaryAxis, ICartesianAxis primaryAxis)
     {
+        // Derive cell steps from the data once per measure cycle and cache them so
+        // Invalidate (the per-frame hot path) can read them without an extra scan.
+        ComputeCellSteps(chart, secondaryAxis.UnitWidth, primaryAxis.UnitWidth);
+
         var seriesBounds = base.GetBounds(chart, secondaryAxis, primaryAxis);
         var b = seriesBounds.Bounds.TertiaryBounds;
         WeightBounds = new(MinValue ?? b.Min, MaxValue ?? b.Max);
@@ -363,20 +366,19 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
             SeriesProperties.Solid | SeriesProperties.PrefersXYStrategyTooltips;
     }
 
-    private static (double xStep, double yStep) GetCellSteps(
-        IReadOnlyList<ChartPoint> points, double xFallback, double yFallback)
+    private void ComputeCellSteps(Chart chart, double xFallback, double yFallback)
     {
-        if (points.Count < 2) return (xFallback, yFallback);
-
         var xs = new HashSet<double>();
         var ys = new HashSet<double>();
-        foreach (var point in points)
+        foreach (var point in Fetch(chart))
         {
-            xs.Add(point.Coordinate.SecondaryValue);
-            ys.Add(point.Coordinate.PrimaryValue);
+            var c = point.Coordinate;
+            _ = xs.Add(c.SecondaryValue);
+            _ = ys.Add(c.PrimaryValue);
         }
 
-        return (MinStep(xs, xFallback), MinStep(ys, yFallback));
+        _xStep = MinStep(xs, xFallback);
+        _yStep = MinStep(ys, yFallback);
 
         static double MinStep(HashSet<double> values, double fallback)
         {
