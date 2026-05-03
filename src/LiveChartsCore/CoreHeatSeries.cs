@@ -307,9 +307,35 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
         ComputeCellSteps(chart, secondaryAxis.UnitWidth, primaryAxis.UnitWidth);
 
         var seriesBounds = base.GetBounds(chart, secondaryAxis, primaryAxis);
-        var b = seriesBounds.Bounds.TertiaryBounds;
-        WeightBounds = new(MinValue ?? b.Min, MaxValue ?? b.Max);
+        var b = seriesBounds.Bounds;
+        WeightBounds = new(MinValue ?? b.TertiaryBounds.Min, MaxValue ?? b.TertiaryBounds.Max);
+
+        // SeriesBounds.HasData is true when there's no data to render; base.GetBounds
+        // returns the un-padded raw bounds in that case, so nothing to compensate.
+        if (seriesBounds.HasData) return seriesBounds;
+
+        // base.GetBounds padded SecondaryBounds/PrimaryBounds by offset * Axis.UnitWidth,
+        // which over-expands the auto axis when the data step is finer than UnitWidth
+        // (e.g. UnitWidth=1 on a Y axis stepped by 0.1 adds 0.5 of empty space each
+        // side). Add the (cellStep - UnitWidth) * offset delta so padding matches
+        // cell sizing.
+        var rso = GetRequestedSecondaryOffset();
+        var rpo = GetRequestedPrimaryOffset();
+        var dx = (_xStep - secondaryAxis.UnitWidth) * rso;
+        var dy = (_yStep - primaryAxis.UnitWidth) * rpo;
+
+        Expand(b.SecondaryBounds, dx);
+        Expand(b.VisibleSecondaryBounds, dx);
+        Expand(b.PrimaryBounds, dy);
+        Expand(b.VisiblePrimaryBounds, dy);
+
         return seriesBounds;
+
+        static void Expand(Bounds bounds, double delta)
+        {
+            bounds.Max += delta;
+            bounds.Min -= delta;
+        }
     }
 
     /// <inheritdoc cref="CartesianSeries{TModel, TVisual, TLabel}.GetRequestedSecondaryOffset"/>
