@@ -372,6 +372,9 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
         var ys = new HashSet<double>();
         foreach (var point in Fetch(chart))
         {
+            // Empty points carry Coordinate(0, 0); including them would inject a
+            // spurious 0 into the distinct-values set and shrink the computed step.
+            if (point.IsEmpty) continue;
             var c = point.Coordinate;
             _ = xs.Add(c.SecondaryValue);
             _ = ys.Add(c.PrimaryValue);
