@@ -295,9 +295,11 @@ public class ScaleFunctionsTests
         var atMinPx = chart.ScalePixelsToData(new LvcPointD(loc.X, loc.Y));
         var awayFromMinPx = chart.ScalePixelsToData(new LvcPointD(loc.X + 50, loc.Y));
 
-        Assert.IsTrue(double.IsFinite(atMinPx.X) && double.IsFinite(atMinPx.Y),
+        Assert.IsTrue(IsFinite(atMinPx.X) && IsFinite(atMinPx.Y),
             $"ScalePixelsToData at _minPx returned ({atMinPx.X}, {atMinPx.Y})");
-        Assert.IsTrue(double.IsFinite(awayFromMinPx.X) && double.IsFinite(awayFromMinPx.Y),
+        Assert.IsTrue(IsFinite(awayFromMinPx.X) && IsFinite(awayFromMinPx.Y),
             $"ScalePixelsToData away from _minPx returned ({awayFromMinPx.X}, {awayFromMinPx.Y})");
+
+        static bool IsFinite(double v) => !double.IsNaN(v) && !double.IsInfinity(v);
     }
 }
