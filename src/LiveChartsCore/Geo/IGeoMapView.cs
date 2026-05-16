@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections.Generic;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
@@ -27,109 +28,54 @@ using LiveChartsCore.Painting;
 namespace LiveChartsCore.Geo;
 
 /// <summary>
-/// Defines a geographic map.
+/// Defines a geographic map view.
 /// </summary>
-public interface IGeoMapView : IDrawnView
+/// <remarks>
+/// Inherits from <see cref="IChartView"/> so the map shares the same view
+/// contract as cartesian / pie / polar views and is driven through the unified
+/// <see cref="Chart"/> base. <see cref="CoreChart"/>, <see cref="Series"/> and
+/// <see cref="Tooltip"/> shadow base members with map-specific types; everything
+/// else (DesignerMode, IsDarkMode, AutoUpdateEnabled, SyncContext, theme,
+/// tooltip-text/background/size, etc.) is inherited unchanged.
+/// </remarks>
+public interface IGeoMapView : IChartView
 {
     /// <summary>
-    /// Gets the core chart.
+    /// Gets the core chart. Shadows <see cref="IChartView.CoreChart"/> with the
+    /// more-derived <see cref="GeoMapChart"/> type.
     /// </summary>
-    GeoMapChart CoreChart { get; }
+    new GeoMapChart CoreChart { get; }
 
     /// <summary>
-    /// Gets or sets the active map.
+    /// Gets or sets the series. Shadows <see cref="IChartView.Series"/> because
+    /// geo series do not implement the chart-series interface.
     /// </summary>
+    new IEnumerable<IGeoSeries> Series { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tooltip. Shadows <see cref="IChartView.Tooltip"/> because
+    /// the map uses a land-based tooltip contract instead of <see cref="IChartTooltip"/>.
+    /// </summary>
+    new IGeoMapTooltip? Tooltip { get; set; }
+
+    /// <summary>Gets or sets the active map.</summary>
     DrawnMap ActiveMap { get; set; }
 
-    /// <summary>
-    /// Gets or sets the stroke.
-    /// </summary>
+    /// <summary>Gets or sets the stroke painted around each land.</summary>
     Paint? Stroke { get; set; }
 
-    /// <summary>
-    /// Gets or sets the fill.
-    /// </summary>
+    /// <summary>Gets or sets the fill painted on lands with no series value.</summary>
     Paint? Fill { get; set; }
 
-    /// <summary>
-    /// Gets or sets whether the chart auto-updates are enabled.
-    /// </summary>
-    bool AutoUpdateEnabled { get; set; }
-
-    /// <summary>
-    /// Gets or sets the projection.
-    /// </summary>
+    /// <summary>Gets or sets the projection.</summary>
     MapProjection MapProjection { get; set; }
 
-    /// <summary>
-    /// Gets whether the control is in designer mode.
-    /// </summary>
-    bool DesignerMode { get; }
-
-    /// <summary>
-    /// Gets or sets the Synchronization Context, use this property to
-    /// use an external object to handle multi threading synchronization.
-    /// </summary>
-    object SyncContext { get; set; }
-
-    ///// <summary>
-    ///// Gets or sets the view command.
-    ///// </summary>
-    //object? ViewCommand { get; set; }
-
-    /// <summary>
-    /// Invokes an action in the UI thread.
-    /// </summary>
-    /// <param name="action"></param>
-    void InvokeOnUIThread(Action action);
-
-    /// <summary>
-    /// Gets or sets the series.
-    /// </summary>
-    IEnumerable<IGeoSeries> Series { get; set; }
-
-    /// <summary>
-    /// Gets whether the UI is in dark mode.
-    /// </summary>
-    bool IsDarkMode { get; }
-
-    /// <summary>
-    /// Gets or sets the tooltip.
-    /// </summary>
-    IGeoMapTooltip? Tooltip { get; set; }
-
-    /// <summary>
-    /// Gets or sets the tooltip position.
-    /// </summary>
-    TooltipPosition TooltipPosition { get; set; }
-
-    /// <summary>
-    /// Gets or sets the tooltip text paint.
-    /// </summary>
-    Paint? TooltipTextPaint { get; set; }
-
-    /// <summary>
-    /// Gets or sets the tooltip background paint.
-    /// </summary>
-    Paint? TooltipBackgroundPaint { get; set; }
-
-    /// <summary>
-    /// Gets or sets the tooltip text size.
-    /// </summary>
-    double TooltipTextSize { get; set; }
-
-    /// <summary>
-    /// Gets or sets the zooming speed, a value between 0.1 and 0.95.
-    /// </summary>
+    /// <summary>Gets or sets the zooming speed; a value in [0.1, 0.95].</summary>
     double ZoomingSpeed { get; set; }
 
-    /// <summary>
-    /// Gets or sets the minimum zoom level. Defaults to 1.
-    /// </summary>
+    /// <summary>Gets or sets the minimum zoom level. Defaults to 1.</summary>
     double MinZoomLevel { get; set; }
 
-    /// <summary>
-    /// Gets or sets the maximum zoom level. Defaults to 100.
-    /// </summary>
+    /// <summary>Gets or sets the maximum zoom level. Defaults to 100.</summary>
     double MaxZoomLevel { get; set; }
 }

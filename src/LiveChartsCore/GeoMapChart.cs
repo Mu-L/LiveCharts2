@@ -27,40 +27,53 @@ using System.Threading.Tasks;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
-using LiveChartsCore.Themes;
 
 namespace LiveChartsCore;
 
 /// <summary>
 /// Defines a geo map chart.
 /// </summary>
-public class GeoMapChart
+/// <remarks>
+/// PHASE 1 SKETCH: inherits from <see cref="Chart"/> so the map participates in
+/// the same lifecycle / throttler / pointer pipeline as Cartesian, Pie, Polar.
+///
+/// What this class no longer owns (delegated to <see cref="Chart"/> base):
+///   - <c>_updateThrottler</c>, <c>_panningThrottler</c> and the
+///     <c>Update</c> / <c>UpdateThrottlerUnlocked</c> methods.
+///   - <c>_pointerPosition</c>, <c>_isPointerIn</c>, <c>_isPointerDown</c>,
+///     <c>_isPanning</c>, <c>_pointerPanningPosition</c>,
+///     <c>_pointerPreviousPanningPosition</c> (all base internals).
+///   - The custom <c>Action&lt;LvcPoint&gt;</c> pointer events; <see cref="Chart"/>
+///     fires its own <c>Action&lt;Chart, LvcPoint&gt;</c> events.
+///   - Canvas (via base), the <c>Load</c>/<c>Unload</c> shells.
+///
+/// What stays geo-specific (overrides):
+///   - <see cref="Measure"/>, <see cref="PanningThrottlerUnlocked"/>,
+///     <see cref="IsPanEnabled"/>, <see cref="InvokePointerDown"/> family.
+///   - Land-based tooltip pipeline (own <c>_tooltipThrottler</c> — different
+///     semantics from <see cref="IChartTooltip"/>; unifying is Phase 2 work).
+///   - Viewport state (zoom, pan, rotation) and bounce/rotation animators.
+/// </remarks>
+public class GeoMapChart : Chart
 {
     private readonly HashSet<IGeoSeries> _everMeasuredSeries = [];
-    private readonly ActionThrottler _updateThrottler;
-    private readonly ActionThrottler _panningThrottler;
     private readonly ActionThrottler _tooltipThrottler;
     private bool _isHeatInCanvas = false;
     private Paint _heatPaint;
     private Paint? _previousStroke;
     private Paint? _previousFill;
-    private LvcPoint _pointerPanningPosition = new(-10, -10);
-    private LvcPoint _pointerPreviousPanningPosition = new(-10, -10);
-    private LvcPoint _pointerPosition = new(-10, -10);
-    private bool _isPanning = false;
-    private bool _isPointerIn = false;
     private IMapFactory _mapFactory;
     private DrawnMap? _activeMap;
     private bool _isUnloaded = false;
-    private bool _isToolTipOpen = false;
+    // _isToolTipOpen is inherited from Chart base; we reuse it for the geo tooltip.
     private LandDefinition? _hoveredLand;
     private float _zoomLevel = 1f;
     private LvcPoint _panOffset = new(0, 0);
     private bool _isBouncing = false;
     private System.Threading.Timer? _bounceTimer;
-    private bool _isPointerDown = false;
     private LvcPoint _pointerDownPosition = new(-10, -10);
     private bool _pointerDownIsClick = false;
     private double _rotationX;
@@ -70,29 +83,15 @@ public class GeoMapChart
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
     /// </summary>
-    /// <param name="mapView"></param>
+    /// <param name="mapView">The map view.</param>
     public GeoMapChart(IGeoMapView mapView)
+        : base(mapView.CoreCanvas, mapView, ChartKind.GeoMap)
     {
-        View = mapView;
-        _updateThrottler = mapView.DesignerMode
-                ? new ActionThrottler(() => Task.CompletedTask, TimeSpan.FromMilliseconds(50))
-                : new ActionThrottler(UpdateThrottlerUnlocked, TimeSpan.FromMilliseconds(100));
+        MapView = mapView;
         _heatPaint = LiveCharts.DefaultSettings.GetProvider().GetSolidColorPaint();
         _mapFactory = LiveCharts.DefaultSettings.GetProvider().GetDefaultMapFactory();
-
-        PointerDown += Chart_PointerDown;
-        PointerMove += Chart_PointerMove;
-        PointerUp += Chart_PointerUp;
-        PointerLeft += Chart_PointerLeft;
-
-        _panningThrottler = new ActionThrottler(PanningThrottlerUnlocked, TimeSpan.FromMilliseconds(30));
         _tooltipThrottler = new ActionThrottler(TooltipThrottlerUnlocked, TimeSpan.FromMilliseconds(50));
     }
-
-    internal event Action<LvcPoint> PointerDown;
-    internal event Action<LvcPoint> PointerMove;
-    internal event Action<LvcPoint> PointerUp;
-    internal event Action PointerLeft;
 
     /// <summary>
     /// Occurs when a land (country) is clicked.
@@ -100,62 +99,54 @@ public class GeoMapChart
     public event Action<LandClickedEventArgs>? LandClicked;
 
     /// <summary>
-    /// Gets the chart view.
+    /// Gets the map view, typed.
     /// </summary>
-    public IGeoMapView View { get; private set; }
+    public IGeoMapView MapView { get; }
+
+    /// <inheritdoc/>
+    public override IChartView View => MapView;
+
+    /// <inheritdoc/>
+    public override IEnumerable<ISeries> Series => [];
+
+    /// <inheritdoc/>
+    public override IEnumerable<ISeries> VisibleSeries => [];
+
+    /// <inheritdoc/>
+    public override IEnumerable<ChartPoint> FindHoveredPointsBy(LvcPoint pointerPosition) => [];
 
     /// <summary>
-    /// Gets the current zoom level.
+    /// Pan is always available on the map; gates the base deadzone in
+    /// <see cref="Chart.InvokePointerMove"/>.
     /// </summary>
+    internal override bool IsPanEnabled => true;
+
+    /// <summary>Gets the current zoom level.</summary>
     public float ZoomLevel
     {
         get => _zoomLevel;
         internal set => _zoomLevel = value;
     }
 
-    /// <summary>
-    /// Gets the current pan offset.
-    /// </summary>
+    /// <summary>Gets the current pan offset.</summary>
     public LvcPoint PanOffset
     {
         get => _panOffset;
         internal set => _panOffset = value;
     }
 
-    /// <summary>
-    /// Gets or sets the rotation center longitude (used for Orthographic projection).
-    /// </summary>
+    /// <summary>Rotation center longitude (used for Orthographic projection).</summary>
     public double RotationX
     {
         get => _rotationX;
-        set
-        {
-            _rotationX = value;
-            Update(new ChartUpdateParams { Throttling = false });
-        }
+        set { _rotationX = value; Update(new ChartUpdateParams { Throttling = false }); }
     }
 
-    /// <summary>
-    /// Gets or sets the rotation center latitude (used for Orthographic projection).
-    /// </summary>
+    /// <summary>Rotation center latitude (used for Orthographic projection).</summary>
     public double RotationY
     {
         get => _rotationY;
-        set
-        {
-            _rotationY = value;
-            Update(new ChartUpdateParams { Throttling = false });
-        }
-    }
-
-    /// <summary>
-    /// Gets the active theme, ensuring it is set up for the current dark/light mode.
-    /// </summary>
-    public Theme GetTheme()
-    {
-        var theme = LiveCharts.DefaultSettings.GetTheme();
-        theme.Setup(View.IsDarkMode);
-        return theme;
+        set { _rotationY = value; Update(new ChartUpdateParams { Throttling = false }); }
     }
 
     /// <inheritdoc cref="IMapFactory.ViewTo(GeoMapChart, object)"/>
@@ -168,9 +159,7 @@ public class GeoMapChart
     public virtual void Zoom(LvcPoint pivot, ZoomDirection direction) =>
         _mapFactory.Zoom(this, pivot, direction);
 
-    /// <summary>
-    /// Resets the viewport to the default zoom and pan.
-    /// </summary>
+    /// <summary>Resets the viewport to default zoom and pan.</summary>
     public void ResetViewport()
     {
         _isBouncing = false;
@@ -178,12 +167,8 @@ public class GeoMapChart
     }
 
     /// <summary>
-    /// Animates the globe rotation to the specified longitude and latitude.
-    /// Only has a visual effect when the projection is <see cref="Geo.MapProjection.Orthographic"/>.
+    /// Animates the globe rotation. Only visual under <see cref="MapProjection.Orthographic"/>.
     /// </summary>
-    /// <param name="longitude">The target center longitude.</param>
-    /// <param name="latitude">The target center latitude.</param>
-    /// <param name="durationMs">The animation duration in milliseconds.</param>
     public void RotateTo(double longitude, double latitude, int durationMs = 800)
     {
         _rotationTimer?.Dispose();
@@ -191,40 +176,15 @@ public class GeoMapChart
         AnimateRotation(longitude, latitude, durationMs);
     }
 
-    /// <summary>
-    /// Invokes a pointer wheel event.
-    /// </summary>
-    /// <param name="point">The pointer position.</param>
-    /// <param name="direction">The zoom direction.</param>
+    /// <summary>Invokes a pointer wheel event.</summary>
     protected internal void InvokePointerWheel(LvcPoint point, ZoomDirection direction) =>
         Zoom(point, direction);
 
-    /// <summary>
-    /// Queues a measure request to update the chart.
-    /// </summary>
-    /// <param name="chartUpdateParams"></param>
-    public virtual void Update(ChartUpdateParams? chartUpdateParams = null)
+    /// <inheritdoc/>
+    public override void Load()
     {
-        chartUpdateParams ??= new ChartUpdateParams();
-
-        if (chartUpdateParams.IsAutomaticUpdate && !View.AutoUpdateEnabled) return;
-
-        if (!chartUpdateParams.Throttling)
-        {
-            _updateThrottler.ForceCall();
-            return;
-        }
-
-        _updateThrottler.Call();
-    }
-
-    /// <summary>
-    /// Loads (or reloads) the map resources after a previous <see cref="Unload"/>,
-    /// then queues a measure. Safe to call when the chart has not been unloaded —
-    /// it will simply queue an update.
-    /// </summary>
-    public void Load()
-    {
+        // Geo-specific resource (re-)init must run before base.Load() queues the
+        // first Update — Measure() will read _heatPaint / _mapFactory.
         if (_isUnloaded)
         {
             _heatPaint = LiveCharts.DefaultSettings.GetProvider().GetSolidColorPaint();
@@ -232,35 +192,27 @@ public class GeoMapChart
             _isHeatInCanvas = false;
             _isUnloaded = false;
         }
-        Update();
+        base.Load();
     }
 
-    /// <summary>
-    /// Unload the map resources. Calling this method on an already-unloaded chart
-    /// is a no-op.
-    /// </summary>
-    public void Unload()
+    /// <inheritdoc/>
+    public override void Unload()
     {
-        if (_isUnloaded) return;
+        if (_isUnloaded) { base.Unload(); return; }
 
-        // Hide the tooltip and clear hover state so that a subsequent Load +
-        // Measure does not re-show a tooltip from a stale _hoveredLand.
         if (_isToolTipOpen)
         {
-            View.Tooltip?.Hide(this);
+            MapView.Tooltip?.Hide(this);
             _isToolTipOpen = false;
         }
         _hoveredLand = null;
 
-        if (View.Stroke is not null) View.CoreCanvas.RemovePaintTask(View.Stroke);
-        if (View.Fill is not null) View.CoreCanvas.RemovePaintTask(View.Fill);
+        if (MapView.Stroke is not null) Canvas.RemovePaintTask(MapView.Stroke);
+        if (MapView.Fill is not null) Canvas.RemovePaintTask(MapView.Fill);
 
-        _bounceTimer?.Dispose();
-        _bounceTimer = null;
+        _bounceTimer?.Dispose(); _bounceTimer = null;
         _isBouncing = false;
-
-        _rotationTimer?.Dispose();
-        _rotationTimer = null;
+        _rotationTimer?.Dispose(); _rotationTimer = null;
 
         _everMeasuredSeries.Clear();
         _heatPaint = null!;
@@ -269,118 +221,160 @@ public class GeoMapChart
         _isUnloaded = true;
         _mapFactory.Dispose();
 
-        // Do NOT dispose _activeMap: DrawnMap.Dispose clears its Layers dictionary,
-        // and the same instance is referenced by View.ActiveMap. Disposing it here
-        // would make the chart unrenderable on a subsequent Load (issue #1417).
-        // The View owns the map's lifetime.
+        // Do NOT dispose _activeMap: the same instance is referenced by
+        // MapView.ActiveMap and disposing here would make the chart unrenderable
+        // on a subsequent Load (issue #1417). The view owns the map's lifetime.
         _activeMap = null!;
         _mapFactory = null!;
 
-        View.CoreCanvas.Dispose();
+        base.Unload();
     }
 
-    /// <summary>
-    /// Invokes the pointer down event.
-    /// </summary>
-    /// <param name="point">The pointer position.</param>
-    protected internal void InvokePointerDown(LvcPoint point) => PointerDown?.Invoke(point);
-
-    /// <summary>
-    /// Invokes the pointer move event.
-    /// </summary>
-    /// <param name="point">The pointer position.</param>
-    protected internal void InvokePointerMove(LvcPoint point) => PointerMove?.Invoke(point);
-
-    /// <summary>
-    /// Invokes the pointer up event.
-    /// </summary>
-    /// <param name="point">The pointer position.</param>
-    protected internal void InvokePointerUp(LvcPoint point) => PointerUp?.Invoke(point);
-
-    /// <summary>
-    /// Invokes the pointer left event.
-    /// </summary>
-    protected internal void InvokePointerLeft() => PointerLeft?.Invoke();
-
-    /// <summary>
-    /// Called to measure the chart.
-    /// </summary>
-    /// <returns>The update task.</returns>
-    protected virtual Task UpdateThrottlerUnlocked()
+    /// <inheritdoc/>
+    protected internal override void InvokePointerDown(LvcPoint point, bool isSecondaryAction)
     {
-        return Task.Run(() =>
+        // Track click intent for LandClicked. Base will set _isPointerDown / seed
+        // _pointerPosition / etc; we just track the geo-specific bits.
+        _pointerDownPosition = point;
+        _pointerDownIsClick = true;
+        base.InvokePointerDown(point, isSecondaryAction);
+    }
+
+    /// <inheritdoc/>
+    protected internal override void InvokePointerMove(LvcPoint point)
+    {
+        // Base handles _pointerPosition, _isPointerIn, pan-engagement deadzone
+        // (which uses our IsPanEnabled override) and panning throttler dispatch.
+        base.InvokePointerMove(point);
+
+        if (_isPointerDown)
         {
+            var dx = point.X - _pointerDownPosition.X;
+            var dy = point.Y - _pointerDownPosition.Y;
+            if (dx * dx + dy * dy > 25) _pointerDownIsClick = false;
+        }
+
+        // Geo tooltip dispatch uses its own throttler with land-based semantics
+        // distinct from IChartTooltip. Base's _tooltipThrottler still fires but
+        // DrawToolTip exits early because FindHoveredPointsBy returns [].
+        if (!_isPanning && !_isPointerDown) _tooltipThrottler.Call();
+    }
+
+    /// <inheritdoc/>
+    protected internal override void InvokePointerUp(LvcPoint point, bool isSecondaryAction)
+    {
+        var wasClick = _pointerDownIsClick;
+        _pointerDownIsClick = false;
+
+        base.InvokePointerUp(point, isSecondaryAction);
+
+        if (_isPanning is false) BounceBack();
+
+        if (wasClick && LandClicked is not null)
+        {
+            var result = FindLandAt(point);
+            if (result is not null)
+            {
+                LandClicked.Invoke(new LandClickedEventArgs
+                {
+                    Land = result.Value.Land,
+                    Value = result.Value.Value,
+                    Position = point
+                });
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    protected internal override void InvokePointerLeft()
+    {
+        base.InvokePointerLeft();
+
+        if (_isToolTipOpen)
+        {
+            _hoveredLand = null;
+            _isToolTipOpen = false;
             View.InvokeOnUIThread(() =>
             {
-                lock (View.CoreCanvas.Sync)
-                {
-                    if (_isUnloaded) return;
-                    Measure();
-                }
+                MapView.Tooltip?.Hide(this);
+                Canvas.Invalidate();
             });
-        });
+        }
     }
 
-    /// <summary>
-    /// Measures the chart.
-    /// </summary>
-    protected internal void Measure()
+    /// <inheritdoc/>
+    protected override Task PanningThrottlerUnlocked()
     {
-        if (_activeMap is not null && _activeMap != View.ActiveMap)
+        return Task.Run(() =>
+            View.InvokeOnUIThread(() =>
+            {
+                lock (Canvas.Sync)
+                {
+                    Pan(
+                        new LvcPoint(
+                            (float)(_pointerPosition.X - _pointerDownPosition.X),
+                            (float)(_pointerPosition.Y - _pointerDownPosition.Y)));
+                    _pointerDownPosition = _pointerPosition;
+                }
+            }));
+    }
+
+    /// <inheritdoc/>
+    protected internal override void Measure()
+    {
+        if (_activeMap is not null && _activeMap != MapView.ActiveMap)
         {
-            _previousStroke?.ClearGeometriesFromPaintTask(View.CoreCanvas);
-            _previousFill?.ClearGeometriesFromPaintTask(View.CoreCanvas);
+            _previousStroke?.ClearGeometriesFromPaintTask(Canvas);
+            _previousFill?.ClearGeometriesFromPaintTask(Canvas);
 
             _previousFill = null;
             _previousStroke = null;
 
-            View.CoreCanvas.Clear();
+            Canvas.Clear();
         }
-        _activeMap = View.ActiveMap;
+        _activeMap = MapView.ActiveMap;
 
         if (!_isHeatInCanvas)
         {
-            View.CoreCanvas.AddDrawableTask(_heatPaint);
+            Canvas.AddDrawableTask(_heatPaint);
             _isHeatInCanvas = true;
         }
 
-        if (_previousStroke != View.Stroke)
+        if (_previousStroke != MapView.Stroke)
         {
-            if (_previousStroke is not null)
-                View.CoreCanvas.RemovePaintTask(_previousStroke);
+            if (_previousStroke is not null) Canvas.RemovePaintTask(_previousStroke);
 
-            if (View.Stroke is not null)
+            if (MapView.Stroke is not null)
             {
-                if (View.Stroke.ZIndex == 0) View.Stroke.ZIndex = PaintConstants.GeoMapStrokeZIndex;
-                View.Stroke.PaintStyle = PaintStyle.Stroke;
-                View.CoreCanvas.AddDrawableTask(View.Stroke);
+                if (MapView.Stroke.ZIndex == 0) MapView.Stroke.ZIndex = PaintConstants.GeoMapStrokeZIndex;
+                MapView.Stroke.PaintStyle = PaintStyle.Stroke;
+                Canvas.AddDrawableTask(MapView.Stroke);
             }
 
-            _previousStroke = View.Stroke;
+            _previousStroke = MapView.Stroke;
         }
 
-        if (_previousFill != View.Fill)
+        if (_previousFill != MapView.Fill)
         {
-            if (_previousFill is not null)
-                View.CoreCanvas.RemovePaintTask(_previousFill);
+            if (_previousFill is not null) Canvas.RemovePaintTask(_previousFill);
 
-            if (View.Fill is not null)
+            if (MapView.Fill is not null)
             {
-                View.Fill.PaintStyle = PaintStyle.Fill;
-                View.CoreCanvas.AddDrawableTask(View.Fill);
+                MapView.Fill.PaintStyle = PaintStyle.Fill;
+                Canvas.AddDrawableTask(MapView.Fill);
             }
 
-            _previousFill = View.Fill;
+            _previousFill = MapView.Fill;
         }
 
         var i = _previousFill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
         var context = new MapContext(
-            this, View, View.ActiveMap,
+            this, MapView, MapView.ActiveMap,
             Maps.BuildProjector(
-                View.MapProjection,
-                [View.ControlSize.Width, View.ControlSize.Height],
+                MapView.MapProjection,
+                [MapView.ControlSize.Width, MapView.ControlSize.Height],
                 _rotationX, _rotationY));
 
         _mapFactory.GenerateLands(context);
@@ -389,7 +383,7 @@ public class GeoMapChart
         // Otherwise CoreHeatLandSeries.Delete -> ClearHeat would null the Shape.Fill
         // on lands shared with the new series AFTER the new series painted them,
         // making shared lands appear blank on series swap (issue #962).
-        var currentSeries = View.Series?.Cast<IGeoSeries>().ToArray() ?? [];
+        var currentSeries = MapView.Series?.Cast<IGeoSeries>().ToArray() ?? [];
         var currentSet = new HashSet<IGeoSeries>(currentSeries);
         foreach (var series in _everMeasuredSeries)
         {
@@ -404,22 +398,20 @@ public class GeoMapChart
             _ = _everMeasuredSeries.Add(series);
         }
 
-        // Refresh tooltip if a land is currently hovered (data may have changed)
-        if (_hoveredLand is not null && View.Tooltip is not null &&
-            View.TooltipPosition != TooltipPosition.Hidden)
+        if (_hoveredLand is not null && MapView.Tooltip is not null &&
+            MapView.TooltipPosition != TooltipPosition.Hidden)
         {
             var value = 0d;
             var hasValue = false;
-            foreach (var series in View.Series?.Cast<IGeoSeries>() ?? [])
+            foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
             {
                 if (series.TryGetValue(_hoveredLand.ShortName, out value))
                 { hasValue = true; break; }
             }
 
-            // Compute screen-space center from geographic coordinates via projector
             var center = ComputeLandScreenCenter(_hoveredLand, context.Projector);
 
-            View.Tooltip.Show(
+            MapView.Tooltip.Show(
                 new GeoTooltipPoint
                 {
                     Land = _hoveredLand,
@@ -430,30 +422,12 @@ public class GeoMapChart
                 this);
         }
 
-        View.CoreCanvas.Invalidate();
-    }
-
-    private Task PanningThrottlerUnlocked()
-    {
-        return Task.Run(() =>
-            View.InvokeOnUIThread(() =>
-            {
-                lock (View.CoreCanvas.Sync)
-                {
-                    Pan(
-                        new LvcPoint(
-                            (float)(_pointerPanningPosition.X - _pointerPreviousPanningPosition.X),
-                            (float)(_pointerPanningPosition.Y - _pointerPreviousPanningPosition.Y)));
-                    _pointerPreviousPanningPosition = new LvcPoint(_pointerPanningPosition.X, _pointerPanningPosition.Y);
-                }
-            }));
+        Canvas.Invalidate();
     }
 
     /// <summary>
     /// Finds the land definition at the specified pointer position, if any.
     /// </summary>
-    /// <param name="pointerPosition">The pointer position in control coordinates.</param>
-    /// <returns>A tuple of the land definition, heat value, whether a value exists, and screen-space center, or null.</returns>
     public (LandDefinition Land, double Value, bool HasValue, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
     {
         if (_activeMap is null) return null;
@@ -469,19 +443,17 @@ public class GeoMapChart
                     if (landData.Shape is null) continue;
                     if (!landData.Shape.ContainsPoint(pointerPosition.X, pointerPosition.Y)) continue;
 
-                    // Look up the heat value from the series
                     var value = 0d;
                     var hasValue = false;
-                    foreach (var series in View.Series?.Cast<IGeoSeries>() ?? [])
+                    foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
                     {
                         if (series.TryGetValue(landDefinition.ShortName, out value))
                         { hasValue = true; break; }
                     }
 
-                    // Compute screen-space center using the projector (works for all projections)
                     var projector = Maps.BuildProjector(
-                        View.MapProjection,
-                        [View.ControlSize.Width, View.ControlSize.Height],
+                        MapView.MapProjection,
+                        [MapView.ControlSize.Width, MapView.ControlSize.Height],
                         _rotationX, _rotationY);
                     var center = ComputeLandScreenCenter(landDefinition, projector);
 
@@ -519,8 +491,8 @@ public class GeoMapChart
 
         var baseCx = (minX + maxX) / 2f;
         var baseCy = (minY + maxY) / 2f;
-        var ctrlCx = View.ControlSize.Width * 0.5f;
-        var ctrlCy = View.ControlSize.Height * 0.5f;
+        var ctrlCx = MapView.ControlSize.Width * 0.5f;
+        var ctrlCy = MapView.ControlSize.Height * 0.5f;
         var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
         var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
         return new LvcPoint(baseCx * _zoomLevel + tx, baseCy * _zoomLevel + ty);
@@ -531,10 +503,10 @@ public class GeoMapChart
         return Task.Run(() =>
             View.InvokeOnUIThread(() =>
             {
-                lock (View.CoreCanvas.Sync)
+                lock (Canvas.Sync)
                 {
                     if (_isUnloaded || _isPanning || !_isPointerIn) return;
-                    if (View.Tooltip is null || View.TooltipPosition == TooltipPosition.Hidden) return;
+                    if (MapView.Tooltip is null || MapView.TooltipPosition == TooltipPosition.Hidden) return;
 
                     var result = FindLandAt(_pointerPosition);
 
@@ -544,8 +516,8 @@ public class GeoMapChart
                         {
                             _hoveredLand = null;
                             _isToolTipOpen = false;
-                            View.Tooltip.Hide(this);
-                            View.CoreCanvas.Invalidate();
+                            MapView.Tooltip.Hide(this);
+                            Canvas.Invalidate();
                         }
                         return;
                     }
@@ -556,7 +528,7 @@ public class GeoMapChart
                     _hoveredLand = land;
                     _isToolTipOpen = true;
 
-                    View.Tooltip.Show(
+                    MapView.Tooltip.Show(
                         new GeoTooltipPoint
                         {
                             Land = land,
@@ -565,133 +537,33 @@ public class GeoMapChart
                             LandCenter = center
                         },
                         this);
-                    View.CoreCanvas.Invalidate();
+                    Canvas.Invalidate();
                 }
             }));
-    }
-
-    private void Chart_PointerDown(LvcPoint pointerPosition)
-    {
-        _pointerPreviousPanningPosition = pointerPosition;
-        _pointerDownPosition = pointerPosition;
-        _pointerDownIsClick = true;
-        _isPointerDown = true;
-    }
-
-    private void Chart_PointerMove(LvcPoint pointerPosition)
-    {
-        _pointerPosition = pointerPosition;
-        _isPointerIn = true;
-
-        if (_isPointerDown && !_isPanning)
-        {
-            var dx = pointerPosition.X - _pointerDownPosition.X;
-            var dy = pointerPosition.Y - _pointerDownPosition.Y;
-            if (dx * dx + dy * dy > 25) // 5px drag threshold
-            {
-                _isPanning = true;
-                _pointerDownIsClick = false;
-
-                // Hide tooltip while panning
-                if (_isToolTipOpen)
-                {
-                    _hoveredLand = null;
-                    _isToolTipOpen = false;
-                    View.Tooltip?.Hide(this);
-                }
-            }
-        }
-
-        if (_isPanning)
-        {
-            _pointerPanningPosition = pointerPosition;
-            _panningThrottler.Call();
-        }
-        else if (!_isPointerDown)
-        {
-            _tooltipThrottler.Call();
-        }
-    }
-
-    private void Chart_PointerLeft()
-    {
-        _isPointerIn = false;
-
-        if (_isToolTipOpen)
-        {
-            _hoveredLand = null;
-            _isToolTipOpen = false;
-            View.InvokeOnUIThread(() =>
-            {
-                View.Tooltip?.Hide(this);
-                View.CoreCanvas.Invalidate();
-            });
-        }
-    }
-
-    private void Chart_PointerUp(LvcPoint pointerPosition)
-    {
-        var wasClick = _pointerDownIsClick;
-        _pointerDownIsClick = false;
-        _isPointerDown = false;
-
-        if (_isPanning)
-        {
-            _isPanning = false;
-            _panningThrottler.Call();
-            BounceBack();
-        }
-
-        if (wasClick && LandClicked is not null)
-        {
-            var result = FindLandAt(pointerPosition);
-            if (result is not null)
-            {
-                LandClicked.Invoke(new LandClickedEventArgs
-                {
-                    Land = result.Value.Land,
-                    Value = result.Value.Value,
-                    Position = pointerPosition
-                });
-            }
-        }
     }
 
     private void BounceBack()
     {
         if (_isBouncing) return;
 
-        var controlW = View.ControlSize.Width;
-        var controlH = View.ControlSize.Height;
+        var controlW = MapView.ControlSize.Width;
+        var controlH = MapView.ControlSize.Height;
         if (controlW <= 0 || controlH <= 0) return;
 
         var cx = controlW * 0.5f;
         var cy = controlH * 0.5f;
         var zoom = _zoomLevel;
-        var minZoom = (float)View.MinZoomLevel;
+        var minZoom = (float)MapView.MinZoomLevel;
         var targetZoom = zoom < minZoom ? minZoom : zoom;
-
-        // Map occupies [0,0]..[controlW,controlH] in base coordinates.
-        // After transform: screenX = baseX * zoom + tx, where tx = cx*(1-zoom) + panX
-        // Map left edge on screen = tx, map right edge on screen = controlW * zoom + tx
-        //
-        // Constraint: the map must fully cover the viewport (no background visible).
-        // When zoomed in (map bigger than viewport):
-        //   left edge <= 0  AND  right edge >= controlW
-        //   tx <= 0  AND  tx >= controlW - mapScreenW  (i.e. controlW*(1-zoom))
-        // When at 1x (map == viewport): tx must be 0, ty must be 0 → panX=0, panY=0
 
         var mapScreenW = controlW * targetZoom;
         var mapScreenH = controlH * targetZoom;
 
-        // Compute current tx/ty at the target zoom using current pan
         var targetPanX = _panOffset.X;
         var targetPanY = _panOffset.Y;
 
-        // If zoom is bouncing, reset pan to keep centered
         if (Math.Abs(targetZoom - zoom) > 1e-6)
         {
-            // Scale current pan proportionally to new zoom
             targetPanX = _panOffset.X * targetZoom / zoom;
             targetPanY = _panOffset.Y * targetZoom / zoom;
         }
@@ -699,12 +571,8 @@ public class GeoMapChart
         var tx = cx * (1 - targetZoom) + targetPanX;
         var ty = cy * (1 - targetZoom) + targetPanY;
 
-        // Clamp: map left edge must be <= 0 (can't show background on left)
         if (tx > 0) tx = 0;
-        // Clamp: map right edge must be >= controlW (can't show background on right)
         if (tx + mapScreenW < controlW) tx = controlW - mapScreenW;
-
-        // Clamp vertical
         if (ty > 0) ty = 0;
         if (ty + mapScreenH < controlH) ty = controlH - mapScreenH;
 
@@ -744,7 +612,6 @@ public class GeoMapChart
 
             step++;
             var t = (float)step / steps;
-            // ease-out cubic
             t = 1 - (1 - t) * (1 - t) * (1 - t);
 
             var newPanX = startPanX + (targetPanX - startPanX) * t;
@@ -775,7 +642,6 @@ public class GeoMapChart
         var startLon = _rotationX;
         var startLat = _rotationY;
 
-        // Normalize longitude difference to shortest path [-180, 180]
         var deltaLon = targetLon - startLon;
         if (deltaLon > 180) deltaLon -= 360;
         if (deltaLon < -180) deltaLon += 360;
@@ -792,7 +658,6 @@ public class GeoMapChart
             step++;
             var t = (float)step / totalSteps;
 
-            // ease-in-out cubic
             t = t < 0.5f
                 ? 4 * t * t * t
                 : 1 - (float)Math.Pow(-2 * t + 2, 3) / 2;
@@ -803,10 +668,7 @@ public class GeoMapChart
             View.InvokeOnUIThread(() =>
             {
                 if (_isUnloaded) return;
-                lock (View.CoreCanvas.Sync)
-                {
-                    Measure();
-                }
+                lock (Canvas.Sync) { Measure(); }
             });
 
             if (step >= totalSteps)
