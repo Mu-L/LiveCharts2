@@ -86,8 +86,11 @@ public partial class SourceGenMapChart : IGeoMapView
     /// <inheritdoc cref="IChartView.ChartTheme" />
     public Theme? ChartTheme { get; set; }
 
-    /// <inheritdoc cref="IChartView.BackColor" />
-    public LvcColor BackColor => default;
+    // CoreCanvas / ControlSize / DesignerMode / IsDarkMode / InvokeOnUIThread
+    // are inherited from SourceGenDrawnView. BackColor stays here because
+    // WinForms' native BackColor name collides — explicit interface impl on
+    // the map is the simplest way out.
+    LvcColor IChartView.BackColor => default;
 
     /// <inheritdoc cref="IChartView.DrawMargin" />
     public Margin? DrawMargin { get; set; }

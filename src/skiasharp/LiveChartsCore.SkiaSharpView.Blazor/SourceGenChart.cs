@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -22,7 +22,6 @@
 
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Blazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -31,20 +30,16 @@ using Microsoft.AspNetCore.Components.Web;
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
-// this file is the base class for this UI framework controls, in this file we
-// define the UI framework specific code. 
-// expanding this file in the solution explorer will show 2 more files:
-//    - *.shared.cs:        shared code between all UI frameworks
-//    - *.sgp.cs:           the source generated properties
+// Blazor-specific base class for cartesian / pie / polar controls. Drawn-view
+// scaffolding (MotionCanvas ref capture, OnAfterRender/Dispose lifecycle,
+// CoreCanvas / ControlSize / InvokeOnUIThread) lives in SourceGenDrawnView.blazor.cs.
+// Chart-specific plumbing (observer lifecycle, BuildRenderTree for chart events,
+// callback Parameters) lives here.
 // ==============================================================================
 
 /// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenChart : ComponentBase, IDisposable, IChartView
+public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
 {
-#pragma warning disable IDE0032 // Use auto property, blazor ref
-    private MotionCanvas _motionCanvas = null!;
-#pragma warning restore IDE0032 // Use auto property
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenChart"/> class.
     /// </summary>
@@ -56,9 +51,6 @@ public abstract partial class SourceGenChart : ComponentBase, IDisposable, IChar
         // will be initialized in OnAfterRender, because we need the canvas element reference
         CoreChart = null!;
     }
-
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => _motionCanvas.CanvasCore;
 
     /// <summary>
     /// Builds the render tree.
@@ -77,30 +69,26 @@ public abstract partial class SourceGenChart : ComponentBase, IDisposable, IChar
     }
 
     /// <inheritdoc />
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (!firstRender) return;
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded()
+    {
         InitializeChartControl();
         StartObserving();
-
-        _motionCanvas.SizeChanged +=
-            () =>
-                CoreChart.Update();
 
         CoreChart.Canvas.Sync = SyncContext;
         CoreChart.Load();
     }
 
-    bool IChartView.DesignerMode => false;
-    bool IChartView.IsDarkMode => false; // Is this possible in Blazor?
-    LvcColor IChartView.BackColor { get; }
-
-    LvcSize IDrawnView.ControlSize => new()
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded()
     {
-        Width = _motionCanvas.Width,
-        Height = _motionCanvas.Height
-    };
+        StopObserving();
+        CoreChart.Unload();
+    }
+
+    LvcColor IChartView.BackColor { get; }
 
     /// <summary>
     /// Gets or sets the pointer down callback.
@@ -119,8 +107,6 @@ public abstract partial class SourceGenChart : ComponentBase, IDisposable, IChar
     /// </summary>
     [Parameter]
     public EventCallback<PointerEventArgs> OnPointerUpCallback { get; set; }
-
-    void IChartView.InvokeOnUIThread(Action action) => _ = InvokeAsync(action);
 
     /// <summary>
     /// Called when the pointer goes down.
@@ -163,10 +149,4 @@ public abstract partial class SourceGenChart : ComponentBase, IDisposable, IChar
     /// </summary>
     /// <param name="e"></param>
     protected virtual void OnPointerOut(PointerEventArgs e) => CoreChart?.InvokePointerLeft();
-
-    void IDisposable.Dispose()
-    {
-        StopObserving();
-        CoreChart.Unload();
-    }
 }

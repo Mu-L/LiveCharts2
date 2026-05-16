@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,38 +20,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.ComponentModel;
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.WPF;
 
 namespace LiveChartsGeneratedCode;
 
-// ===============================================
-// this file contains the WPF specific code
-// ===============================================
+// ==============================================================================
+// WPF-specific code for SourceGenMapChart. Drawn-view scaffolding (MotionCanvas
+// hosting, size / load / unload wiring, CoreCanvas / ControlSize / DesignerMode
+// etc) is inherited from SourceGenDrawnView; only the map's wheel-to-zoom and
+// modifier-free pointer handlers live here.
+// ==============================================================================
 
 /// <inheritdoc cref="IGeoMapView" />
-public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
+public abstract partial class SourceGenMapChart : SourceGenDrawnView, IGeoMapView
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
-    /// <exception cref="Exception">Default colors are not valid</exception>
     protected SourceGenMapChart()
     {
-        Content = new MotionCanvas();
-
-        SizeChanged += (s, e) =>
-            CoreChart.Update();
-
         InitializeChartControl();
 
         MouseWheel += OnMouseWheel;
@@ -59,28 +49,16 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
         MouseMove += OnMouseMove;
         MouseUp += OnMouseUp;
         MouseLeave += OnMouseLeave;
-
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
     }
 
-    private MotionCanvas MotionCanvas => (MotionCanvas)Content;
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
-    /// <inheritdoc cref="IDrawnView.CoreCanvas" />
-    public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded() => CoreChart?.Load();
 
-    bool IChartView.DesignerMode => DesignerProperties.GetIsInDesignMode(this);
-    bool IChartView.IsDarkMode => false;
-    LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
-
-    private void OnLoaded(object sender, RoutedEventArgs e) =>
-        CoreChart?.Load();
-
-    private void OnUnloaded(object sender, RoutedEventArgs e) =>
-        CoreChart?.Unload();
-
-    void IChartView.InvokeOnUIThread(Action action) =>
-        Dispatcher.Invoke(action);
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded() => CoreChart?.Unload();
 
     private void OnMouseWheel(object? sender, MouseWheelEventArgs e)
     {
@@ -108,8 +86,6 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
         CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
-    private void OnMouseLeave(object? sender, MouseEventArgs e)
-    {
+    private void OnMouseLeave(object? sender, MouseEventArgs e) =>
         CoreChart?.InvokePointerLeft();
-    }
 }

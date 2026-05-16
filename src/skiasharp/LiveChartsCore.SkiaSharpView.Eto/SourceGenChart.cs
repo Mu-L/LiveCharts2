@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,42 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using Eto.Drawing;
 using Eto.Forms;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.Eto;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
-// this file is the base class for this UI framework controls, in this file we
-// define the UI framework specific code. 
-// expanding this file in the solution explorer will show 2 more files:
-//    - *.shared.cs:        shared code between all UI frameworks
-//    - *.sgp.cs:           the source generated properties
+// Eto-specific base class for cartesian / pie / polar controls. Drawn-view
+// scaffolding (MotionCanvas hosting, lifecycle wiring via OnLoadComplete /
+// OnUnLoad, CoreCanvas / ControlSize) lives in SourceGenDrawnView.eto.cs.
+// Chart-specific plumbing (observer lifecycle, modifier-free pointer handlers
+// that distinguish primary vs secondary) lives here.
 // ==============================================================================
 
 /// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenChart : Panel, IChartView
+public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenChart"/> class.
     /// </summary>
     protected SourceGenChart()
     {
-        var motionCanvas = new MotionCanvas();
-
-        Content = motionCanvas;
-        BackgroundColor = Colors.White;
-
         InitializeChartControl();
         InitializeObservedProperties();
-
-        Content.SizeChanged += (s, e) =>
-            CoreChart.Update();
 
         Content.MouseDown += OnMouseDown;
         Content.MouseMove += OnMouseMove;
@@ -63,33 +51,22 @@ public abstract partial class SourceGenChart : Panel, IChartView
         Content.MouseLeave += OnMouseLeave;
     }
 
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Content).CanvasCore;
-
-    bool IChartView.DesignerMode => false;
-
-    bool IChartView.IsDarkMode => false;
-
     LvcColor IChartView.BackColor =>
         new((byte)BackgroundColor.Rb, (byte)BackgroundColor.Gb, (byte)BackgroundColor.Bb, (byte)BackgroundColor.Ab);
 
-    LvcSize IDrawnView.ControlSize => new() { Width = Content.Width, Height = Content.Height };
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart.Update();
 
-    void IChartView.InvokeOnUIThread(Action action) =>
-        _ = Application.Instance.InvokeAsync(action);
-
-    /// <inheritdoc cref="Control.OnLoadComplete(EventArgs)"/>
-    protected override void OnLoadComplete(EventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded()
     {
-        base.OnLoadComplete(e);
         StartObserving();
         CoreChart.Load();
     }
 
-    /// <inheritdoc cref="Control.OnUnLoad(EventArgs)"/>
-    protected override void OnUnLoad(EventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded()
     {
-        base.OnUnLoad(e);
         StopObserving();
         CoreChart.Unload();
     }

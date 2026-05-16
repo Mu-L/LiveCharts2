@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,51 +20,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
 using System.ComponentModel;
-using System.Drawing;
 using System.Windows.Forms;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.WinForms;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
-// this file is the base class for this UI framework controls, in this file we
-// define the UI framework specific code. 
-// expanding this file in the solution explorer will show 2 more files:
-//    - *.shared.cs:        shared code between all UI frameworks
-//    - *.sgp.cs:           the source generated properties
+// WinForms-specific base class for cartesian / pie / polar controls. Drawn-view
+// scaffolding (MotionCanvas hosting, lifecycle wiring via OnParentChanged /
+// OnHandleDestroyed, CoreCanvas / ControlSize / DesignerMode / GetDrawnControl)
+// lives in SourceGenDrawnView.winforms.cs. Chart-specific plumbing (modifier-aware
+// pointer handlers, observer lifecycle, series template inflation) lives here.
 // ==============================================================================
 
 /// <inheritdoc cref="IChartView" />
 [DesignerCategory("")]
-public abstract partial class SourceGenChart : UserControl, IChartView
+public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenChart"/> class.
     /// </summary>
     protected SourceGenChart()
     {
-        var motionCanvas = new MotionCanvas();
-        SuspendLayout();
-        motionCanvas.Dock = DockStyle.Fill;
-        motionCanvas.Location = new Point(0, 0);
-        motionCanvas.Name = "motionCanvas";
-        motionCanvas.Size = new Size(150, 150);
-        motionCanvas.TabIndex = 0;
-        AutoScaleMode = AutoScaleMode.Font;
-        Controls.Add(motionCanvas);
         Name = "Chart";
-        ResumeLayout(true);
 
         InitializeChartControl();
         InitializeObservedProperties();
-
-        motionCanvas.Resize += (s, e) =>
-            CoreChart.Update();
 
         var c = GetDrawnControl();
         c.MouseDown += OnMouseDown;
@@ -75,48 +58,22 @@ public abstract partial class SourceGenChart : UserControl, IChartView
         c.MouseLeave += OnMouseLeave;
     }
 
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>"/>
-    public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Controls[0]).CanvasCore;
-
-    bool IChartView.DesignerMode => LicenseManager.UsageMode == LicenseUsageMode.Designtime;
-
-    bool IChartView.IsDarkMode => false;
-
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     LvcColor IChartView.BackColor => new(BackColor.R, BackColor.G, BackColor.B, BackColor.A);
 
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart.Update();
 
-    /// <summary>
-    /// Gets the drawn control.
-    /// </summary>
-    /// <returns></returns>
-    public Control GetDrawnControl() => Controls[0].Controls[0];
-
-    void IChartView.InvokeOnUIThread(Action action)
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded()
     {
-        if (!IsHandleCreated) return;
-        _ = BeginInvoke(action);
-    }
-
-    /// <inheritdoc cref="ContainerControl.OnParentChanged(EventArgs)"/>
-    protected override void OnParentChanged(EventArgs e)
-    {
-        base.OnParentChanged(e);
         StartObserving();
         CoreChart?.Load();
     }
 
-    /// <summary>
-    /// Raises the <see cref="E:HandleDestroyed" /> event.
-    /// </summary>
-    /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-    /// <returns></returns>
-    protected override void OnHandleDestroyed(EventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded()
     {
-        base.OnHandleDestroyed(e);
-
         StopObserving();
         CoreChart?.Unload();
     }
@@ -146,7 +103,7 @@ public abstract partial class SourceGenChart : UserControl, IChartView
     private void OnMouseDoubleClick(object? sender, MouseEventArgs e) =>
         base.OnMouseDoubleClick(e);
 
-    private void OnMouseLeave(object? sender, EventArgs e)
+    private void OnMouseLeave(object? sender, System.EventArgs e)
     {
         base.OnMouseLeave(e);
         CoreChart?.InvokePointerLeft();

@@ -21,35 +21,28 @@
 // SOFTWARE.
 
 using System;
-using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
-using Avalonia.Rendering;
-using Avalonia.Styling;
-using Avalonia.Threading;
 using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.Avalonia;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
-// this file is the base class for this UI framework controls, in this file we
-// define the UI framework specific code. 
-// expanding this file in the solution explorer will show 2 more files:
-//    - *.shared.cs:        shared code between all UI frameworks
-//    - *.sgp.cs:           the source generated properties
+// Avalonia-specific base class for cartesian / pie / polar controls. Drawn-view
+// scaffolding (MotionCanvas hosting, lifecycle wiring, EffectiveViewport fix
+// for #1986, CoreCanvas / ControlSize / theme awareness / ICustomHitTest) lives
+// in SourceGenDrawnView.avalonia.cs. Chart-specific plumbing — modifier-aware
+// pointer handlers, capture recovery for #1576, double-tap detection, commands,
+// series template inflation, observer lifecycle — lives here.
 // ==============================================================================
 
 /// <inheritdoc cref="ICartesianChartView" />
-public abstract partial class SourceGenChart : UserControl, IChartView, ICustomHitTest
+public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
 {
     private DateTime _lastPressed;
     private LvcPoint _lastPressedPosition;
@@ -60,7 +53,6 @@ public abstract partial class SourceGenChart : UserControl, IChartView, ICustomH
     // controllers — the value must stay aligned across all three SkiaSharp
     // host paths.
     private const int PressDeadzoneMs = 100;
-    private bool _wasInViewport;
     private bool _isPointerDown;
     private LvcPoint _lastPointerPosition;
 
@@ -69,79 +61,41 @@ public abstract partial class SourceGenChart : UserControl, IChartView, ICustomH
     /// </summary>
     protected SourceGenChart()
     {
-        Content = new MotionCanvas();
-
-        AttachedToVisualTree += OnAttachedToVisualTree;
-        DetachedFromVisualTree += OnDetachedFromVisualTree;
-        EffectiveViewportChanged += OnEffectiveViewportChanged;
+        InitializeChartControl();
+        InitializeObservedProperties();
 
         PointerPressed += OnPointerPressed;
         PointerMoved += OnPointerMoved;
         PointerReleased += OnPointerReleased;
         PointerExited += OnPointerLeave;
         PointerCaptureLost += OnPointerCaptureLost;
-
-        SizeChanged += (s, e) =>
-            CoreChart.Update();
-
-        InitializeChartControl();
-        InitializeObservedProperties();
     }
 
-    private MotionCanvas CanvasView => (MotionCanvas)Content!;
-
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => CanvasView.CanvasCore;
-
-    bool IChartView.DesignerMode => Design.IsDesignMode;
-    bool IChartView.IsDarkMode => Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
+    /// <inheritdoc cref="IChartView.BackColor" />
     LvcColor IChartView.BackColor =>
         Background is not ISolidColorBrush b
             ? CoreCanvas._virtualBackgroundColor
             : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
-    LvcSize IDrawnView.ControlSize => new() { Width = (float)CanvasView.Bounds.Width, Height = (float)CanvasView.Bounds.Height };
 
-    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart.Update();
+
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded()
     {
         StartObserving();
         CoreChart?.Load();
     }
 
-    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded()
     {
         StopObserving();
         CoreChart?.Unload();
-        _wasInViewport = false;
     }
 
-    private void OnEffectiveViewportChanged(object? sender, EffectiveViewportChangedEventArgs e)
-    {
-        // Fix for https://github.com/Live-Charts/LiveCharts2/issues/1986
-        // EffectiveViewport reports the ancestor scroll viewport in this control's
-        // local coordinates, NOT whether the chart is in view. To detect "in view"
-        // we have to check whether the viewport intersects the chart's local bounds
-        // (which are 0,0..Bounds.Width,Bounds.Height in local coords).
-        var vp = e.EffectiveViewport;
-        var nowInViewport =
-            vp.Width > 0 && vp.Height > 0 &&
-            vp.X < Bounds.Width && vp.X + vp.Width > 0 &&
-            vp.Y < Bounds.Height && vp.Y + vp.Height > 0;
-
-        if (nowInViewport && !_wasInViewport && CoreChart is not null)
-        {
-            // When a chart is off-screen (scrolled out of a ScrollViewer or in an inactive
-            // tab) Avalonia stops painting the canvas; Chart.IsRendering() then blocks the
-            // measure to avoid wasted work (see Chart.cs:787). On the transition back into
-            // the viewport, mark the canvas as visible so IsRendering() will allow the next
-            // measure, and request an Update.
-            CoreCanvas.NotifyPlatformVisible();
-            CoreChart.Update();
-        }
-        _wasInViewport = nowInViewport;
-    }
-
-    void IChartView.InvokeOnUIThread(Action action) =>
-        Dispatcher.UIThread.Post(action);
+    /// <inheritdoc />
+    protected override void OnDrawnViewReturnedToViewport() => CoreChart?.Update();
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -227,14 +181,14 @@ public abstract partial class SourceGenChart : UserControl, IChartView, ICustomH
 
     private void AddUIElement(object item)
     {
-        if (CanvasView is null || item is not ILogical logical) return;
-        CanvasView.Children.Add(logical);
+        if (Content is not Avalonia.Controls.Panel panel || item is not ILogical logical) return;
+        panel.Children.Add((Avalonia.Controls.Control)logical);
     }
 
     private void RemoveUIElement(object item)
     {
-        if (CanvasView is null || item is not ILogical logical) return;
-        _ = CanvasView.Children.Remove(logical);
+        if (Content is not Avalonia.Controls.Panel panel || item is not ILogical logical) return;
+        _ = panel.Children.Remove((Avalonia.Controls.Control)logical);
     }
 
     private ISeries InflateSeriesTemplate(object item)
@@ -248,7 +202,4 @@ public abstract partial class SourceGenChart : UserControl, IChartView, ICustomH
 
         return series;
     }
-
-    bool ICustomHitTest.HitTest(Point point) =>
-        new Rect(Bounds.Size).Contains(point);
 }
