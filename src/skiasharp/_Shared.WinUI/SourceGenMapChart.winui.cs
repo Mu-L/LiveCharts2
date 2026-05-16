@@ -70,8 +70,8 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
+    bool IChartView.DesignerMode => false;
+    bool IChartView.IsDarkMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
 
     private void OnLoaded(object sender, RoutedEventArgs e) =>
@@ -80,7 +80,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnUnloaded(object sender, RoutedEventArgs e) =>
         CoreChart?.Unload();
 
-    void IGeoMapView.InvokeOnUIThread(Action action)
+    void IChartView.InvokeOnUIThread(Action action)
     {
         if (s_isWebAssembly)
         {
@@ -106,7 +106,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
         var p = e.GetCurrentPoint(this).Position;
-        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
     private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
@@ -118,7 +118,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
     {
         var p = e.GetCurrentPoint(this).Position;
-        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
     private void OnPointerExited(object sender, PointerRoutedEventArgs e)

@@ -52,11 +52,11 @@ public partial class SourceGenSKMapChart : InMemorySkiaSharpChart, IGeoMapView
         InitializeChartControl();
     }
 
-    /// <inheritdoc cref="IGeoMapView.DesignerMode" />
-    bool IGeoMapView.DesignerMode => false;
+    /// <inheritdoc cref="IChartView.DesignerMode" />
+    bool IChartView.DesignerMode => false;
 
-    /// <inheritdoc cref="IGeoMapView.IsDarkMode" />
-    bool IGeoMapView.IsDarkMode => false;
+    /// <inheritdoc cref="IChartView.IsDarkMode" />
+    bool IChartView.IsDarkMode => false;
 
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
@@ -70,9 +70,9 @@ public partial class SourceGenSKMapChart : InMemorySkiaSharpChart, IGeoMapView
         CoreChart.Unload();
     }
 
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
+    void IChartView.InvokeOnUIThread(Action action) =>
         action();
 
     /// <inheritdoc cref="InMemorySkiaSharpChart.GetCoreChart"/>
-    protected override Chart GetCoreChart() => throw new NotImplementedException();
+    protected override Chart GetCoreChart() => CoreChart;
 }

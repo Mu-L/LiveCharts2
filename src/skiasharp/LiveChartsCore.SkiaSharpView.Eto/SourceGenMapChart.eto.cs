@@ -64,11 +64,11 @@ public abstract partial class SourceGenMapChart : Panel, IGeoMapView
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Content).CanvasCore;
 
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
+    bool IChartView.DesignerMode => false;
+    bool IChartView.IsDarkMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = Content.Width, Height = Content.Height };
 
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
+    void IChartView.InvokeOnUIThread(Action action) =>
         _ = Application.Instance.InvokeAsync(action);
 
     /// <inheritdoc cref="Control.OnLoadComplete(EventArgs)"/>
@@ -97,7 +97,7 @@ public abstract partial class SourceGenMapChart : Panel, IGeoMapView
     private void OnMouseDown(object? sender, MouseEventArgs e)
     {
         var p = e.Location;
-        CoreChart?.InvokePointerDown(new LvcPoint(p.X, p.Y));
+        CoreChart?.InvokePointerDown(new LvcPoint(p.X, p.Y), isSecondaryAction: false);
     }
 
     private void OnMouseMove(object? sender, MouseEventArgs e)
@@ -109,7 +109,7 @@ public abstract partial class SourceGenMapChart : Panel, IGeoMapView
     private void OnMouseUp(object? sender, MouseEventArgs e)
     {
         var p = e.Location;
-        CoreChart?.InvokePointerUp(new LvcPoint(p.X, p.Y));
+        CoreChart?.InvokePointerUp(new LvcPoint(p.X, p.Y), isSecondaryAction: false);
     }
 
     private void OnMouseLeave(object? sender, MouseEventArgs e)

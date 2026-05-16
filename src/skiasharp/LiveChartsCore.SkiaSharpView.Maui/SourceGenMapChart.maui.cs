@@ -59,8 +59,8 @@ public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => CanvasView.CanvasCore;
 
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
+    bool IChartView.DesignerMode => false;
+    bool IChartView.IsDarkMode => false;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)Width, Height = (float)Height };
 
     private void OnLoaded(object? sender, EventArgs e) =>
@@ -75,7 +75,7 @@ public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
 #endif
     }
 
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
+    void IChartView.InvokeOnUIThread(Action action) =>
         MainThread.BeginInvokeOnMainThread(action);
 
     internal override void OnPressed(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args) =>

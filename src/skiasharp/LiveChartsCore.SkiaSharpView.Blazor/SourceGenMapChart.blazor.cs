@@ -54,8 +54,8 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => _motionCanvas.CanvasCore;
 
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
+    bool IChartView.DesignerMode => false;
+    bool IChartView.IsDarkMode => false;
 
     LvcSize IDrawnView.ControlSize => new()
     {
@@ -92,20 +92,20 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
         CoreCanvas.Sync = SyncContext;
     }
 
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
+    void IChartView.InvokeOnUIThread(Action action) =>
         _ = InvokeAsync(action);
 
     void IDisposable.Dispose() =>
         CoreChart.Unload();
 
     private void OnPointerDown(PointerEventArgs e) =>
-        CoreChart?.InvokePointerDown(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
+        CoreChart?.InvokePointerDown(new LvcPoint((float)e.OffsetX, (float)e.OffsetY), isSecondaryAction: false);
 
     private void OnPointerMove(PointerEventArgs e) =>
         CoreChart?.InvokePointerMove(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
 
     private void OnPointerUp(PointerEventArgs e) =>
-        CoreChart?.InvokePointerUp(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
+        CoreChart?.InvokePointerUp(new LvcPoint((float)e.OffsetX, (float)e.OffsetY), isSecondaryAction: false);
 
     private void OnPointerOut(PointerEventArgs e) =>
         CoreChart?.InvokePointerLeft();

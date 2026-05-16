@@ -236,7 +236,7 @@ public class MapFactory : IMapFactory
         _viewportTransform.CenterX = sender.View.ControlSize.Width * 0.5f;
         _viewportTransform.CenterY = sender.View.ControlSize.Height * 0.5f;
 
-        var speed = sender.View.ZoomingSpeed;
+        var speed = sender.MapView.ZoomingSpeed;
         speed = speed < 0.1 ? 0.1 : (speed > 0.95 ? 0.95 : speed);
         speed = 1 - speed;
 
@@ -245,8 +245,8 @@ public class MapFactory : IMapFactory
             ? (float)(oldZoom / speed)
             : (float)(oldZoom * speed);
 
-        var minZoom = (float)sender.View.MinZoomLevel;
-        var maxZoom = (float)sender.View.MaxZoomLevel;
+        var minZoom = (float)sender.MapView.MinZoomLevel;
+        var maxZoom = (float)sender.MapView.MaxZoomLevel;
 
         // Allow slight overshoot past min for bounce-back feel
         if (newZoom < minZoom * 0.8f) newZoom = minZoom * 0.8f;

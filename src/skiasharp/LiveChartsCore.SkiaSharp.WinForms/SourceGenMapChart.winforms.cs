@@ -75,8 +75,8 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Controls[0]).CanvasCore;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
+    bool IChartView.DesignerMode => false;
+    bool IChartView.IsDarkMode => false;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
@@ -87,7 +87,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     /// <returns></returns>
     public Control GetDrawnControl() => Controls[0].Controls[0];
 
-    void IGeoMapView.InvokeOnUIThread(Action action)
+    void IChartView.InvokeOnUIThread(Action action)
     {
         if (!IsHandleCreated) return;
         _ = BeginInvoke(action);
@@ -122,7 +122,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnMouseDown(object? sender, MouseEventArgs e)
     {
         var p = e.Location;
-        CoreChart?.InvokePointerDown(new LvcPoint(p.X, p.Y));
+        CoreChart?.InvokePointerDown(new LvcPoint(p.X, p.Y), isSecondaryAction: false);
     }
 
     private void OnMouseMove(object? sender, MouseEventArgs e)
@@ -134,7 +134,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnMouseUp(object? sender, MouseEventArgs e)
     {
         var p = e.Location;
-        CoreChart?.InvokePointerUp(new LvcPoint(p.X, p.Y));
+        CoreChart?.InvokePointerUp(new LvcPoint(p.X, p.Y), isSecondaryAction: false);
     }
 
     private void OnMouseLeave(object? sender, EventArgs e)

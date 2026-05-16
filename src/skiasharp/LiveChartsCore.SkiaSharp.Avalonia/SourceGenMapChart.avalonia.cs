@@ -69,8 +69,8 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
     public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
 
-    bool IGeoMapView.DesignerMode => Design.IsDesignMode;
-    bool IGeoMapView.IsDarkMode => Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
+    bool IChartView.DesignerMode => Design.IsDesignMode;
+    bool IChartView.IsDarkMode => Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
     LvcSize IDrawnView.ControlSize => new() { Width = (float)MotionCanvas.Bounds.Width, Height = (float)MotionCanvas.Bounds.Height };
 
     private void GeoMap_AttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
@@ -79,7 +79,7 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     private void GeoMap_DetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
         CoreChart?.Unload();
 
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
+    void IChartView.InvokeOnUIThread(Action action) =>
         Dispatcher.UIThread.Post(action);
 
     bool ICustomHitTest.HitTest(Point point) =>
@@ -88,7 +88,7 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var p = e.GetPosition(this);
-        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
@@ -100,7 +100,7 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         var p = e.GetPosition(this);
-        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
     private void OnPointerExited(object? sender, PointerEventArgs e)
