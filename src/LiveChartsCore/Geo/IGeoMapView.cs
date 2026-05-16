@@ -70,6 +70,13 @@ public interface IGeoMapView : IChartView
     /// <summary>Gets or sets the projection.</summary>
     MapProjection MapProjection { get; set; }
 
+    /// <summary>
+    /// Gets or sets which interactions are enabled (pan / zoom / both / none).
+    /// Defaults to <see cref="MapInteractionMode.Zoom"/> — wheel-zoom is on,
+    /// pan is off. Set <see cref="MapInteractionMode.Both"/> to enable pan too.
+    /// </summary>
+    MapInteractionMode InteractionMode { get; set; }
+
     /// <summary>Gets or sets the zooming speed; a value in [0.1, 0.95].</summary>
     double ZoomingSpeed { get; set; }
 

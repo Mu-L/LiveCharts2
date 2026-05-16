@@ -116,10 +116,13 @@ public class GeoMapChart : Chart
     public override IEnumerable<ChartPoint> FindHoveredPointsBy(LvcPoint pointerPosition) => [];
 
     /// <summary>
-    /// Pan is always available on the map; gates the base deadzone in
-    /// <see cref="Chart.InvokePointerMove"/>.
+    /// Pan is gated by the user's <see cref="IGeoMapView.InteractionMode"/>.
+    /// Returning false here makes the base pan-engagement deadzone in
+    /// <see cref="Chart.InvokePointerMove"/> a no-op so a drag stays a
+    /// tooltip-only gesture instead of moving the map.
     /// </summary>
-    internal override bool IsPanEnabled => true;
+    internal override bool IsPanEnabled =>
+        (MapView.InteractionMode & MapInteractionMode.Pan) == MapInteractionMode.Pan;
 
     /// <summary>Gets the current zoom level.</summary>
     public float ZoomLevel
@@ -176,9 +179,15 @@ public class GeoMapChart : Chart
         AnimateRotation(longitude, latitude, durationMs);
     }
 
-    /// <summary>Invokes a pointer wheel event.</summary>
-    protected internal void InvokePointerWheel(LvcPoint point, ZoomDirection direction) =>
+    /// <summary>
+    /// Invokes a pointer wheel event. No-op when zoom is disabled via
+    /// <see cref="IGeoMapView.InteractionMode"/>.
+    /// </summary>
+    protected internal void InvokePointerWheel(LvcPoint point, ZoomDirection direction)
+    {
+        if ((MapView.InteractionMode & MapInteractionMode.Zoom) != MapInteractionMode.Zoom) return;
         Zoom(point, direction);
+    }
 
     /// <inheritdoc/>
     public override void Load()

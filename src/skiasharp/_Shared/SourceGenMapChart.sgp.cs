@@ -70,6 +70,9 @@ public partial class SourceGenMapChart
     /// <inheritdoc cref="IGeoMapView.MapProjection"/>
     static UIProperty<MapProjection>            mapProjection       = new(defaultValue: MapProjection.Default);
 
+    /// <inheritdoc cref="IGeoMapView.InteractionMode"/>
+    static UIProperty<MapInteractionMode>       interactionMode     = new(defaultValue: MapInteractionMode.Zoom);
+
     /// <inheritdoc cref="IGeoMapView.Stroke"/>
     static UIProperty<Paint>                    stroke              = new(defaultValue: GetPaint(new(255, 255, 255, 255), PaintStyle.Stroke), onChanged: OnPaintPropertyChanged(nameof(Stroke)));
 
