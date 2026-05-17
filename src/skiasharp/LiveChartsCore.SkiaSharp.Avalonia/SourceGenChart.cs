@@ -29,6 +29,7 @@ using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.SkiaSharpView.Avalonia;
 
 namespace LiveChartsGeneratedCode;
 
@@ -179,16 +180,18 @@ public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
     private void OnPointerLeave(object? sender, PointerEventArgs e) =>
         CoreChart?.InvokePointerLeft();
 
+    // MotionCanvas is a UserControl; attach to its LogicalChildren (exposed as
+    // Children) so the chart's DataContext propagates to XAML series / axes.
     private void AddUIElement(object item)
     {
-        if (Content is not Avalonia.Controls.Panel panel || item is not ILogical logical) return;
-        panel.Children.Add((Avalonia.Controls.Control)logical);
+        if (Content is not MotionCanvas canvas || item is not ILogical logical) return;
+        canvas.Children.Add(logical);
     }
 
     private void RemoveUIElement(object item)
     {
-        if (Content is not Avalonia.Controls.Panel panel || item is not ILogical logical) return;
-        _ = panel.Children.Remove((Avalonia.Controls.Control)logical);
+        if (Content is not MotionCanvas canvas || item is not ILogical logical) return;
+        _ = canvas.Children.Remove(logical);
     }
 
     private ISeries InflateSeriesTemplate(object item)
