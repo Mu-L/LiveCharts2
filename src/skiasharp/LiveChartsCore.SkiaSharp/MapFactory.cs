@@ -69,9 +69,8 @@ public class MapFactory : IMapFactory
                 _globeCircle = new LandAreaGeometry();
             }
 
-            var circlePath = new SKPath();
+            var circlePath = _globeCircle.GetOrResetBasePath();
             circlePath.AddCircle(ortho.ScreenCenterX, ortho.ScreenCenterY, ortho.Radius);
-            _globeCircle.SetBasePath(circlePath);
             _globeCircle.ViewportTransform = _viewportTransform;
 
             if (context.View.Fill is not null)
@@ -139,21 +138,25 @@ public class MapFactory : IMapFactory
 
                     if (isOrtho && ortho is not null)
                     {
-                        var skPath = BuildOrthographicPath(ortho, landData.Coordinates);
-                        if (skPath is null)
+                        // Reuse the geometry's cached SKPath in place; avoids
+                        // the per-frame native alloc+dispose pair that used to
+                        // dominate paint time during orthographic rotation.
+                        var skPath = shape.GetOrResetBasePath();
+                        var hasGeometry = BuildOrthographicPath(ortho, landData.Coordinates, skPath);
+                        if (!hasGeometry)
                         {
-                            // Entire polygon is on the far side — hide it
+                            // Entire polygon is on the far side — hide it.
+                            // skPath is already empty (Reset above), no need
+                            // to allocate a new one.
                             stroke?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
                             fill?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
                             shape.Commands.Clear();
-                            shape.SetBasePath(new SKPath());
                             continue;
                         }
 
                         stroke?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
                         fill?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
                         shape.Commands.Clear();
-                        shape.SetBasePath(skPath);
                     }
                     else
                     {
@@ -288,9 +291,16 @@ public class MapFactory : IMapFactory
         sender.View.CoreCanvas.Invalidate();
     }
 
-    private static SKPath? BuildOrthographicPath(OrthographicProjector ortho, LvcPointD[] coordinates)
+    /// <summary>
+    /// Populates <paramref name="path"/> in place with the orthographic
+    /// projection of <paramref name="coordinates"/>. Returns true if any
+    /// geometry was added; false when the entire polygon is on the far side
+    /// (caller hides the geometry).
+    /// </summary>
+    private static bool BuildOrthographicPath(
+        OrthographicProjector ortho, LvcPointD[] coordinates, SKPath path)
     {
-        if (coordinates.Length == 0) return null;
+        if (coordinates.Length == 0) return false;
 
         // Check if any point is visible
         var anyVisible = false;
@@ -303,9 +313,8 @@ public class MapFactory : IMapFactory
             }
         }
 
-        if (!anyVisible) return null;
+        if (!anyVisible) return false;
 
-        var path = new SKPath();
         var started = false;
 
         for (var i = 0; i < coordinates.Length; i++)
@@ -354,8 +363,8 @@ public class MapFactory : IMapFactory
             }
         }
 
-        path.Close();
-        return path;
+        if (started) path.Close();
+        return started;
     }
 
     private static double[] FindHorizonPoint(

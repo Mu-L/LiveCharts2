@@ -63,6 +63,20 @@ public class LandAreaGeometry : VectorGeometry, IDrawnElement<SkiaSharpDrawingCo
     }
 
     /// <summary>
+    /// Returns the cached base path, reset and ready for in-place rebuild.
+    /// Caller populates with MoveTo/LineTo. Hot path for animated projections
+    /// (orthographic rotation) — avoids the native alloc + dispose of a fresh
+    /// <see cref="SKPath"/> per land per frame.
+    /// </summary>
+    public SKPath GetOrResetBasePath()
+    {
+        _basePath ??= new SKPath();
+        _basePath.Reset();
+        _pathDirty = false;
+        return _basePath;
+    }
+
+    /// <summary>
     /// Draws the land area using a cached base path with GPU canvas matrix transform.
     /// Zero allocations during zoom/pan — just Save/Concat/DrawPath/Restore.
     /// </summary>
