@@ -30,6 +30,7 @@ using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
+using LiveChartsCore.Motion;
 using LiveChartsCore.Painting;
 
 namespace LiveChartsCore;
@@ -77,9 +78,7 @@ public class GeoMapChart : Chart
     private System.Threading.Timer? _bounceTimer;
     private LvcPoint _pointerDownPosition = new(-10, -10);
     private bool _pointerDownIsClick = false;
-    private double _rotationX;
-    private double _rotationY;
-    private System.Threading.Timer? _rotationTimer;
+    private readonly RotationTracker _rotation = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
@@ -92,6 +91,12 @@ public class GeoMapChart : Chart
         _heatPaint = LiveCharts.DefaultSettings.GetProvider().GetSolidColorPaint();
         _mapFactory = LiveCharts.DefaultSettings.GetProvider().GetDefaultMapFactory();
         _tooltipThrottler = new ActionThrottler(TooltipThrottlerUnlocked, TimeSpan.FromMilliseconds(50));
+
+        // Drive orthographic rotation off the canvas paint cycle: after each
+        // paint completes, if the rotation motion property is still mid-flight,
+        // queue another Measure. This naturally rate-matches rotation to paint
+        // capacity instead of queueing Timer ticks on a busy UI thread.
+        Canvas.Validated += OnCanvasValidatedForRotation;
     }
 
     /// <summary>
@@ -140,17 +145,35 @@ public class GeoMapChart : Chart
     }
 
     /// <summary>Rotation center longitude (used for Orthographic projection).</summary>
+    /// <remarks>
+    /// Direct sets snap immediately (no animation). Use <see cref="RotateTo"/>
+    /// for an animated transition.
+    /// </remarks>
     public double RotationX
     {
-        get => _rotationX;
-        set { _rotationX = value; Update(new ChartUpdateParams { Throttling = false }); }
+        get => _rotation.X;
+        set
+        {
+            _rotation.RemoveTransition();
+            _rotation.X = value;
+            Update(new ChartUpdateParams { Throttling = false });
+        }
     }
 
     /// <summary>Rotation center latitude (used for Orthographic projection).</summary>
+    /// <remarks>
+    /// Direct sets snap immediately (no animation). Use <see cref="RotateTo"/>
+    /// for an animated transition.
+    /// </remarks>
     public double RotationY
     {
-        get => _rotationY;
-        set { _rotationY = value; Update(new ChartUpdateParams { Throttling = false }); }
+        get => _rotation.Y;
+        set
+        {
+            _rotation.RemoveTransition();
+            _rotation.Y = value;
+            Update(new ChartUpdateParams { Throttling = false });
+        }
     }
 
     /// <inheritdoc cref="IMapFactory.ViewTo(GeoMapChart, object)"/>
@@ -175,9 +198,32 @@ public class GeoMapChart : Chart
     /// </summary>
     public void RotateTo(double longitude, double latitude, int durationMs = 800)
     {
-        _rotationTimer?.Dispose();
-        _rotationTimer = null;
-        AnimateRotation(longitude, latitude, durationMs);
+        // Normalize longitude diff to shortest path so the rotation doesn't
+        // sweep the long way around the globe (e.g. 170° → -170° goes through
+        // the antimeridian, not the full 340° around).
+        var startLon = _rotation.X;
+        var deltaLon = longitude - startLon;
+        if (deltaLon > 180) longitude = startLon + (deltaLon - 360);
+        else if (deltaLon < -180) longitude = startLon + (deltaLon + 360);
+
+        _rotation.SetTransition(new Animation(EasingFunctions.QuadraticInOut, TimeSpan.FromMilliseconds(durationMs)));
+        _rotation.X = longitude;
+        _rotation.Y = latitude;
+
+        // Kick the first frame; subsequent frames flow through
+        // OnCanvasValidatedForRotation until the motion property settles.
+        Update(new ChartUpdateParams { Throttling = false });
+    }
+
+    private void OnCanvasValidatedForRotation(CoreMotionCanvas _)
+    {
+        if (_isUnloaded) return;
+        // _rotation.IsValid is flipped to false in Measure() when GetMovement
+        // sees the motion property is still mid-flight. If still false here,
+        // the rotation hasn't settled — request another Measure for the next
+        // interpolated value. Loop exits when GetMovement stops invalidating.
+        if (_rotation.IsValid) return;
+        Update(new ChartUpdateParams { Throttling = false });
     }
 
     /// <summary>
@@ -222,7 +268,9 @@ public class GeoMapChart : Chart
 
         _bounceTimer?.Dispose(); _bounceTimer = null;
         _isBouncing = false;
-        _rotationTimer?.Dispose(); _rotationTimer = null;
+        // Rotation has no Timer to dispose — it runs through the canvas
+        // Validated event hook, which Unload() naturally stops since
+        // _isUnloaded gates OnCanvasValidatedForRotation.
 
         _everMeasuredSeries.Clear();
         _heatPaint = null!;
@@ -336,12 +384,23 @@ public class GeoMapChart : Chart
     // (and the s_perf* fields) once we have the data.
     private const int PerfSampleSize = 30;
     private static long s_projTicks, s_landsTicks, s_seriesTicks, s_totalTicks;
+    private static long s_lastMeasureTs, s_intervalTicks;
     private static int s_perfCount;
+
+    static GeoMapChart()
+    {
+        // Enable LiveCharts built-in FPS overlay so we can compare requested
+        // Measure rate vs actual painted FPS during rotation. Remove with the
+        // rest of the perf instrumentation.
+        LiveCharts.RenderingSettings.ShowFPS = true;
+    }
 
     /// <inheritdoc/>
     protected internal override void Measure()
     {
         var perfT0 = Stopwatch.GetTimestamp();
+        if (s_lastMeasureTs != 0) s_intervalTicks += perfT0 - s_lastMeasureTs;
+        s_lastMeasureTs = perfT0;
 
         if (_activeMap is not null && _activeMap != MapView.ActiveMap)
         {
@@ -392,12 +451,19 @@ public class GeoMapChart : Chart
         _heatPaint.ZIndex = i + 1;
 
         var perfProjStart = Stopwatch.GetTimestamp();
+        // Reset IsValid before reading the motion properties so GetMovement
+        // can flip it back to false only if the rotation animation is still
+        // mid-flight. The OnCanvasValidatedForRotation hook checks this flag
+        // post-paint to decide whether to queue another measure.
+        _rotation.IsValid = true;
+        var rotX = _rotation.X;
+        var rotY = _rotation.Y;
         var context = new MapContext(
             this, MapView, MapView.ActiveMap,
             Maps.BuildProjector(
                 MapView.MapProjection,
                 [MapView.ControlSize.Width, MapView.ControlSize.Height],
-                _rotationX, _rotationY));
+                rotX, rotY));
         var perfProjEnd = Stopwatch.GetTimestamp();
         s_projTicks += perfProjEnd - perfProjStart;
 
@@ -455,13 +521,17 @@ public class GeoMapChart : Chart
         if (++s_perfCount >= PerfSampleSize)
         {
             var perFreq = 1000.0 / Stopwatch.Frequency;
-            Trace.WriteLine(
+            // n-1 intervals across n samples
+            var avgIntervalMs = s_intervalTicks * perFreq / (s_perfCount - 1);
+            var effectiveHz = avgIntervalMs > 0 ? 1000.0 / avgIntervalMs : 0;
+            Console.WriteLine(
                 $"[MAP-PERF] n={s_perfCount} avg ms — " +
                 $"total={s_totalTicks * perFreq / s_perfCount:F2} " +
                 $"projector={s_projTicks * perFreq / s_perfCount:F2} " +
                 $"lands={s_landsTicks * perFreq / s_perfCount:F2} " +
-                $"series={s_seriesTicks * perFreq / s_perfCount:F2}");
-            s_totalTicks = s_projTicks = s_landsTicks = s_seriesTicks = 0;
+                $"series={s_seriesTicks * perFreq / s_perfCount:F2} " +
+                $"|| measure-interval={avgIntervalMs:F2}ms ({effectiveHz:F0} Hz)");
+            s_totalTicks = s_projTicks = s_landsTicks = s_seriesTicks = s_intervalTicks = 0;
             s_perfCount = 0;
         }
     }
@@ -495,7 +565,7 @@ public class GeoMapChart : Chart
                     var projector = Maps.BuildProjector(
                         MapView.MapProjection,
                         [MapView.ControlSize.Width, MapView.ControlSize.Height],
-                        _rotationX, _rotationY);
+                        _rotation.X, _rotation.Y);
                     var center = ComputeLandScreenCenter(landDefinition, projector);
 
                     return (landDefinition, value, hasValue, center);
@@ -517,9 +587,7 @@ public class GeoMapChart : Chart
             foreach (var coord in data.Coordinates)
             {
                 if (!projector.IsVisible(coord.X, coord.Y)) continue;
-                var projected = projector.ToMap([coord.X, coord.Y]);
-                var px = projected[0];
-                var py = projected[1];
+                projector.ToMap(coord.X, coord.Y, out var px, out var py);
                 if (px < minX) minX = px;
                 if (py < minY) minY = py;
                 if (px > maxX) maxX = px;
@@ -674,51 +742,7 @@ public class GeoMapChart : Chart
         }, null, intervalMs, intervalMs);
     }
 
-    private void AnimateRotation(double targetLon, double targetLat, int durationMs)
-    {
-        const int intervalMs = 16;
-        var totalSteps = Math.Max(1, durationMs / intervalMs);
-        var step = 0;
-
-        var startLon = _rotationX;
-        var startLat = _rotationY;
-
-        var deltaLon = targetLon - startLon;
-        if (deltaLon > 180) deltaLon -= 360;
-        if (deltaLon < -180) deltaLon += 360;
-
-        _rotationTimer = new System.Threading.Timer(_ =>
-        {
-            if (_isUnloaded)
-            {
-                _rotationTimer?.Dispose();
-                _rotationTimer = null;
-                return;
-            }
-
-            step++;
-            var t = (float)step / totalSteps;
-
-            t = t < 0.5f
-                ? 4 * t * t * t
-                : 1 - (float)Math.Pow(-2 * t + 2, 3) / 2;
-
-            _rotationX = startLon + deltaLon * t;
-            _rotationY = startLat + (targetLat - startLat) * t;
-
-            View.InvokeOnUIThread(() =>
-            {
-                if (_isUnloaded) return;
-                lock (Canvas.Sync) { Measure(); }
-            });
-
-            if (step >= totalSteps)
-            {
-                _rotationX = targetLon;
-                _rotationY = targetLat;
-                _rotationTimer?.Dispose();
-                _rotationTimer = null;
-            }
-        }, null, intervalMs, intervalMs);
-    }
+    // AnimateRotation removed — rotation is now driven by the LiveCharts
+    // motion-property engine via _rotation (RotationTracker). See RotateTo
+    // and OnCanvasValidatedForRotation.
 }
