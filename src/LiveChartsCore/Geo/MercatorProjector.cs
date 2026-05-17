@@ -65,20 +65,18 @@ public class MercatorProjector : MapProjector
     /// <inheritdoc cref="MapProjector.ToMap(double[])"/>
     public override float[] ToMap(double[] point)
     {
-        var lat = point[1];
-        var lon = point[0];
+        ToMap(point[0], point[1], out var x, out var y);
+        return [x, y];
+    }
 
-        var latRad = lat * Math.PI / 180d;
+    /// <inheritdoc cref="MapProjector.ToMap(double, double, out float, out float)"/>
+    public override void ToMap(double longitude, double latitude, out float x, out float y)
+    {
+        var latRad = latitude * Math.PI / 180d;
         var mercN = Math.Log(Math.Tan(Math.PI / 4d + latRad / 2d), Math.E);
-        var y = _h / 2d - _h * mercN / (2 * Math.PI);
+        var py = _h / 2d - _h * mercN / (2 * Math.PI);
 
-        return new[]
-        {
-            // x' =
-            (float)((lon + 180) * (_w / 360d) + _ox),
-
-            // y' =
-            (float) y + _oy
-        };
+        x = (float)((longitude + 180) * (_w / 360d) + _ox);
+        y = (float)py + _oy;
     }
 }

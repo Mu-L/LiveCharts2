@@ -111,20 +111,25 @@ public class OrthographicProjector : MapProjector
     /// <inheritdoc cref="MapProjector.ToMap(double[])"/>
     public override float[] ToMap(double[] point)
     {
-        var lon = point[0];
-        var lat = point[1];
+        ToMap(point[0], point[1], out var x, out var y);
+        return [x, y];
+    }
 
-        var latRad = lat * Math.PI / 180d;
-        var lonDiff = (lon - _centerLon) * Math.PI / 180d;
+    /// <inheritdoc cref="MapProjector.ToMap(double, double, out float, out float)"/>
+    public override void ToMap(double longitude, double latitude, out float x, out float y)
+    {
+        var latRad = latitude * Math.PI / 180d;
+        var lonDiff = (longitude - _centerLon) * Math.PI / 180d;
 
-        var x = _radius * Math.Cos(latRad) * Math.Sin(lonDiff);
-        var y = _radius * (_cosCenterLat * Math.Sin(latRad) -
-                           _sinCenterLat * Math.Cos(latRad) * Math.Cos(lonDiff));
+        var sinLat = Math.Sin(latRad);
+        var cosLat = Math.Cos(latRad);
+        var sinLon = Math.Sin(lonDiff);
+        var cosLon = Math.Cos(lonDiff);
 
-        return
-        [
-            (float)(_screenCenterX + x),
-            (float)(_screenCenterY - y)
-        ];
+        var px = _radius * cosLat * sinLon;
+        var py = _radius * (_cosCenterLat * sinLat - _sinCenterLat * cosLat * cosLon);
+
+        x = (float)(_screenCenterX + px);
+        y = (float)(_screenCenterY - py);
     }
 }

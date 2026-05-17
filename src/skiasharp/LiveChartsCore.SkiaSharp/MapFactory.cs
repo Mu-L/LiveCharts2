@@ -167,10 +167,7 @@ public class MapFactory : IMapFactory
 
                         foreach (var point in landData.Coordinates)
                         {
-                            var p = projector.ToMap([point.X, point.Y]);
-
-                            var x = p[0];
-                            var y = p[1];
+                            projector.ToMap(point.X, point.Y, out var x, out var y);
 
                             if (isFirst)
                             {
@@ -321,38 +318,38 @@ public class MapFactory : IMapFactory
 
             if (curVis)
             {
-                var p = ortho.ToMap([cur.X, cur.Y]);
+                ortho.ToMap(cur.X, cur.Y, out var px, out var py);
                 if (!started)
                 {
-                    path.MoveTo(p[0], p[1]);
+                    path.MoveTo(px, py);
                     started = true;
                 }
                 else
                 {
-                    path.LineTo(p[0], p[1]);
+                    path.LineTo(px, py);
                 }
 
                 if (!nextVis && i < coordinates.Length - 1)
                 {
                     // Transition visible → invisible: find horizon point
                     var hp = FindHorizonPoint(ortho, cur.X, cur.Y, next.X, next.Y);
-                    var hpp = ortho.ToMap([hp[0], hp[1]]);
-                    path.LineTo(hpp[0], hpp[1]);
+                    ortho.ToMap(hp[0], hp[1], out var hx, out var hy);
+                    path.LineTo(hx, hy);
                 }
             }
             else if (nextVis)
             {
                 // Transition invisible → visible: find horizon point and start from there
                 var hp = FindHorizonPoint(ortho, next.X, next.Y, cur.X, cur.Y);
-                var hpp = ortho.ToMap([hp[0], hp[1]]);
+                ortho.ToMap(hp[0], hp[1], out var hx, out var hy);
                 if (!started)
                 {
-                    path.MoveTo(hpp[0], hpp[1]);
+                    path.MoveTo(hx, hy);
                     started = true;
                 }
                 else
                 {
-                    path.LineTo(hpp[0], hpp[1]);
+                    path.LineTo(hx, hy);
                 }
             }
         }
