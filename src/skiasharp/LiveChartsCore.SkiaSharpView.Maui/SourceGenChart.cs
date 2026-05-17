@@ -65,7 +65,7 @@ public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
     }
 
     /// <inheritdoc />
-    protected override void OnDrawnViewSizeChanged() => CoreChart.Update();
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
     /// <inheritdoc />
     protected override void OnDrawnViewLoaded()

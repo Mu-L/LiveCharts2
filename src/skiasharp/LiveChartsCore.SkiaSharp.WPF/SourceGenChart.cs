@@ -68,7 +68,7 @@ public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
             : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
 
     /// <inheritdoc />
-    protected override void OnDrawnViewSizeChanged() => CoreChart.Update();
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
     /// <inheritdoc />
     protected override void OnDrawnViewLoaded()

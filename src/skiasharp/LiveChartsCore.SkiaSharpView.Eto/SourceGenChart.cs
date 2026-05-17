@@ -55,7 +55,7 @@ public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
         new((byte)BackgroundColor.Rb, (byte)BackgroundColor.Gb, (byte)BackgroundColor.Bb, (byte)BackgroundColor.Ab);
 
     /// <inheritdoc />
-    protected override void OnDrawnViewSizeChanged() => CoreChart.Update();
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
     /// <inheritdoc />
     protected override void OnDrawnViewLoaded()
