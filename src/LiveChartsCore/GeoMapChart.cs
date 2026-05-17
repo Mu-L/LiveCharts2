@@ -22,7 +22,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using LiveChartsCore.Drawing;
@@ -377,31 +376,9 @@ public class GeoMapChart : Chart
             }));
     }
 
-    // TEMPORARY profiling instrumentation for MAUI rotation perf.
-    // Aggregates per-section timings over PerfSampleSize measures and writes
-    // a single Trace line so MAUI's debug log (Xcode console / logcat / VS
-    // Output) gets one summary every ~half-second of rotation. Remove this
-    // (and the s_perf* fields) once we have the data.
-    private const int PerfSampleSize = 30;
-    private static long s_projTicks, s_landsTicks, s_seriesTicks, s_totalTicks;
-    private static long s_lastMeasureTs, s_intervalTicks;
-    private static int s_perfCount;
-
-    static GeoMapChart()
-    {
-        // Enable LiveCharts built-in FPS overlay so we can compare requested
-        // Measure rate vs actual painted FPS during rotation. Remove with the
-        // rest of the perf instrumentation.
-        LiveCharts.RenderingSettings.ShowFPS = true;
-    }
-
     /// <inheritdoc/>
     protected internal override void Measure()
     {
-        var perfT0 = Stopwatch.GetTimestamp();
-        if (s_lastMeasureTs != 0) s_intervalTicks += perfT0 - s_lastMeasureTs;
-        s_lastMeasureTs = perfT0;
-
         if (_activeMap is not null && _activeMap != MapView.ActiveMap)
         {
             _previousStroke?.ClearGeometriesFromPaintTask(Canvas);
@@ -450,7 +427,6 @@ public class GeoMapChart : Chart
         var i = _previousFill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
-        var perfProjStart = Stopwatch.GetTimestamp();
         // Reset IsValid before reading the motion properties so GetMovement
         // can flip it back to false only if the rotation animation is still
         // mid-flight. The OnCanvasValidatedForRotation hook checks this flag
@@ -464,12 +440,8 @@ public class GeoMapChart : Chart
                 MapView.MapProjection,
                 [MapView.ControlSize.Width, MapView.ControlSize.Height],
                 rotX, rotY));
-        var perfProjEnd = Stopwatch.GetTimestamp();
-        s_projTicks += perfProjEnd - perfProjStart;
 
         _mapFactory.GenerateLands(context);
-        var perfLandsEnd = Stopwatch.GetTimestamp();
-        s_landsTicks += perfLandsEnd - perfProjEnd;
 
         // Departed series must be deleted BEFORE measuring the new series.
         // Otherwise CoreHeatLandSeries.Delete -> ClearHeat would null the Shape.Fill
@@ -489,7 +461,6 @@ public class GeoMapChart : Chart
             series.Measure(context);
             _ = _everMeasuredSeries.Add(series);
         }
-        s_seriesTicks += Stopwatch.GetTimestamp() - perfLandsEnd;
 
         if (_hoveredLand is not null && MapView.Tooltip is not null &&
             MapView.TooltipPosition != TooltipPosition.Hidden)
@@ -516,24 +487,6 @@ public class GeoMapChart : Chart
         }
 
         Canvas.Invalidate();
-
-        s_totalTicks += Stopwatch.GetTimestamp() - perfT0;
-        if (++s_perfCount >= PerfSampleSize)
-        {
-            var perFreq = 1000.0 / Stopwatch.Frequency;
-            // n-1 intervals across n samples
-            var avgIntervalMs = s_intervalTicks * perFreq / (s_perfCount - 1);
-            var effectiveHz = avgIntervalMs > 0 ? 1000.0 / avgIntervalMs : 0;
-            Console.WriteLine(
-                $"[MAP-PERF] n={s_perfCount} avg ms — " +
-                $"total={s_totalTicks * perFreq / s_perfCount:F2} " +
-                $"projector={s_projTicks * perFreq / s_perfCount:F2} " +
-                $"lands={s_landsTicks * perFreq / s_perfCount:F2} " +
-                $"series={s_seriesTicks * perFreq / s_perfCount:F2} " +
-                $"|| measure-interval={avgIntervalMs:F2}ms ({effectiveHz:F0} Hz)");
-            s_totalTicks = s_projTicks = s_landsTicks = s_seriesTicks = s_intervalTicks = 0;
-            s_perfCount = 0;
-        }
     }
 
     /// <summary>
