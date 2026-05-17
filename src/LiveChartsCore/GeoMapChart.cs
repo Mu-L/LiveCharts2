@@ -22,6 +22,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using LiveChartsCore.Drawing;
@@ -328,9 +329,20 @@ public class GeoMapChart : Chart
             }));
     }
 
+    // TEMPORARY profiling instrumentation for MAUI rotation perf.
+    // Aggregates per-section timings over PerfSampleSize measures and writes
+    // a single Trace line so MAUI's debug log (Xcode console / logcat / VS
+    // Output) gets one summary every ~half-second of rotation. Remove this
+    // (and the s_perf* fields) once we have the data.
+    private const int PerfSampleSize = 30;
+    private static long s_projTicks, s_landsTicks, s_seriesTicks, s_totalTicks;
+    private static int s_perfCount;
+
     /// <inheritdoc/>
     protected internal override void Measure()
     {
+        var perfT0 = Stopwatch.GetTimestamp();
+
         if (_activeMap is not null && _activeMap != MapView.ActiveMap)
         {
             _previousStroke?.ClearGeometriesFromPaintTask(Canvas);
@@ -379,14 +391,19 @@ public class GeoMapChart : Chart
         var i = _previousFill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
+        var perfProjStart = Stopwatch.GetTimestamp();
         var context = new MapContext(
             this, MapView, MapView.ActiveMap,
             Maps.BuildProjector(
                 MapView.MapProjection,
                 [MapView.ControlSize.Width, MapView.ControlSize.Height],
                 _rotationX, _rotationY));
+        var perfProjEnd = Stopwatch.GetTimestamp();
+        s_projTicks += perfProjEnd - perfProjStart;
 
         _mapFactory.GenerateLands(context);
+        var perfLandsEnd = Stopwatch.GetTimestamp();
+        s_landsTicks += perfLandsEnd - perfProjEnd;
 
         // Departed series must be deleted BEFORE measuring the new series.
         // Otherwise CoreHeatLandSeries.Delete -> ClearHeat would null the Shape.Fill
@@ -406,6 +423,7 @@ public class GeoMapChart : Chart
             series.Measure(context);
             _ = _everMeasuredSeries.Add(series);
         }
+        s_seriesTicks += Stopwatch.GetTimestamp() - perfLandsEnd;
 
         if (_hoveredLand is not null && MapView.Tooltip is not null &&
             MapView.TooltipPosition != TooltipPosition.Hidden)
@@ -432,6 +450,20 @@ public class GeoMapChart : Chart
         }
 
         Canvas.Invalidate();
+
+        s_totalTicks += Stopwatch.GetTimestamp() - perfT0;
+        if (++s_perfCount >= PerfSampleSize)
+        {
+            var perFreq = 1000.0 / Stopwatch.Frequency;
+            Trace.WriteLine(
+                $"[MAP-PERF] n={s_perfCount} avg ms — " +
+                $"total={s_totalTicks * perFreq / s_perfCount:F2} " +
+                $"projector={s_projTicks * perFreq / s_perfCount:F2} " +
+                $"lands={s_landsTicks * perFreq / s_perfCount:F2} " +
+                $"series={s_seriesTicks * perFreq / s_perfCount:F2}");
+            s_totalTicks = s_projTicks = s_landsTicks = s_seriesTicks = 0;
+            s_perfCount = 0;
+        }
     }
 
     /// <summary>
