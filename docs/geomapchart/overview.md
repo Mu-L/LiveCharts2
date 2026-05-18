@@ -302,25 +302,80 @@ static.
 <pre><code>geoMap1.InteractionMode = LiveChartsCore.Geo.MapInteractionMode.Both;</code></pre>
 {{~ end ~}}
 
-To hide the tooltip, set `TooltipPosition` to `Hidden`:
+## Tooltip placement and styling
+
+The `TooltipPosition` property controls where the popup anchors relative to the
+hovered land's centroid. The map auto-flips between top and bottom when
+`Auto` is set and the popup would clip the chart edge.
+
+| Value    | Behavior                                            |
+| -------- | --------------------------------------------------- |
+| `Auto`   | Default — places above the land, flips below near the top edge. |
+| `Top`    | Always above the land (wedge points down).          |
+| `Bottom` | Always below the land (wedge points up).            |
+| `Hidden` | Disables the tooltip entirely.                      |
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap
     Series="{Binding Series}"
-    TooltipPosition="Hidden">&lt;!-- mark -->
+    TooltipPosition="Top"&gt;&lt;!-- mark -->
 &lt;/lvc:GeoMap></code></pre>
 {{~ end ~}}
 
 {{~ if blazor ~}}
 <pre><code>&lt;GeoMap
     Series="series"
-    TooltipPosition="LiveChartsCore.Measure.TooltipPosition.Hidden">&lt;!-- mark -->
+    TooltipPosition="LiveChartsCore.Measure.TooltipPosition.Top"&gt;&lt;!-- mark -->
 &lt;/GeoMap></code></pre>
 {{~ end ~}}
 
 {{~ if winforms ~}}
-<pre><code>geoMap1.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden;</code></pre>
+<pre><code>geoMap1.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Top;</code></pre>
 {{~ end ~}}
+
+`TooltipTextSize`, `TooltipTextPaint`, and `TooltipBackgroundPaint` style the
+default tooltip without replacing it. `TooltipTextSize` defaults to the active
+theme; `TooltipTextPaint` and `TooltipBackgroundPaint` fall back to theme
+paints when null.
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    TooltipTextSize="16"&gt;&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    TooltipTextSize="16"&gt;&lt;!-- mark -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.TooltipTextSize = 16;
+geoMap1.TooltipTextPaint = new SolidColorPaint(SKColors.White);
+geoMap1.TooltipBackgroundPaint = new SolidColorPaint(SKColors.Black);</code></pre>
+{{~ end ~}}
+
+## Programmatic zoom, pan and reset
+
+`MapInteractionMode` covers user gestures; the methods on `CoreChart` cover
+programmatic viewport control:
+
+- `CoreChart.ResetViewport()` — snap back to zoom 1.0 / no pan.
+- `CoreChart.Pan(LvcPoint delta)` — pan by a screen-space offset.
+- `CoreChart.Zoom(LvcPoint pivot, ZoomDirection direction)` — zoom in / out
+  around a screen point.
+- `CoreChart.RotateTo(double longitude, double latitude, int durationMs = 800)`
+  — animated globe rotation for `MapProjection.Orthographic`. `RotationX` and
+  `RotationY` set rotation without animation.
+
+<pre><code>// Reset zoom and pan to defaults.
+geoMap.CoreChart.ResetViewport();
+
+// Animate the orthographic globe to look at Tokyo.
+geoMap.CoreChart.RotateTo(longitude: 139.69, latitude: 35.69);</code></pre>
 
 ## Finding lands on click or hover
 
