@@ -636,6 +636,9 @@ public abstract class CorePolarLineSeries<TModel, TVisual, TLabel, TPathGeometry
 
         LvcPoint previous, current, next, next2;
 
+        // Reused BezierData — see CoreLineSeries.GetSpline for the contract.
+        BezierData? data = null;
+
         for (var i = 0; i < points.Length; i++)
         {
             var isClosed = IsClosed && points.Length > 2;
@@ -720,15 +723,16 @@ public abstract class CorePolarLineSeries<TModel, TVisual, TLabel, TPathGeometry
                 y0 = c1Y;
             }
 
-            yield return new BezierData(points[i])
-            {
-                X0 = x0,
-                Y0 = y0,
-                X1 = c2X,
-                Y1 = c2Y,
-                X2 = next.X,
-                Y2 = next.Y
-            };
+            data ??= new BezierData(points[i]);
+            data.TargetPoint = points[i];
+            data.X0 = x0;
+            data.Y0 = y0;
+            data.X1 = c2X;
+            data.Y1 = c2Y;
+            data.X2 = next.X;
+            data.Y2 = next.Y;
+
+            yield return data;
         }
     }
     /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.SetDefaultPointTransitions(ChartPoint)"/>
