@@ -47,6 +47,7 @@ public class CoreMotionCanvas : IDisposable
     private double _totalSeconds = 0;
     internal long _lastFrameTimestamp;
     internal TimeSpan _nextFrameDelay = s_baseFrameDelay;
+    private readonly List<(Paint Task, IDrawnElement Geometry)> _toRemoveGeometries = [];
     private static readonly double s_ticksPerMillisecond = Stopwatch.Frequency / 1000d;
     private static readonly TimeSpan s_baseFrameDelay = TimeSpan.FromMilliseconds(1000d / LiveCharts.RenderingSettings.LiveChartsRenderLoopFPS);
     private static readonly long s_jitterThreshold = s_baseFrameDelay.Ticks / 2;
@@ -157,8 +158,9 @@ public class CoreMotionCanvas : IDisposable
 
             var isValid = true;
 
-            var toRemoveGeometries = new List<Tuple<Paint, IDrawnElement>>();
-
+            // _toRemoveGeometries is a reusable scratch list; cleared at the end of each draw
+            // pass. Per-frame allocation here showed up as easy waste in perf profiling — in
+            // steady state nothing is removed.
             foreach (var zone in Zones)
             {
                 context.OnBeginZone(zone);
@@ -186,8 +188,7 @@ public class CoreMotionCanvas : IDisposable
                         isValid = isValid && geometry.IsValid;
 
                         if (geometry.IsValid && geometry.RemoveOnCompleted)
-                            toRemoveGeometries.Add(
-                                new Tuple<Paint, IDrawnElement>(task, geometry));
+                            _toRemoveGeometries.Add((task, geometry));
                     }
 
                     isValid = isValid && task.IsValid;
@@ -201,14 +202,16 @@ public class CoreMotionCanvas : IDisposable
                 context.OnEndZone(zone);
             }
 
-            foreach (var tuple in toRemoveGeometries)
+            for (var i = 0; i < _toRemoveGeometries.Count; i++)
             {
-                tuple.Item1.RemoveGeometryFromPaintTask(this, tuple.Item2);
+                var (task, geometry) = _toRemoveGeometries[i];
+                task.RemoveGeometryFromPaintTask(this, geometry);
 
                 // if we removed at least one geometry, we need to redraw the control
                 // to ensure it is not present in the next frame
                 isValid = false;
             }
+            _toRemoveGeometries.Clear();
 
             if (showFps)
             {
