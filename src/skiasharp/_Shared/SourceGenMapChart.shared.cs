@@ -99,6 +99,9 @@ public partial class SourceGenMapChart : IGeoMapView
     // into a smaller core interface that the map can implement cleanly.
     // =====================================================================
 
+    /// <inheritdoc cref="IGeoMapView.TooltipFormatter" />
+    public Func<GeoTooltipValue, string>? TooltipFormatter { get; set; }
+
     /// <inheritdoc cref="IChartView.ChartTheme" />
     public Theme? ChartTheme { get; set; }
 

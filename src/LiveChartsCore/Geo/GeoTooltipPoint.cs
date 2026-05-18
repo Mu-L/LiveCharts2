@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections.Generic;
+using System.Linq;
 using LiveChartsCore.Drawing;
 
 namespace LiveChartsCore.Geo;
@@ -35,14 +37,24 @@ public class GeoTooltipPoint
     public LandDefinition Land { get; set; } = null!;
 
     /// <summary>
-    /// Gets or sets the heat value of the land.
+    /// Gets or sets the values contributed by each series that has data for
+    /// this land. Empty when no series has a value. Series-declaration order
+    /// is preserved.
     /// </summary>
-    public double Value { get; set; }
+    public IReadOnlyList<GeoTooltipValue> Values { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets whether the land has a heat value assigned.
+    /// Gets the heat value of the first contributing series, or 0 when none.
+    /// Kept for single-series consumers; prefer iterating <see cref="Values"/>
+    /// when multiple series may cover the same land.
     /// </summary>
-    public bool HasValue { get; set; }
+    public double Value => Values.FirstOrDefault()?.Value ?? 0d;
+
+    /// <summary>
+    /// Gets a value indicating whether at least one series has a value for
+    /// this land.
+    /// </summary>
+    public bool HasValue => Values.Count > 0;
 
     /// <summary>
     /// Gets or sets the heat color of the land.
@@ -53,4 +65,16 @@ public class GeoTooltipPoint
     /// Gets or sets the visual center of the land in screen coordinates.
     /// </summary>
     public LvcPoint LandCenter { get; set; }
+}
+
+/// <summary>
+/// A single series' contribution to a land tooltip.
+/// </summary>
+public class GeoTooltipValue
+{
+    /// <summary>The series the value came from.</summary>
+    public IGeoSeries Series { get; set; } = null!;
+
+    /// <summary>The numeric value the series carries for this land.</summary>
+    public double Value { get; set; }
 }

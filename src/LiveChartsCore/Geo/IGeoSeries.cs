@@ -28,6 +28,12 @@ namespace LiveChartsCore.Geo;
 public interface IGeoSeries
 {
     /// <summary>
+    /// Gets or sets the series name. Used by the default tooltip when several
+    /// series have a value for the same land — one labeled line per series.
+    /// </summary>
+    string Name { get; set; }
+
+    /// <summary>
     /// Gets or sets a value to indecate whether the series is visible.
     /// </summary>
     public bool IsVisible { get; set; }

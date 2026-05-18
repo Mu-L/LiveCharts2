@@ -1,3 +1,4 @@
+using System.Linq;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
@@ -87,11 +88,11 @@ public class SKChartingVisualsTests
 
         var tooltip = new SKDefaultGeoTooltip();
 
+        var series = (IGeoSeries)chart.Series!.First();
         var point = new GeoTooltipPoint
         {
             Land = new LandDefinition(shortName: "bra", name: "brazil", setOf: "world"),
-            Value = 13,
-            HasValue = true,
+            Values = [new GeoTooltipValue { Series = series, Value = 13 }],
             LandCenter = new LvcPoint(200, 200)
         };
 
@@ -122,7 +123,7 @@ public class SKChartingVisualsTests
         var point = new GeoTooltipPoint
         {
             Land = new LandDefinition(shortName: "usa", name: "united states", setOf: "world"),
-            HasValue = false,  // exercise the no-value path in GetLayout
+            // No Values — exercise the no-value path in GetLayout.
             LandCenter = new LvcPoint(100, 50)
         };
 

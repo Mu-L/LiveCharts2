@@ -471,22 +471,13 @@ public class GeoMapChart : Chart
         if (_hoveredLand is not null && MapView.Tooltip is not null &&
             MapView.TooltipPosition != TooltipPosition.Hidden)
         {
-            var value = 0d;
-            var hasValue = false;
-            foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
-            {
-                if (series.TryGetValue(_hoveredLand.ShortName, out value))
-                { hasValue = true; break; }
-            }
-
             var center = ComputeLandScreenCenter(_hoveredLand, context.Projector);
 
             MapView.Tooltip.Show(
                 new GeoTooltipPoint
                 {
                     Land = _hoveredLand,
-                    Value = value,
-                    HasValue = hasValue,
+                    Values = CollectLandValues(_hoveredLand),
                     LandCenter = center
                 },
                 this);
@@ -496,9 +487,12 @@ public class GeoMapChart : Chart
     }
 
     /// <summary>
-    /// Finds the land definition at the specified pointer position, if any.
+    /// Finds the land at the specified pointer position, returning the land
+    /// definition, the values contributed by every series that covers it
+    /// (in <see cref="IGeoMapView.Series"/> declaration order), and the
+    /// projected screen anchor for tooltip placement.
     /// </summary>
-    public (LandDefinition Land, double Value, bool HasValue, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
+    public (LandDefinition Land, IReadOnlyList<GeoTooltipValue> Values, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
     {
         if (_activeMap is null) return null;
 
@@ -513,26 +507,30 @@ public class GeoMapChart : Chart
                     if (landData.Shape is null) continue;
                     if (!landData.Shape.ContainsPoint(pointerPosition.X, pointerPosition.Y)) continue;
 
-                    var value = 0d;
-                    var hasValue = false;
-                    foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
-                    {
-                        if (series.TryGetValue(landDefinition.ShortName, out value))
-                        { hasValue = true; break; }
-                    }
-
+                    var values = CollectLandValues(landDefinition);
                     var projector = Maps.BuildProjector(
                         MapView.MapProjection,
                         [MapView.ControlSize.Width, MapView.ControlSize.Height],
                         _rotation.X, _rotation.Y);
                     var center = ComputeLandScreenCenter(landDefinition, projector);
 
-                    return (landDefinition, value, hasValue, center);
+                    return (landDefinition, values, center);
                 }
             }
         }
 
         return null;
+    }
+
+    private IReadOnlyList<GeoTooltipValue> CollectLandValues(LandDefinition land)
+    {
+        List<GeoTooltipValue>? acc = null;
+        foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
+        {
+            if (!series.TryGetValue(land.ShortName, out var value)) continue;
+            (acc ??= []).Add(new GeoTooltipValue { Series = series, Value = value });
+        }
+        return acc ?? (IReadOnlyList<GeoTooltipValue>)[];
     }
 
     private LvcPoint ComputeLandScreenCenter(LandDefinition land, MapProjector projector)
@@ -634,8 +632,7 @@ public class GeoMapChart : Chart
                             new GeoTooltipPoint
                             {
                                 Land = hit.Land,
-                                Value = hit.Value,
-                                HasValue = hit.HasValue,
+                                Values = hit.Values,
                                 LandCenter = hit.Center
                             },
                             this);
@@ -650,7 +647,7 @@ public class GeoMapChart : Chart
     /// land — geo lands aren't owned by a single series (the same country can
     /// be in zero or many heat series), so the DataSource is the land itself.
     /// </summary>
-    internal ChartPoint[] BuildHitPoints((LandDefinition Land, double Value, bool HasValue, LvcPoint Center) hit)
+    internal ChartPoint[] BuildHitPoints((LandDefinition Land, IReadOnlyList<GeoTooltipValue> Values, LvcPoint Center) hit)
     {
         var bbox = ComputeLandScreenBounds(hit.Land);
         var hoverArea = new RectangleHoverArea(bbox.MinX, bbox.MinY, bbox.MaxX - bbox.MinX, bbox.MaxY - bbox.MinY);

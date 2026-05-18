@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
 using System.Collections.Generic;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
@@ -85,4 +86,12 @@ public interface IGeoMapView : IChartView
 
     /// <summary>Gets or sets the maximum zoom level. Defaults to 100.</summary>
     double MaxZoomLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets a formatter for the per-series value lines in the default
+    /// tooltip. When null, each <see cref="GeoTooltipValue"/> renders as
+    /// "{Series.Name}: {Value:N2}" (or just "{Value:N2}" if the series has no
+    /// name). Has no effect when a custom <see cref="IGeoMapTooltip"/> is set.
+    /// </summary>
+    Func<GeoTooltipValue, string>? TooltipFormatter { get; set; }
 }

@@ -208,19 +208,20 @@ public class SKDefaultGeoTooltip : Container<PopUpGeometry>, IGeoMapTooltip
                 Text = ToTitleCase(point.Land.Name),
                 Paint = fontPaint,
                 TextSize = textSize,
-                Padding = new Padding(0, 0, 0, 8),
+                Padding = new Padding(0, 0, 0, point.Values.Count > 0 ? 8 : 0),
                 MaxWidth = lw,
                 VerticalAlign = Align.Start,
                 HorizontalAlign = Align.Start
             });
 
-        // Value line
-        if (point.HasValue)
+        // One labeled line per series that has a value for this land.
+        var formatter = chart.MapView.TooltipFormatter;
+        foreach (var v in point.Values)
         {
             stackLayout.Children.Add(
                 new LabelGeometry
                 {
-                    Text = point.Value.ToString("N2"),
+                    Text = formatter is null ? FormatDefault(v) : formatter(v),
                     Paint = fontPaint,
                     TextSize = textSize,
                     MaxWidth = lw,
@@ -231,6 +232,11 @@ public class SKDefaultGeoTooltip : Container<PopUpGeometry>, IGeoMapTooltip
 
         return stackLayout;
     }
+
+    private static string FormatDefault(GeoTooltipValue v) =>
+        string.IsNullOrEmpty(v.Series.Name)
+            ? v.Value.ToString("N2")
+            : $"{v.Series.Name}: {v.Value:N2}";
 
     /// <summary>
     /// Called to initialize the tooltip.
