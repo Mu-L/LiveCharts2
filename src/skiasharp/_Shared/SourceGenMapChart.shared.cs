@@ -70,10 +70,26 @@ public partial class SourceGenMapChart : IGeoMapView
         CoreChart = new GeoMapChart(this);
         _seriesObserver = new CollectionDeepObserver(() => CoreChart?.Update());
 
+        // Forward core lifecycle events to the IChartView surface so
+        // consumers subscribing through the view get notified — matches
+        // SourceGenChart.InitializeChartControl wiring.
+        CoreChart.Measuring += OnCoreMeasuring;
+        CoreChart.UpdateStarted += OnCoreUpdateStarted;
+        CoreChart.UpdateFinished += OnCoreUpdateFinished;
+
         ActiveMap = Maps.GetWorldMap();
         SyncContext = new object();
         Tooltip = new SKDefaultGeoTooltip();
     }
+
+    private void OnCoreMeasuring(IChartView chart) =>
+        Measuring?.Invoke(this);
+
+    private void OnCoreUpdateStarted(IChartView chart) =>
+        UpdateStarted?.Invoke(this);
+
+    private void OnCoreUpdateFinished(IChartView chart) =>
+        UpdateFinished?.Invoke(this);
 
     // =====================================================================
     // PHASE 1 SHIM: IChartView members that do not (yet) have a meaningful
