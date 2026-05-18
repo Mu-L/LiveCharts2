@@ -247,20 +247,28 @@ a look at the [Paints article]({{ website_url }}/docs/{{ platform }}/{{ version 
 
 ## MapProjection property
 
-Defines the [projection](https://en.wikipedia.org/wiki/Map_projection) of the map coordinates in the control coordinates,
-currently it only support the `Default` (none) and `Mercator` projections.
+Defines the [projection](https://en.wikipedia.org/wiki/Map_projection) of the
+map coordinates in the control coordinates. Three projections are available:
+
+| Value          | Use case                                                            |
+| -------------- | ------------------------------------------------------------------- |
+| `Default`      | No projection — raw control-coordinate plot. Useful for non-geographic maps. |
+| `Mercator`     | Flat world map; preserves angles, exaggerates polar areas.          |
+| `Orthographic` | 3D globe view — only one hemisphere visible at a time, rotate to look at the other side. |
+
+### Mercator
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap
     Series="{Binding Series}"
-    MapProjection="Mercator">&lt;!-- mark -->
+    MapProjection="Mercator"&gt;&lt;!-- mark -->
 &lt;/lvc:GeoMap></code></pre>
 {{~ end ~}}
 
 {{~ if blazor ~}}
 <pre><code>&lt;GeoMap
     Series="series"
-    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator">&lt;!-- mark --> 
+    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator"&gt;&lt;!-- mark -->
 &lt;/GeoMap></code></pre>
 {{~ end ~}}
 
@@ -269,6 +277,56 @@ currently it only support the `Default` (none) and `Mercator` projections.
 {{~ end ~}}
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-mercator.png)
+
+### Orthographic
+
+`Orthographic` renders the map as a 3D globe — only the hemisphere facing the
+camera is drawn, lands that cross the horizon are clipped along the disc rim.
+`CoreChart.RotationX` (longitude) and `CoreChart.RotationY` (latitude) control
+the center of view; setting them directly snaps, `CoreChart.RotateTo(lon, lat)`
+animates.
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    x:Name="geoMap"
+    Series="{Binding Series}"
+    MapProjection="Orthographic"&gt;&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+
+<pre><code>// Code-behind / ViewModel: center the globe on Europe + Africa.
+geoMap.CoreChart.RotationX = 15;  // longitude
+geoMap.CoreChart.RotationY = 20;  // latitude</code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    @ref="geoMap"
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;!-- mark -->
+&lt;/GeoMap>
+
+@code {
+    private GeoMap geoMap = null!;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        geoMap.CoreChart.RotationX = 15;
+        geoMap.CoreChart.RotationY = 20;
+    }
+}</code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MapProjection = LiveChartsCore.Geo.MapProjection.Orthographic;
+geoMap1.CoreChart.RotationX = 15;  // longitude
+geoMap1.CoreChart.RotationY = 20;  // latitude</code></pre>
+{{~ end ~}}
+
+![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-orthographic.png)
+
+Mouse-wheel zoom is supported the same way as on the flat projections; pan is
+disabled by default — set `InteractionMode="Both"` to enable click-drag pan.
 
 ## InteractionMode property
 
