@@ -35,8 +35,8 @@ namespace LiveChartsCore.SkiaSharpView.Painting;
 public class RadialGradientPaint : SkiaPaint
 {
     private SKShader? _shader;
-    private SKColorFilter? _opacityFilter;
-    private float _opacityFilterAlpha = -1f;
+    internal SKColorFilter? _opacityFilter;
+    internal float _opacityFilterAlpha = -1f;
     private SKRect _activeClip = new();
     private readonly SKColor[] _gradientStops;
     private SKPoint _center;

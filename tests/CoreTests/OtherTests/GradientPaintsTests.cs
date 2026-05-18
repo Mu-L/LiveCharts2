@@ -1,6 +1,8 @@
 using System;
+using LiveChartsCore.Motion;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Drawing;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -200,5 +202,113 @@ public class GradientPaintsTests
         var to = new RadialGradientPaint(s_threeStops);
 
         Assert.ThrowsExactly<ArgumentException>(() => _ = from.Transitionate(0.5f, to));
+    }
+
+    // The next three tests cover the opacity-filter cache + disposal contract introduced
+    // in this PR. Before the fix, every call to ApplyOpacityMask built a fresh
+    // SKColorFilter and RestoreOpacityMask dropped the reference without disposing —
+    // native handles leaked to GC finalization. The cache now keys on the opacity value
+    // and disposes the cached filter properly in DisposeTask.
+
+    [TestMethod]
+    public void LinearGradient_ApplyOpacityMask_ReusesFilterForSameOpacity()
+    {
+        var (paint, context) = NewLinearGradientWithContext();
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        var first = paint._opacityFilter;
+        Assert.IsNotNull(first);
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        Assert.AreSame(first, paint._opacityFilter,
+            "Same opacity value must reuse the cached SKColorFilter.");
+    }
+
+    [TestMethod]
+    public void LinearGradient_ApplyOpacityMask_RebuildsForDifferentOpacity()
+    {
+        var (paint, context) = NewLinearGradientWithContext();
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        var first = paint._opacityFilter;
+
+        paint.ApplyOpacityMask(context, 0.25f, null);
+        Assert.AreNotSame(first, paint._opacityFilter,
+            "Different opacity value must rebuild the cached filter.");
+        Assert.AreEqual(0.25f, paint._opacityFilterAlpha);
+    }
+
+    [TestMethod]
+    public void LinearGradient_DisposeTask_ReleasesCachedOpacityFilter()
+    {
+        var (paint, context) = NewLinearGradientWithContext();
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        Assert.IsNotNull(paint._opacityFilter);
+
+        paint.DisposeTask();
+        Assert.IsNull(paint._opacityFilter,
+            "DisposeTask must dispose and null the cached SKColorFilter.");
+    }
+
+    [TestMethod]
+    public void RadialGradient_ApplyOpacityMask_ReusesFilterForSameOpacity()
+    {
+        var (paint, context) = NewRadialGradientWithContext();
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        var first = paint._opacityFilter;
+        Assert.IsNotNull(first);
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        Assert.AreSame(first, paint._opacityFilter,
+            "Same opacity value must reuse the cached SKColorFilter.");
+    }
+
+    [TestMethod]
+    public void RadialGradient_ApplyOpacityMask_RebuildsForDifferentOpacity()
+    {
+        var (paint, context) = NewRadialGradientWithContext();
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        var first = paint._opacityFilter;
+
+        paint.ApplyOpacityMask(context, 0.25f, null);
+        Assert.AreNotSame(first, paint._opacityFilter,
+            "Different opacity value must rebuild the cached filter.");
+        Assert.AreEqual(0.25f, paint._opacityFilterAlpha);
+    }
+
+    [TestMethod]
+    public void RadialGradient_DisposeTask_ReleasesCachedOpacityFilter()
+    {
+        var (paint, context) = NewRadialGradientWithContext();
+
+        paint.ApplyOpacityMask(context, 0.5f, null);
+        Assert.IsNotNull(paint._opacityFilter);
+
+        paint.DisposeTask();
+        Assert.IsNull(paint._opacityFilter,
+            "DisposeTask must dispose and null the cached SKColorFilter.");
+    }
+
+    private static (LinearGradientPaint Paint, SkiaSharpDrawingContext Context) NewLinearGradientWithContext()
+    {
+        var canvas = new CoreMotionCanvas();
+        var surface = SKSurface.Create(new SKImageInfo(100, 100))!;
+        var context = new SkiaSharpDrawingContext(canvas, surface.Canvas, SKColor.Empty);
+        var paint = new LinearGradientPaint(s_twoStops);
+        paint.OnPaintStarted(context, null);
+        return (paint, context);
+    }
+
+    private static (RadialGradientPaint Paint, SkiaSharpDrawingContext Context) NewRadialGradientWithContext()
+    {
+        var canvas = new CoreMotionCanvas();
+        var surface = SKSurface.Create(new SKImageInfo(100, 100))!;
+        var context = new SkiaSharpDrawingContext(canvas, surface.Canvas, SKColor.Empty);
+        var paint = new RadialGradientPaint(s_twoStops);
+        paint.OnPaintStarted(context, null);
+        return (paint, context);
     }
 }
