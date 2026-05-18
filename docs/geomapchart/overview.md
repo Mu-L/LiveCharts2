@@ -321,3 +321,77 @@ To hide the tooltip, set `TooltipPosition` to `Hidden`:
 {{~ if winforms ~}}
 <pre><code>geoMap1.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden;</code></pre>
 {{~ end ~}}
+
+## Finding lands on click or hover
+
+The map participates in the same `IChartView` pointer-event surface as the
+other charts. `DataPointerDown` fires once per land click, and
+`HoveredPointsChanged` fires when the pointer enters, transitions between, or
+leaves a land. Each `ChartPoint` carries the `LandDefinition` as its data
+source — unwrap it to read the land's name / short name and look up the
+per-series values yourself.
+
+<pre><code>using LiveChartsCore.Geo;
+using LiveChartsCore.Kernel;
+
+geoMap.DataPointerDown += (sender, points) =>
+{
+    if (points.FirstOrDefault()?.Context.DataSource is not LandDefinition land) return;
+
+    // Look up each series' value for this land.
+    foreach (var series in geoMap.Series ?? [])
+        if (series.TryGetValue(land.ShortName, out var value))
+            Console.WriteLine($"{series.Name}: {value}");
+};</code></pre>
+
+If you only need a synchronous lookup (e.g. on a custom gesture), call
+`geoMap.GetPointsAt(new LvcPointD(x, y))` — same `ChartPoint` shape, no event
+subscription needed.
+
+## Customizing the tooltip
+
+The default tooltip (`SKDefaultGeoTooltip`) renders the land name followed by
+one labeled line per heat series that has a value for it. For most cases the
+quickest knob is `TooltipFormatter` — a `Func<GeoTooltipValue, string>` that
+takes over the per-value line text:
+
+{{~ if xaml ~}}
+<pre><code>// In your ViewModel:
+public Func&lt;GeoTooltipValue, string> TooltipFormatter { get; }
+    = v => $"{v.Series.Name}: {v.Value:C0}"; // mark</code></pre>
+
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    TooltipFormatter="{Binding TooltipFormatter}">&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    TooltipFormatter="@(v => $"{v.Series.Name}: {v.Value:C0}")">&lt;!-- mark -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.TooltipFormatter = v => $"{v.Series.Name}: {v.Value:C0}"; // mark</code></pre>
+{{~ end ~}}
+
+The default format is `"{Series.Name}: {Value:N2}"` (or just `"{Value:N2}"`
+when the series has no `Name`). When several series cover the same land, you
+get one line per series in the order they appear in `Series`.
+
+For deeper customization (layout, multiple paints, icons, etc.), subclass
+`SKDefaultGeoTooltip` or implement `IGeoMapTooltip` from scratch and assign
+it to the `Tooltip` property:
+
+<pre><code>public class MyTooltip : SKDefaultGeoTooltip
+{
+    protected override Layout&lt;SkiaSharpDrawingContext> GetLayout(
+        GeoTooltipPoint point, GeoMapChart chart, Theme theme, PopUpPlacement placement)
+    {
+        // build and return your own layout
+    }
+}
+
+geoMap.Tooltip = new MyTooltip();</code></pre>
