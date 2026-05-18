@@ -379,6 +379,13 @@ public class GeoMapChart : Chart
     /// <inheritdoc/>
     protected internal override void Measure()
     {
+        // GetTheme has the side effect of wiring Canvas._virtualBackgroundColor,
+        // which platform views fall back to in IChartView.BackColor when no
+        // native control Background is set. Without it, GPU mode (SKGLView on
+        // MAUI etc.) clears to the GL surface default (transparent/black)
+        // instead of the theme's chart background.
+        _ = GetTheme();
+
         if (_activeMap is not null && _activeMap != MapView.ActiveMap)
         {
             _previousStroke?.ClearGeometriesFromPaintTask(Canvas);

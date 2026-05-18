@@ -89,8 +89,43 @@ public partial class SourceGenMapChart : IGeoMapView
     // CoreCanvas / ControlSize / DesignerMode / IsDarkMode / InvokeOnUIThread
     // are inherited from SourceGenDrawnView. BackColor stays here because
     // WinForms' native BackColor name collides — explicit interface impl on
-    // the map is the simplest way out.
-    LvcColor IChartView.BackColor => default;
+    // the map is the simplest way out. Each platform reads its native
+    // Background brush first and falls back to the theme-driven virtual
+    // background; GPURenderMode.GetBackground() relies on this — without it
+    // the GL surface clears to SKColor.Empty (transparent black).
+#if MAUI_LVC
+    LvcColor IChartView.BackColor
+    {
+        get
+        {
+            var c = (Background as Microsoft.Maui.Controls.SolidColorBrush)?.Color ?? BackgroundColor;
+            return c is not null
+                ? LvcColor.FromArgb((byte)(c.Alpha * 255), (byte)(c.Red * 255), (byte)(c.Green * 255), (byte)(c.Blue * 255))
+                : CoreCanvas._virtualBackgroundColor;
+        }
+    }
+#elif WPF_LVC
+    LvcColor IChartView.BackColor =>
+        Background is not System.Windows.Media.SolidColorBrush b
+            ? CoreCanvas._virtualBackgroundColor
+            : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
+#elif AVALONIA_LVC
+    LvcColor IChartView.BackColor =>
+        Background is not Avalonia.Media.ISolidColorBrush b
+            ? CoreCanvas._virtualBackgroundColor
+            : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
+#elif WINUI_LVC
+    LvcColor IChartView.BackColor =>
+        Background is not Microsoft.UI.Xaml.Media.SolidColorBrush b
+            ? CoreCanvas._virtualBackgroundColor
+            : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
+#else
+    // SKIA_IMAGE_LVC / WinForms / Eto / Blazor: no native Background brush
+    // exposed via the partial here; theme-driven virtual background only.
+    // (WinForms' own BackColor would have to be read after the System.Drawing.Color
+    // → LvcColor conversion in its own partial; out of scope for this change.)
+    LvcColor IChartView.BackColor => CoreCanvas._virtualBackgroundColor;
+#endif
 
     /// <inheritdoc cref="IChartView.DrawMargin" />
     public Margin? DrawMargin { get; set; }
