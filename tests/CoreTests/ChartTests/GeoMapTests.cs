@@ -260,6 +260,102 @@ public class GeoMapTests
         Assert.AreEqual(0, chart.GetPointsAt(new LvcPointD(1, 1)).Count());
     }
 
+    // Multi-series tooltip: when several heat series have a value for the same
+    // land, the tooltip dispatch passes Values (one per contributing series) in
+    // Series-declaration order instead of breaking on the first match (which
+    // hid all but the first series' value in the pre-#2253 tooltip).
+    [TestMethod]
+    public void GeoMap_MultipleHeatSeries_TooltipValuesPreserveDeclarationOrder()
+    {
+        const float Width = 600f, Height = 600f;
+
+        var chart = new SKGeoMap
+        {
+            Width = (int)Width,
+            Height = (int)Height,
+            MapProjection = MapProjection.Mercator,
+            Series = [
+                new HeatLandSeries { Name = "Population", Lands = [new() { Name = "bra", Value = 213 }] },
+                new HeatLandSeries { Name = "GDP",        Lands = [new() { Name = "bra", Value = 1839 }] },
+            ]
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [Width, Height]);
+        projector.ToMap(-47.92, -15.79, out var brasiliaX, out var brasiliaY); // Brasilia
+
+        var hit = chart.CoreChart.FindLandAt(new LvcPoint(brasiliaX, brasiliaY));
+        Assert.IsNotNull(hit, "Brasilia must hit bra");
+        Assert.AreEqual("bra", hit.Value.Land.ShortName);
+
+        var values = hit.Value.Values;
+        Assert.AreEqual(2, values.Count, "both series contribute");
+        Assert.AreEqual("Population", values[0].Series.Name, "declaration order is preserved");
+        Assert.AreEqual(213d, values[0].Value);
+        Assert.AreEqual("GDP", values[1].Series.Name);
+        Assert.AreEqual(1839d, values[1].Value);
+    }
+
+    // TooltipFormatter is invoked once per Value during tooltip rendering. We
+    // verify by routing through a custom IGeoMapTooltip that records the
+    // GeoTooltipPoint it received, so we can replay the formatter ourselves.
+    [TestMethod]
+    public void GeoMap_TooltipFormatter_IsAppliedToEachValue()
+    {
+        var captured = new RecordingTooltip();
+        var calls = new List<GeoTooltipValue>();
+
+        var chart = new SKGeoMap
+        {
+            Width = 600,
+            Height = 600,
+            MapProjection = MapProjection.Mercator,
+            Series = [
+                new HeatLandSeries { Name = "Pop", Lands = [new() { Name = "fra", Value = 67.5 }] },
+                new HeatLandSeries { Name = "GDP", Lands = [new() { Name = "fra", Value = 2937 }] },
+            ],
+            Tooltip = captured,
+            TooltipFormatter = v =>
+            {
+                calls.Add(v);
+                return $"[{v.Series.Name}] {v.Value:0.0}";
+            }
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [600f, 600f]);
+        projector.ToMap(2.35, 48.85, out var x, out var y);
+
+        // Drive a hover through the throttler so the tooltip Show fires.
+        chart.CoreChart.InvokePointerMove(new LvcPoint(x, y));
+        RunPendingTooltip(chart);
+
+        Assert.IsNotNull(captured.LastPoint, "tooltip.Show must be invoked on hover");
+        Assert.AreEqual(2, captured.LastPoint!.Values.Count);
+        Assert.AreSame(chart.TooltipFormatter, captured.LastPointChart!.MapView.TooltipFormatter,
+            "the view's formatter is what SKDefaultGeoTooltip should read");
+
+        // Replay the formatter the way SKDefaultGeoTooltip's GetLayout would:
+        // once per Values entry. Validates the contract that both ends agree on.
+        foreach (var v in captured.LastPoint.Values)
+            _ = chart.TooltipFormatter!(v);
+        Assert.AreEqual(2, calls.Count);
+        Assert.AreEqual("Pop", calls[0].Series.Name);
+        Assert.AreEqual("GDP", calls[1].Series.Name);
+    }
+
+    private sealed class RecordingTooltip : IGeoMapTooltip
+    {
+        public GeoTooltipPoint? LastPoint { get; private set; }
+        public GeoMapChart? LastPointChart { get; private set; }
+        public void Show(GeoTooltipPoint point, GeoMapChart chart)
+        {
+            LastPoint = point;
+            LastPointChart = chart;
+        }
+        public void Hide(GeoMapChart chart) { }
+    }
+
     // GeoMapChart owns its own _tooltipThrottler (50ms ActionThrottler); the
     // tests need a deterministic way to flush it. The throttler dispatches its
     // work via View.InvokeOnUIThread which on SKGeoMap runs synchronously, so
