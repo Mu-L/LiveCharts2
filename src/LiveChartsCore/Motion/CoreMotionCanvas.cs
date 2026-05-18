@@ -337,10 +337,10 @@ public class CoreMotionCanvas : IDisposable
     /// <param name="task">The task.</param>
     public void RemovePaintTask(Paint task)
     {
-        var geometriesWithOwnPaints = task.GetGeometries(this)
-                .Where(x => (x.Fill ?? x.Stroke ?? x.Paint) is not null);
-
-        foreach (var geometry in geometriesWithOwnPaints)
+        // DisposePaints fires the OnDisposed hook — needed for geometries that hold cached
+        // native resources (e.g. VectorGeometry's SKPath) even if they don't own their own
+        // paints. DisposePaints null-checks the paints internally.
+        foreach (var geometry in task.GetGeometries(this))
             geometry.DisposePaints();
 
         task.ReleaseCanvas(this);
@@ -419,10 +419,9 @@ public class CoreMotionCanvas : IDisposable
         {
             foreach (var task in zone.EnumerateTasks())
             {
-                var geometriesWithOwnPaints = task.GetGeometries(this)
-                    .Where(x => (x.Fill ?? x.Stroke ?? x.Paint) is not null);
-
-                foreach (var geometry in geometriesWithOwnPaints)
+                // See RemovePaintTask: DisposePaints reaches OnDisposed on geometries with
+                // cached native resources regardless of paint ownership.
+                foreach (var geometry in task.GetGeometries(this))
                     geometry.DisposePaints();
 
                 task.DisposeTask();
