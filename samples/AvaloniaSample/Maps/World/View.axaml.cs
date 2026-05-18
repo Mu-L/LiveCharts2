@@ -1,6 +1,7 @@
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using LiveChartsCore.Geo;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Avalonia;
@@ -72,10 +73,17 @@ public partial class View : UserControl
         };
 
         var clickedText = this.Find<TextBlock>("ClickedLandText")!;
-        geoMap.CoreChart.LandClicked += args =>
+        geoMap.DataPointerDown += (_, points) =>
         {
+            var land = points.FirstOrDefault()?.Context.DataSource as LandDefinition;
+            if (land is null) return;
+
+            var value = 0d;
+            foreach (var series in geoMap.Series ?? [])
+                if (series.TryGetValue(land.ShortName, out value)) break;
+
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                clickedText.Text = $"Clicked: {args.Land.Name} ({args.Land.ShortName}) = {args.Value}");
+                clickedText.Text = $"Clicked: {land.Name} ({land.ShortName}) = {value}");
         };
     }
 

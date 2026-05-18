@@ -201,7 +201,11 @@ public partial class SourceGenMapChart : IGeoMapView
     public IEnumerable<ChartPoint> GetPointsAt(
         LvcPointD point,
         FindingStrategy strategy = FindingStrategy.Automatic,
-        FindPointFor findPointFor = FindPointFor.HoverEvent) => [];
+        FindPointFor findPointFor = FindPointFor.HoverEvent)
+    {
+        var hit = CoreChart?.FindLandAt(new LvcPoint((float)point.X, (float)point.Y));
+        return hit is null ? [] : CoreChart!.BuildHitPoints(hit.Value);
+    }
 
     /// <inheritdoc cref="IChartView.GetVisualsAt"/>
     public IEnumerable<IChartElement> GetVisualsAt(LvcPointD point) => [];
