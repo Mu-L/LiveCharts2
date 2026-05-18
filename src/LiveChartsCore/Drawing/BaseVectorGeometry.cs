@@ -211,5 +211,14 @@ public abstract partial class BaseVectorGeometry : Animatable, IDrawnElement
         Stroke?.DisposeTask();
         Fill?.DisposeTask();
         ((IDrawnElement)this).Paint?.DisposeTask();
+
+        OnDisposed();
     }
+
+    /// <summary>
+    /// Subclass hook called when the geometry is being removed from a canvas. Use it to release
+    /// any cached resources that aren't covered by paint disposal (e.g. native handles owned by
+    /// the geometry itself). Mirrors <c>BaseLabelGeometry.OnDisposed</c>.
+    /// </summary>
+    internal virtual void OnDisposed() { }
 }
