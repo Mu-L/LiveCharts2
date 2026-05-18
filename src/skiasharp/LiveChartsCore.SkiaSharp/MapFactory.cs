@@ -316,6 +316,13 @@ public class MapFactory : IMapFactory
         if (!anyVisible) return false;
 
         var started = false;
+        // Track the first point and the last horizon-exit so we can close the
+        // clipped polygon by walking the visible-disc boundary instead of
+        // letting path.Close() draw a chord through the disc (which slices the
+        // polygon visually, e.g. China when the view is centered on Americas).
+        float firstX = 0f, firstY = 0f;
+        float lastExitX = 0f, lastExitY = 0f;
+        var hasPendingExit = false;
 
         for (var i = 0; i < coordinates.Length; i++)
         {
@@ -331,6 +338,7 @@ public class MapFactory : IMapFactory
                 if (!started)
                 {
                     path.MoveTo(px, py);
+                    firstX = px; firstY = py;
                     started = true;
                 }
                 else
@@ -338,22 +346,34 @@ public class MapFactory : IMapFactory
                     path.LineTo(px, py);
                 }
 
-                if (!nextVis && i < coordinates.Length - 1)
+                if (!nextVis)
                 {
-                    // Transition visible → invisible: find horizon point
+                    // Transition visible → invisible: find horizon point.
                     var hp = FindHorizonPoint(ortho, cur.X, cur.Y, next.X, next.Y);
                     ortho.ToMap(hp[0], hp[1], out var hx, out var hy);
                     path.LineTo(hx, hy);
+                    lastExitX = hx; lastExitY = hy;
+                    hasPendingExit = true;
                 }
             }
             else if (nextVis)
             {
-                // Transition invisible → visible: find horizon point and start from there
+                // Transition invisible → visible: find horizon point and start from there.
                 var hp = FindHorizonPoint(ortho, next.X, next.Y, cur.X, cur.Y);
                 ortho.ToMap(hp[0], hp[1], out var hx, out var hy);
+
+                if (hasPendingExit)
+                {
+                    // Walk the visible-disc boundary from the previous exit to
+                    // this entry instead of drawing a chord.
+                    EmitHorizonArc(ortho, path, lastExitX, lastExitY, hx, hy);
+                    hasPendingExit = false;
+                }
+
                 if (!started)
                 {
                     path.MoveTo(hx, hy);
+                    firstX = hx; firstY = hy;
                     started = true;
                 }
                 else
@@ -363,8 +383,52 @@ public class MapFactory : IMapFactory
             }
         }
 
+        if (hasPendingExit)
+        {
+            // Polygon ended on a horizon exit — close along the disc boundary
+            // back to the first emitted point rather than via path.Close()'s chord.
+            EmitHorizonArc(ortho, path, lastExitX, lastExitY, firstX, firstY);
+        }
+
         if (started) path.Close();
         return started;
+    }
+
+    /// <summary>
+    /// Emits <see cref="SKPath.LineTo"/> segments along the visible-disc
+    /// boundary (a circle of radius <see cref="OrthographicProjector.Radius"/>
+    /// centered on the projector's screen center) from <c>(fromX, fromY)</c>
+    /// to <c>(toX, toY)</c>, taking the shorter arc. Both endpoints are
+    /// assumed to already lie on the disc boundary.
+    /// </summary>
+    private static void EmitHorizonArc(
+        OrthographicProjector ortho, SKPath path,
+        float fromX, float fromY, float toX, float toY)
+    {
+        var cx = ortho.ScreenCenterX;
+        var cy = ortho.ScreenCenterY;
+        var r = ortho.Radius;
+
+        var a0 = Math.Atan2(fromY - cy, fromX - cx);
+        var a1 = Math.Atan2(toY - cy, toX - cx);
+
+        var delta = a1 - a0;
+        if (delta > Math.PI) delta -= 2 * Math.PI;
+        else if (delta < -Math.PI) delta += 2 * Math.PI;
+
+        // 3°/step keeps the linearized arc visually smooth (~120 steps for a
+        // full half-disc traversal, negligible per-frame cost).
+        const double StepRad = 3.0 * Math.PI / 180.0;
+        var steps = Math.Max(1, (int)Math.Ceiling(Math.Abs(delta) / StepRad));
+        var dStep = delta / steps;
+
+        for (var i = 1; i <= steps; i++)
+        {
+            var a = a0 + dStep * i;
+            var x = (float)(cx + r * Math.Cos(a));
+            var y = (float)(cy + r * Math.Sin(a));
+            path.LineTo(x, y);
+        }
     }
 
     private static double[] FindHorizonPoint(
