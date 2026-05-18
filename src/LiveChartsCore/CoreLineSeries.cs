@@ -649,6 +649,11 @@ public abstract class CoreLineSeries<TModel, TVisual, TLabel, TPathGeometry, TEr
         IEnumerable<ChartPoint> points,
         StackPosition? stacker)
     {
+        // Single BezierData reused across yields — mutating its fields between iterations
+        // is safe because Measure reads X0..Y2 into the segment via local accesses within
+        // the same foreach body; the reference never escapes a single MoveNext step.
+        BezierData? data = null;
+
         foreach (var item in points.AsSplineData())
         {
             if (item.IsFirst)
@@ -657,17 +662,17 @@ public abstract class CoreLineSeries<TModel, TVisual, TLabel, TPathGeometry, TEr
 
                 var sc = stacker?.GetStack(item.Current).CumulativeStart ?? 0;
 
-                yield return new BezierData(item.Next)
-                {
-                    X0 = c.SecondaryValue,
-                    Y0 = c.PrimaryValue + sc,
-                    X1 = c.SecondaryValue,
-                    Y1 = c.PrimaryValue + sc,
-                    X2 = c.SecondaryValue,
-                    Y2 = c.PrimaryValue + sc,
-                    IsNextEmpty = item.IsNextEmpty
-                };
+                data ??= new BezierData(item.Next);
+                data.TargetPoint = item.Next;
+                data.X0 = c.SecondaryValue;
+                data.Y0 = c.PrimaryValue + sc;
+                data.X1 = c.SecondaryValue;
+                data.Y1 = c.PrimaryValue + sc;
+                data.X2 = c.SecondaryValue;
+                data.Y2 = c.PrimaryValue + sc;
+                data.IsNextEmpty = item.IsNextEmpty;
 
+                yield return data;
                 continue;
             }
 
@@ -725,15 +730,17 @@ public abstract class CoreLineSeries<TModel, TVisual, TLabel, TPathGeometry, TEr
             var c2X = xm2 + (xc2 - xm2) * _lineSmoothness + next.SecondaryValue - xm2;
             var c2Y = ym2 + (yc2 - ym2) * _lineSmoothness + next.PrimaryValue + nys - ym2;
 
-            yield return new BezierData(item.Next)
-            {
-                X0 = c1X,
-                Y0 = c1Y,
-                X1 = c2X,
-                Y1 = c2Y,
-                X2 = next.SecondaryValue,
-                Y2 = next.PrimaryValue + nys
-            };
+            data ??= new BezierData(item.Next);
+            data.TargetPoint = item.Next;
+            data.X0 = c1X;
+            data.Y0 = c1Y;
+            data.X1 = c2X;
+            data.Y1 = c2Y;
+            data.X2 = next.SecondaryValue;
+            data.Y2 = next.PrimaryValue + nys;
+            data.IsNextEmpty = false;
+
+            yield return data;
         }
     }
 
