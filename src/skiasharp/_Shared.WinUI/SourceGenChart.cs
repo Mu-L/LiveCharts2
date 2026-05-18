@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -21,52 +21,40 @@
 // SOFTWARE.
 
 using System;
-using System.Runtime.InteropServices;
+using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.SkiaSharpView.WinUI;
 using LiveChartsCore.Native;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using LiveChartsCore;
-using LiveChartsCore.Motion;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
-// this file is the base class for this UI framework controls, in this file we
-// define the UI framework specific code. 
-// expanding this file in the solution explorer will show 2 more files:
-//    - *.shared.cs:        shared code between all UI frameworks
-//    - *.sgp.cs:           the source generated properties
+// WinUI / Uno-WinUI base class for cartesian / pie / polar controls. Drawn-view
+// scaffolding (MotionCanvas hosting, Loaded/Unloaded wiring, DispatcherQueue,
+// CoreCanvas / ControlSize / ActualTheme-aware IsDarkMode) lives in
+// SourceGenDrawnView.winui.cs. Chart-specific plumbing (PointerController with
+// double-tap detection, theme-change listener, command-bound pointer handlers,
+// series template inflation, observer lifecycle) lives here.
 // ==============================================================================
 
 /// <inheritdoc cref="IChartView"/>
-public abstract partial class SourceGenChart : UserControl, IChartView
+public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
 {
     private DateTime _lastTouch;
     private LvcPoint _lastTouchPosition;
     private readonly PointerController _pointerController;
-    private static readonly bool s_isWebAssembly = RuntimeInformation.IsOSPlatform(OSPlatform.Create("BROWSER"));
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenChart"/> class.
     /// </summary>
     public SourceGenChart()
     {
-        Content = new MotionCanvas();
-
-        SizeChanged += (s, e) =>
-            CoreChart.Update();
-
         InitializeChartControl();
         InitializeObservedProperties();
-
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
 
         _pointerController = new PointerController();
 
@@ -78,25 +66,16 @@ public abstract partial class SourceGenChart : UserControl, IChartView
         _pointerController.Exited += OnExited;
     }
 
-    private MotionCanvas MotionCanvas => (MotionCanvas)Content;
-
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
-
-    bool IChartView.DesignerMode => false;
-    // ActualTheme resolves the chain: this element's RequestedTheme -> any ancestor
-    // FrameworkElement.RequestedTheme -> Application.RequestedTheme -> system theme.
-    // Reading Application.RequestedTheme directly (the prior implementation) ignored
-    // both element-level overrides (the standard WinUI 3 pattern, e.g. setting
-    // RequestedTheme on a Window or page) and runtime theme toggles — see #2004.
-    bool IChartView.IsDarkMode => ActualTheme == ElementTheme.Dark;
     LvcColor IChartView.BackColor =>
         Background is not SolidColorBrush b
             ? CoreCanvas._virtualBackgroundColor
             : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
-    LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
+
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded()
     {
         ActualThemeChanged += OnActualThemeChanged;
         _pointerController.InitializeController(this);
@@ -104,7 +83,8 @@ public abstract partial class SourceGenChart : UserControl, IChartView
         CoreChart.Load();
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded()
     {
         ActualThemeChanged -= OnActualThemeChanged;
         _pointerController.DisposeController(this);
@@ -117,14 +97,14 @@ public abstract partial class SourceGenChart : UserControl, IChartView
 
     private void AddUIElement(object item)
     {
-        if (MotionCanvas is null || item is not UIElement uiElement) return;
-        MotionCanvas.Children.Add(uiElement);
+        if (Content is not Microsoft.UI.Xaml.Controls.Panel panel || item is not UIElement uiElement) return;
+        panel.Children.Add(uiElement);
     }
 
     private void RemoveUIElement(object item)
     {
-        if (MotionCanvas is null || item is not UIElement uiElement) return;
-        _ = MotionCanvas.Children.Remove(uiElement);
+        if (Content is not Microsoft.UI.Xaml.Controls.Panel panel || item is not UIElement uiElement) return;
+        _ = panel.Children.Remove(uiElement);
     }
 
     private void OnPressed(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args)
@@ -193,16 +173,4 @@ public abstract partial class SourceGenChart : UserControl, IChartView
 
     private static object GetSeriesSource(ISeries series) =>
         ((FrameworkElement)series).DataContext!;
-
-    void IChartView.InvokeOnUIThread(Action action)
-    {
-        if (s_isWebAssembly)
-        {
-            action();
-            return;
-        }
-
-        _ = DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () => action());
-    }
 }

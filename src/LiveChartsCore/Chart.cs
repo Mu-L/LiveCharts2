@@ -959,7 +959,12 @@ public abstract class Chart
              }));
     }
 
-    private Task PanningThrottlerUnlocked()
+    /// <summary>
+    /// Called when the panning throttler fires. The base implementation handles
+    /// cartesian pan; subclasses (GeoMapChart) override to plug in their own
+    /// panning strategy while still reusing the base throttler + deadzone.
+    /// </summary>
+    protected virtual Task PanningThrottlerUnlocked()
     {
         return Task.Run(() =>
             View.InvokeOnUIThread(() =>

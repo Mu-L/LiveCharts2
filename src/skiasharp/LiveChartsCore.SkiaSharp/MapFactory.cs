@@ -69,9 +69,8 @@ public class MapFactory : IMapFactory
                 _globeCircle = new LandAreaGeometry();
             }
 
-            var circlePath = new SKPath();
+            var circlePath = _globeCircle.GetOrResetBasePath();
             circlePath.AddCircle(ortho.ScreenCenterX, ortho.ScreenCenterY, ortho.Radius);
-            _globeCircle.SetBasePath(circlePath);
             _globeCircle.ViewportTransform = _viewportTransform;
 
             if (context.View.Fill is not null)
@@ -139,21 +138,25 @@ public class MapFactory : IMapFactory
 
                     if (isOrtho && ortho is not null)
                     {
-                        var skPath = BuildOrthographicPath(ortho, landData.Coordinates);
-                        if (skPath is null)
+                        // Reuse the geometry's cached SKPath in place; avoids
+                        // the per-frame native alloc+dispose pair that used to
+                        // dominate paint time during orthographic rotation.
+                        var skPath = shape.GetOrResetBasePath();
+                        var hasGeometry = BuildOrthographicPath(ortho, landData.Coordinates, skPath);
+                        if (!hasGeometry)
                         {
-                            // Entire polygon is on the far side — hide it
+                            // Entire polygon is on the far side — hide it.
+                            // skPath is already empty (Reset above), no need
+                            // to allocate a new one.
                             stroke?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
                             fill?.RemoveGeometryFromPaintTask(context.View.CoreCanvas, shape);
                             shape.Commands.Clear();
-                            shape.SetBasePath(new SKPath());
                             continue;
                         }
 
                         stroke?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
                         fill?.AddGeometryToPaintTask(context.View.CoreCanvas, shape);
                         shape.Commands.Clear();
-                        shape.SetBasePath(skPath);
                     }
                     else
                     {
@@ -167,10 +170,7 @@ public class MapFactory : IMapFactory
 
                         foreach (var point in landData.Coordinates)
                         {
-                            var p = projector.ToMap([point.X, point.Y]);
-
-                            var x = p[0];
-                            var y = p[1];
+                            projector.ToMap(point.X, point.Y, out var x, out var y);
 
                             if (isFirst)
                             {
@@ -236,7 +236,7 @@ public class MapFactory : IMapFactory
         _viewportTransform.CenterX = sender.View.ControlSize.Width * 0.5f;
         _viewportTransform.CenterY = sender.View.ControlSize.Height * 0.5f;
 
-        var speed = sender.View.ZoomingSpeed;
+        var speed = sender.MapView.ZoomingSpeed;
         speed = speed < 0.1 ? 0.1 : (speed > 0.95 ? 0.95 : speed);
         speed = 1 - speed;
 
@@ -245,8 +245,8 @@ public class MapFactory : IMapFactory
             ? (float)(oldZoom / speed)
             : (float)(oldZoom * speed);
 
-        var minZoom = (float)sender.View.MinZoomLevel;
-        var maxZoom = (float)sender.View.MaxZoomLevel;
+        var minZoom = (float)sender.MapView.MinZoomLevel;
+        var maxZoom = (float)sender.MapView.MaxZoomLevel;
 
         // Allow slight overshoot past min for bounce-back feel
         if (newZoom < minZoom * 0.8f) newZoom = minZoom * 0.8f;
@@ -291,9 +291,16 @@ public class MapFactory : IMapFactory
         sender.View.CoreCanvas.Invalidate();
     }
 
-    private static SKPath? BuildOrthographicPath(OrthographicProjector ortho, LvcPointD[] coordinates)
+    /// <summary>
+    /// Populates <paramref name="path"/> in place with the orthographic
+    /// projection of <paramref name="coordinates"/>. Returns true if any
+    /// geometry was added; false when the entire polygon is on the far side
+    /// (caller hides the geometry).
+    /// </summary>
+    private static bool BuildOrthographicPath(
+        OrthographicProjector ortho, LvcPointD[] coordinates, SKPath path)
     {
-        if (coordinates.Length == 0) return null;
+        if (coordinates.Length == 0) return false;
 
         // Check if any point is visible
         var anyVisible = false;
@@ -306,10 +313,16 @@ public class MapFactory : IMapFactory
             }
         }
 
-        if (!anyVisible) return null;
+        if (!anyVisible) return false;
 
-        var path = new SKPath();
         var started = false;
+        // Track the first point and the last horizon-exit so we can close the
+        // clipped polygon by walking the visible-disc boundary instead of
+        // letting path.Close() draw a chord through the disc (which slices the
+        // polygon visually, e.g. China when the view is centered on Americas).
+        float firstX = 0f, firstY = 0f;
+        float lastExitX = 0f, lastExitY = 0f;
+        var hasPendingExit = false;
 
         for (var i = 0; i < coordinates.Length; i++)
         {
@@ -321,44 +334,101 @@ public class MapFactory : IMapFactory
 
             if (curVis)
             {
-                var p = ortho.ToMap([cur.X, cur.Y]);
+                ortho.ToMap(cur.X, cur.Y, out var px, out var py);
                 if (!started)
                 {
-                    path.MoveTo(p[0], p[1]);
+                    path.MoveTo(px, py);
+                    firstX = px; firstY = py;
                     started = true;
                 }
                 else
                 {
-                    path.LineTo(p[0], p[1]);
+                    path.LineTo(px, py);
                 }
 
-                if (!nextVis && i < coordinates.Length - 1)
+                if (!nextVis)
                 {
-                    // Transition visible → invisible: find horizon point
+                    // Transition visible → invisible: find horizon point.
                     var hp = FindHorizonPoint(ortho, cur.X, cur.Y, next.X, next.Y);
-                    var hpp = ortho.ToMap([hp[0], hp[1]]);
-                    path.LineTo(hpp[0], hpp[1]);
+                    ortho.ToMap(hp[0], hp[1], out var hx, out var hy);
+                    path.LineTo(hx, hy);
+                    lastExitX = hx; lastExitY = hy;
+                    hasPendingExit = true;
                 }
             }
             else if (nextVis)
             {
-                // Transition invisible → visible: find horizon point and start from there
+                // Transition invisible → visible: find horizon point and start from there.
                 var hp = FindHorizonPoint(ortho, next.X, next.Y, cur.X, cur.Y);
-                var hpp = ortho.ToMap([hp[0], hp[1]]);
+                ortho.ToMap(hp[0], hp[1], out var hx, out var hy);
+
+                if (hasPendingExit)
+                {
+                    // Walk the visible-disc boundary from the previous exit to
+                    // this entry instead of drawing a chord.
+                    EmitHorizonArc(ortho, path, lastExitX, lastExitY, hx, hy);
+                    hasPendingExit = false;
+                }
+
                 if (!started)
                 {
-                    path.MoveTo(hpp[0], hpp[1]);
+                    path.MoveTo(hx, hy);
+                    firstX = hx; firstY = hy;
                     started = true;
                 }
                 else
                 {
-                    path.LineTo(hpp[0], hpp[1]);
+                    path.LineTo(hx, hy);
                 }
             }
         }
 
-        path.Close();
-        return path;
+        if (hasPendingExit)
+        {
+            // Polygon ended on a horizon exit — close along the disc boundary
+            // back to the first emitted point rather than via path.Close()'s chord.
+            EmitHorizonArc(ortho, path, lastExitX, lastExitY, firstX, firstY);
+        }
+
+        if (started) path.Close();
+        return started;
+    }
+
+    /// <summary>
+    /// Emits <see cref="SKPath.LineTo"/> segments along the visible-disc
+    /// boundary (a circle of radius <see cref="OrthographicProjector.Radius"/>
+    /// centered on the projector's screen center) from <c>(fromX, fromY)</c>
+    /// to <c>(toX, toY)</c>, taking the shorter arc. Both endpoints are
+    /// assumed to already lie on the disc boundary.
+    /// </summary>
+    private static void EmitHorizonArc(
+        OrthographicProjector ortho, SKPath path,
+        float fromX, float fromY, float toX, float toY)
+    {
+        var cx = ortho.ScreenCenterX;
+        var cy = ortho.ScreenCenterY;
+        var r = ortho.Radius;
+
+        var a0 = Math.Atan2(fromY - cy, fromX - cx);
+        var a1 = Math.Atan2(toY - cy, toX - cx);
+
+        var delta = a1 - a0;
+        if (delta > Math.PI) delta -= 2 * Math.PI;
+        else if (delta < -Math.PI) delta += 2 * Math.PI;
+
+        // 3°/step keeps the linearized arc visually smooth (~120 steps for a
+        // full half-disc traversal, negligible per-frame cost).
+        const double StepRad = 3.0 * Math.PI / 180.0;
+        var steps = Math.Max(1, (int)Math.Ceiling(Math.Abs(delta) / StepRad));
+        var dStep = delta / steps;
+
+        for (var i = 1; i <= steps; i++)
+        {
+            var a = a0 + dStep * i;
+            var x = (float)(cx + r * Math.Cos(a));
+            var y = (float)(cy + r * Math.Sin(a));
+            path.LineTo(x, y);
+        }
     }
 
     private static double[] FindHorizonPoint(

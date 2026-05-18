@@ -20,72 +20,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.Maui;
-using Microsoft.Maui.ApplicationModel;
 
 namespace LiveChartsGeneratedCode;
 
-// ===============================================
-// this file contains the MAUI specific code
-// ===============================================
+// ==============================================================================
+// MAUI-specific code for SourceGenMapChart. Drawn-view scaffolding (ChartView
+// base, MotionCanvas hosting, Loaded/Unloaded wiring with Apple handler-disconnect
+// for #1725, CoreCanvas/ControlSize/IsDarkMode/InvokeOnUIThread) inherited from
+// SourceGenDrawnView. Only the wheel-to-zoom and modifier-free pointer handlers
+// live here.
+// ==============================================================================
 
-/// <inheritdoc cref="IChartView"/>
-public abstract partial class SourceGenMapChart : ChartView, IGeoMapView
+/// <inheritdoc cref="IGeoMapView"/>
+public abstract partial class SourceGenMapChart : SourceGenDrawnView, IGeoMapView
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
     protected SourceGenMapChart()
     {
-        Content = new MotionCanvas();
-
-        SizeChanged += (s, e) =>
-            CoreChart.Update();
-
         InitializeChartControl();
-
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
     }
 
-    private MotionCanvas CanvasView => (MotionCanvas)Content;
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => CanvasView.CanvasCore;
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded() => CoreChart?.Load();
 
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
-    LvcSize IDrawnView.ControlSize => new() { Width = (float)Width, Height = (float)Height };
-
-    private void OnLoaded(object? sender, EventArgs e) =>
-        CoreChart?.Load();
-
-    private void OnUnloaded(object? sender, EventArgs e)
-    {
-        CoreChart?.Unload();
-#if IOS || MACCATALYST
-        // See SourceGenChart.OnUnloaded for the rationale (#1725).
-        Handler?.DisconnectHandler();
-#endif
-    }
-
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
-        MainThread.BeginInvokeOnMainThread(action);
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded() => CoreChart?.Unload();
 
     internal override void OnPressed(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args) =>
-        CoreChart?.InvokePointerDown(args.Location);
+        CoreChart?.InvokePointerDown(args.Location, isSecondaryAction: false);
 
     internal override void OnMoved(object? sender, LiveChartsCore.Native.Events.ScreenEventArgs args) =>
         CoreChart?.InvokePointerMove(args.Location);
 
     internal override void OnReleased(object? sender, LiveChartsCore.Native.Events.PressedEventArgs args) =>
-        CoreChart?.InvokePointerUp(args.Location);
+        CoreChart?.InvokePointerUp(args.Location, isSecondaryAction: false);
 
     internal override void OnExited(object? sender, LiveChartsCore.Native.Events.EventArgs args) =>
         CoreChart?.InvokePointerLeft();

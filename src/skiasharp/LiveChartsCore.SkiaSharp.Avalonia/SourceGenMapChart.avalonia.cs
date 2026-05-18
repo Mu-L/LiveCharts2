@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,35 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Rendering;
-using Avalonia.Styling;
-using Avalonia.Threading;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.Avalonia;
 
 namespace LiveChartsGeneratedCode;
 
-// ==============================================================
-// this file contains the shared code between all UI frameworks
-// ==============================================================
+// ==============================================================================
+// Avalonia-specific code for SourceGenMapChart. Drawn-view scaffolding is
+// inherited from SourceGenDrawnView; only the map's wheel-to-zoom and
+// modifier-free pointer handlers live here.
+// ==============================================================================
 
 /// <inheritdoc cref="IGeoMapView" />
-public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTest
+public partial class SourceGenMapChart : SourceGenDrawnView, IGeoMapView
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
     public SourceGenMapChart()
     {
-        Content = new MotionCanvas();
         InitializeChartControl();
 
         PointerPressed += OnPointerPressed;
@@ -56,39 +48,24 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
         PointerReleased += OnPointerReleased;
         PointerExited += OnPointerExited;
         PointerWheelChanged += OnPointerWheelChanged;
-
-        SizeChanged += (s, e) =>
-            CoreChart.Update();
-
-        AttachedToVisualTree += GeoMap_AttachedToVisualTree;
-        DetachedFromVisualTree += GeoMap_DetachedFromVisualTree;
     }
 
-    private MotionCanvas MotionCanvas => (MotionCanvas)Content!;
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded() => CoreChart?.Load();
 
-    bool IGeoMapView.DesignerMode => Design.IsDesignMode;
-    bool IGeoMapView.IsDarkMode => Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
-    LvcSize IDrawnView.ControlSize => new() { Width = (float)MotionCanvas.Bounds.Width, Height = (float)MotionCanvas.Bounds.Height };
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded() => CoreChart?.Unload();
 
-    private void GeoMap_AttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
-        CoreChart?.Load();
-
-    private void GeoMap_DetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
-        CoreChart?.Unload();
-
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
-        Dispatcher.UIThread.Post(action);
-
-    bool ICustomHitTest.HitTest(Point point) =>
-        new Rect(Bounds.Size).Contains(point);
+    /// <inheritdoc />
+    protected override void OnDrawnViewReturnedToViewport() => CoreChart?.Update();
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var p = e.GetPosition(this);
-        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
@@ -100,13 +77,11 @@ public partial class SourceGenMapChart : UserControl, IGeoMapView, ICustomHitTes
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         var p = e.GetPosition(this);
-        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
-    private void OnPointerExited(object? sender, PointerEventArgs e)
-    {
+    private void OnPointerExited(object? sender, PointerEventArgs e) =>
         CoreChart?.InvokePointerLeft();
-    }
 
     private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {

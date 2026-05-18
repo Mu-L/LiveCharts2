@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,77 +20,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.Runtime.InteropServices;
 using LiveChartsCore.Drawing;
-using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Measure;
-using LiveChartsCore.SkiaSharpView.WinUI;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using LiveChartsCore.Motion;
 using LiveChartsCore.Geo;
+using LiveChartsCore.Measure;
+using Microsoft.UI.Xaml.Input;
 
 namespace LiveChartsGeneratedCode;
 
-// ===============================================
-// this file contains the WinUI/Uno specific code
-// ===============================================
+// ==============================================================================
+// WinUI / Uno-WinUI specific code for SourceGenMapChart. Drawn-view scaffolding
+// (MotionCanvas hosting, lifecycle, CoreCanvas / ControlSize / theme awareness /
+// DispatcherQueue dispatch) inherited from SourceGenDrawnView. Only the
+// wheel-to-zoom and modifier-free pointer handlers live here.
+// ==============================================================================
 
-/// <inheritdoc cref="IChartView"/>
-public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
+/// <inheritdoc cref="IGeoMapView"/>
+public abstract partial class SourceGenMapChart : SourceGenDrawnView, IGeoMapView
 {
-    private static readonly bool s_isWebAssembly = RuntimeInformation.IsOSPlatform(OSPlatform.Create("BROWSER"));
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
     public SourceGenMapChart()
     {
-        Content = new MotionCanvas();
-
         InitializeChartControl();
-
-        SizeChanged += (s, e) =>
-            CoreChart.Update();
 
         PointerWheelChanged += OnPointerWheelChanged;
         PointerPressed += OnPointerPressed;
         PointerMoved += OnPointerMoved;
         PointerReleased += OnPointerReleased;
         PointerExited += OnPointerExited;
-
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
     }
 
-    private MotionCanvas MotionCanvas => (MotionCanvas)Content;
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded() => CoreChart?.Load();
 
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
-    LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
-
-    private void OnLoaded(object sender, RoutedEventArgs e) =>
-        CoreChart?.Load();
-
-    private void OnUnloaded(object sender, RoutedEventArgs e) =>
-        CoreChart?.Unload();
-
-    void IGeoMapView.InvokeOnUIThread(Action action)
-    {
-        if (s_isWebAssembly)
-        {
-            action();
-            return;
-        }
-
-        _ = DispatcherQueue.TryEnqueue(
-            Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () => action());
-    }
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded() => CoreChart?.Unload();
 
     private void OnPointerWheelChanged(object sender, PointerRoutedEventArgs e)
     {
@@ -106,7 +74,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
         var p = e.GetCurrentPoint(this).Position;
-        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerDown(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
     private void OnPointerMoved(object sender, PointerRoutedEventArgs e)
@@ -118,11 +86,9 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
     {
         var p = e.GetCurrentPoint(this).Position;
-        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y));
+        CoreChart?.InvokePointerUp(new LvcPoint((float)p.X, (float)p.Y), isSecondaryAction: false);
     }
 
-    private void OnPointerExited(object sender, PointerRoutedEventArgs e)
-    {
+    private void OnPointerExited(object sender, PointerRoutedEventArgs e) =>
         CoreChart?.InvokePointerLeft();
-    }
 }

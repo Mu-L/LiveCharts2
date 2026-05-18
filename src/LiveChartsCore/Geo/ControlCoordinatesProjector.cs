@@ -63,36 +63,20 @@ public class ControlCoordinatesProjector : MapProjector
     /// <inheritdoc cref="MapProjector.ToMap(double[])"/>
     public override float[] ToMap(double[] point)
     {
-        // simplified formula
-        return new[]
-        {
-                // x' =
-                (float)(_ox + (point[0] + 180) / 360d * _w),
+        ToMap(point[0], point[1], out var x, out var y);
+        return [x, y];
+    }
 
-                // y' =
-                (float)(_oy + (90 - point[1]) / 180d * _h)
-            };
+    /// <inheritdoc cref="MapProjector.ToMap(double, double, out float, out float)"/>
+    public override void ToMap(double longitude, double latitude, out float x, out float y)
+    {
+        // simplified formula
+        x = (float)(_ox + (longitude + 180) / 360d * _w);
+        y = (float)(_oy + (90 - latitude) / 180d * _h);
 
         // the following code explains the formula better:
-
-        //var x = point[0];
-        //var y = point[1];
-
-        // 1. to Cartesian coordinates
-
-        //x += 180;
-        //y = 90 - y;
-
-        // 2. fit to map size
-
-        //x = x / 360d * _w;
-        //y = y / 180d * _h;
-
-        // 3. add the offset
-        //return new[]
-        //{
-        //    (float)x + _ox,
-        //    (float)y + _oy
-        //};
+        // 1. to Cartesian:        x += 180;  y = 90 - y;
+        // 2. fit to map size:     x = x / 360d * _w;  y = y / 180d * _h;
+        // 3. add offset:          x += _ox;  y += _oy;
     }
 }

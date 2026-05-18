@@ -77,4 +77,29 @@ public sealed class MapsTests
 
         chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(OrthographicRotated)}");
     }
+
+    // Regression for the orthographic horizon-arc fix in PR #2251.
+    //
+    // Centered over Central Asia, Russia/China/India straddle the horizon and
+    // exercise BuildOrthographicPath's exit/entry handling. Before the fix,
+    // path.Close() drew a chord between the last horizon-exit and the first
+    // horizon-entry, slicing through the visible disc and producing visible
+    // bulges past the rim. After the fix, EmitHorizonArc walks the disc
+    // boundary in 3° steps and the silhouette stays clean.
+    [TestMethod]
+    public void OrthographicHorizonClipsAlongDiscRim()
+    {
+        var chart = new SKGeoMap
+        {
+            Series = CreateHeatSeries(),
+            MapProjection = MapProjection.Orthographic,
+            Width = 600,
+            Height = 600
+        };
+
+        chart.CoreChart.RotationX = 80;
+        chart.CoreChart.RotationY = 20;
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(OrthographicHorizonClipsAlongDiscRim)}");
+    }
 }

@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -22,9 +22,7 @@
 
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
-using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView.Blazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -32,17 +30,16 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace LiveChartsGeneratedCode;
 
-// ===============================================
-// this file contains the Blazor specific code
-// ===============================================
+// ==============================================================================
+// Blazor-specific code for SourceGenMapChart. Drawn-view scaffolding inherited
+// from SourceGenDrawnView (MotionCanvas ref capture, lifecycle, CoreCanvas etc).
+// Only BuildRenderTree (with map-specific event wiring) and the wheel-to-zoom +
+// modifier-free pointer handlers live here.
+// ==============================================================================
 
-/// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IGeoMapView
+/// <inheritdoc cref="IGeoMapView" />
+public abstract partial class SourceGenMapChart : SourceGenDrawnView, IGeoMapView
 {
-#pragma warning disable IDE0032 // Use auto property, blazor ref
-    private MotionCanvas _motionCanvas = null!;
-#pragma warning restore IDE0032 // Use auto property
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
@@ -50,18 +47,6 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
     {
         CoreChart = null!;
     }
-
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>
-    public CoreMotionCanvas CoreCanvas => _motionCanvas.CanvasCore;
-
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
-
-    LvcSize IDrawnView.ControlSize => new()
-    {
-        Width = _motionCanvas.Width,
-        Height = _motionCanvas.Height
-    };
 
     /// <summary>
     /// Builds the render tree.
@@ -79,33 +64,26 @@ public abstract partial class SourceGenMapChart : ComponentBase, IDisposable, IG
     }
 
     /// <inheritdoc />
-    protected override void OnAfterRender(bool firstRender)
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
+
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded()
     {
-        if (!firstRender) return;
-
         InitializeChartControl();
-
-        _motionCanvas.SizeChanged +=
-            () =>
-                CoreChart.Update();
-
         CoreCanvas.Sync = SyncContext;
     }
 
-    void IGeoMapView.InvokeOnUIThread(Action action) =>
-        _ = InvokeAsync(action);
-
-    void IDisposable.Dispose() =>
-        CoreChart.Unload();
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded() => CoreChart?.Unload();
 
     private void OnPointerDown(PointerEventArgs e) =>
-        CoreChart?.InvokePointerDown(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
+        CoreChart?.InvokePointerDown(new LvcPoint((float)e.OffsetX, (float)e.OffsetY), isSecondaryAction: false);
 
     private void OnPointerMove(PointerEventArgs e) =>
         CoreChart?.InvokePointerMove(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
 
     private void OnPointerUp(PointerEventArgs e) =>
-        CoreChart?.InvokePointerUp(new LvcPoint((float)e.OffsetX, (float)e.OffsetY));
+        CoreChart?.InvokePointerUp(new LvcPoint((float)e.OffsetX, (float)e.OffsetY), isSecondaryAction: false);
 
     private void OnPointerOut(PointerEventArgs e) =>
         CoreChart?.InvokePointerLeft();

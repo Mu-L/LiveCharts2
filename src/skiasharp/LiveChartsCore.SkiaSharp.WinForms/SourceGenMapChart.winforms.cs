@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,47 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-using System.ComponentModel;
-using System.Drawing;
 using System.Windows.Forms;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
-using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.WinForms;
 
 namespace LiveChartsGeneratedCode;
 
-// ===============================================
-// this file contains the Winforms specific code
-// ===============================================
+// ==============================================================================
+// WinForms-specific code for SourceGenMapChart. Drawn-view scaffolding is
+// inherited from SourceGenDrawnView; only the wheel-to-zoom and modifier-free
+// pointer handlers live here.
+// ==============================================================================
 
 /// <inheritdoc cref="IGeoMapView" />
-public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
+public abstract partial class SourceGenMapChart : SourceGenDrawnView, IGeoMapView
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SourceGenMapChart"/> class.
     /// </summary>
     protected SourceGenMapChart()
     {
-        var motionCanvas = new MotionCanvas();
-        SuspendLayout();
-        motionCanvas.Dock = DockStyle.Fill;
-        motionCanvas.Location = new Point(0, 0);
-        motionCanvas.Name = "motionCanvas";
-        motionCanvas.Size = new Size(150, 150);
-        motionCanvas.TabIndex = 0;
-        AutoScaleMode = AutoScaleMode.Font;
-        Controls.Add(motionCanvas);
         Name = "GeoChart";
-        ResumeLayout(true);
 
         InitializeChartControl();
-
-        motionCanvas.Resize += (s, e) =>
-            CoreChart.Update();
 
         var drawnControl = GetDrawnControl();
         drawnControl.MouseWheel += OnMouseWheel;
@@ -70,46 +53,14 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
         drawnControl.MouseLeave += OnMouseLeave;
     }
 
-    /// <inheritdoc cref="IDrawnView.CoreCanvas"/>"/>
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public CoreMotionCanvas CoreCanvas => ((MotionCanvas)Controls[0]).CanvasCore;
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
 
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    bool IGeoMapView.DesignerMode => false;
-    bool IGeoMapView.IsDarkMode => false;
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded() => CoreChart?.Load();
 
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    LvcSize IDrawnView.ControlSize => new() { Width = Width, Height = Height };
-
-    /// <summary>
-    /// Gets the drawn control.
-    /// </summary>
-    /// <returns></returns>
-    public Control GetDrawnControl() => Controls[0].Controls[0];
-
-    void IGeoMapView.InvokeOnUIThread(Action action)
-    {
-        if (!IsHandleCreated) return;
-        _ = BeginInvoke(action);
-    }
-
-    /// <inheritdoc cref="ContainerControl.OnParentChanged(EventArgs)"/>
-    protected override void OnParentChanged(EventArgs e)
-    {
-        base.OnParentChanged(e);
-        CoreChart?.Load();
-    }
-
-    /// <summary>
-    /// Raises the <see cref="E:HandleDestroyed" /> event.
-    /// </summary>
-    /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
-    /// <returns></returns>
-    protected override void OnHandleDestroyed(EventArgs e)
-    {
-        base.OnHandleDestroyed(e);
-        CoreChart?.Unload();
-    }
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded() => CoreChart?.Unload();
 
     private void OnMouseWheel(object? sender, MouseEventArgs e)
     {
@@ -122,7 +73,7 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnMouseDown(object? sender, MouseEventArgs e)
     {
         var p = e.Location;
-        CoreChart?.InvokePointerDown(new LvcPoint(p.X, p.Y));
+        CoreChart?.InvokePointerDown(new LvcPoint(p.X, p.Y), isSecondaryAction: false);
     }
 
     private void OnMouseMove(object? sender, MouseEventArgs e)
@@ -134,11 +85,9 @@ public abstract partial class SourceGenMapChart : UserControl, IGeoMapView
     private void OnMouseUp(object? sender, MouseEventArgs e)
     {
         var p = e.Location;
-        CoreChart?.InvokePointerUp(new LvcPoint(p.X, p.Y));
+        CoreChart?.InvokePointerUp(new LvcPoint(p.X, p.Y), isSecondaryAction: false);
     }
 
-    private void OnMouseLeave(object? sender, EventArgs e)
-    {
+    private void OnMouseLeave(object? sender, System.EventArgs e) =>
         CoreChart?.InvokePointerLeft();
-    }
 }

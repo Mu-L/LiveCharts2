@@ -20,10 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using LiveChartsCore;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
+using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Kernel.Observers;
+using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
+using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.Themes;
+using LiveChartsCore.VisualElements;
 
 namespace LiveChartsGeneratedCode;
 
@@ -45,7 +56,13 @@ public partial class SourceGenMapChart : IGeoMapView
     /// </summary>
     public GeoMapChart CoreChart { get; private set; } = null!;
 
-    /// <inheritdoc cref="IGeoMapView.AutoUpdateEnabled" />
+    // IChartView.CoreChart resolved via covariance: GeoMapChart : Chart, so the
+    // shadowed IGeoMapView.CoreChart (typed GeoMapChart) implicitly satisfies
+    // IChartView.CoreChart (typed Chart). An explicit impl is provided in case
+    // a consumer reflects via IChartView.
+    Chart IChartView.CoreChart => CoreChart;
+
+    /// <inheritdoc cref="IChartView.AutoUpdateEnabled" />
     public bool AutoUpdateEnabled { get; set; } = true;
 
     private void InitializeChartControl()
@@ -53,8 +70,163 @@ public partial class SourceGenMapChart : IGeoMapView
         CoreChart = new GeoMapChart(this);
         _seriesObserver = new CollectionDeepObserver(() => CoreChart?.Update());
 
+        // Forward core lifecycle events to the IChartView surface so
+        // consumers subscribing through the view get notified — matches
+        // SourceGenChart.InitializeChartControl wiring.
+        CoreChart.Measuring += OnCoreMeasuring;
+        CoreChart.UpdateStarted += OnCoreUpdateStarted;
+        CoreChart.UpdateFinished += OnCoreUpdateFinished;
+
         ActiveMap = Maps.GetWorldMap();
         SyncContext = new object();
         Tooltip = new SKDefaultGeoTooltip();
     }
+
+    private void OnCoreMeasuring(IChartView chart) =>
+        Measuring?.Invoke(this);
+
+    private void OnCoreUpdateStarted(IChartView chart) =>
+        UpdateStarted?.Invoke(this);
+
+    private void OnCoreUpdateFinished(IChartView chart) =>
+        UpdateFinished?.Invoke(this);
+
+    // =====================================================================
+    // PHASE 1 SHIM: IChartView members that do not (yet) have a meaningful
+    // implementation for the map. The map deliberately has no legend, title,
+    // chart-series, or visual-element layer. These stubs exist only so the
+    // type checks; future phases can either implement them or split IChartView
+    // into a smaller core interface that the map can implement cleanly.
+    // =====================================================================
+
+    /// <inheritdoc cref="IChartView.ChartTheme" />
+    public Theme? ChartTheme { get; set; }
+
+    // CoreCanvas / ControlSize / DesignerMode / IsDarkMode / InvokeOnUIThread
+    // are inherited from SourceGenDrawnView. BackColor stays here because
+    // WinForms' native BackColor name collides — explicit interface impl on
+    // the map is the simplest way out. Each platform reads its native
+    // Background brush first and falls back to the theme-driven virtual
+    // background; GPURenderMode.GetBackground() relies on this — without it
+    // the GL surface clears to SKColor.Empty (transparent black).
+#if MAUI_LVC
+    LvcColor IChartView.BackColor
+    {
+        get
+        {
+            var c = (Background as Microsoft.Maui.Controls.SolidColorBrush)?.Color ?? BackgroundColor;
+            return c is not null
+                ? LvcColor.FromArgb((byte)(c.Alpha * 255), (byte)(c.Red * 255), (byte)(c.Green * 255), (byte)(c.Blue * 255))
+                : CoreCanvas._virtualBackgroundColor;
+        }
+    }
+#elif WPF_LVC
+    LvcColor IChartView.BackColor =>
+        Background is not System.Windows.Media.SolidColorBrush b
+            ? CoreCanvas._virtualBackgroundColor
+            : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
+#elif AVALONIA_LVC
+    LvcColor IChartView.BackColor =>
+        Background is not Avalonia.Media.ISolidColorBrush b
+            ? CoreCanvas._virtualBackgroundColor
+            : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
+#elif WINUI_LVC
+    LvcColor IChartView.BackColor =>
+        Background is not Microsoft.UI.Xaml.Media.SolidColorBrush b
+            ? CoreCanvas._virtualBackgroundColor
+            : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
+#else
+    // SKIA_IMAGE_LVC / WinForms / Eto / Blazor: no native Background brush
+    // exposed via the partial here; theme-driven virtual background only.
+    // (WinForms' own BackColor would have to be read after the System.Drawing.Color
+    // → LvcColor conversion in its own partial; out of scope for this change.)
+    LvcColor IChartView.BackColor => CoreCanvas._virtualBackgroundColor;
+#endif
+
+    /// <inheritdoc cref="IChartView.DrawMargin" />
+    public Margin? DrawMargin { get; set; }
+
+    /// <inheritdoc cref="IChartView.AnimationsSpeed" />
+    public TimeSpan AnimationsSpeed { get; set; } = LiveCharts.DefaultSettings.AnimationsSpeed;
+
+    /// <inheritdoc cref="IChartView.EasingFunction" />
+    public Func<float, float>? EasingFunction { get; set; } = LiveCharts.DefaultSettings.EasingFunction;
+
+    /// <inheritdoc cref="IChartView.UpdaterThrottler" />
+    public TimeSpan UpdaterThrottler { get; set; } = LiveCharts.DefaultSettings.UpdateThrottlingTimeout;
+
+    /// <inheritdoc cref="IChartView.LegendPosition" />
+    public LegendPosition LegendPosition { get; set; } = LegendPosition.Hidden;
+
+    /// <inheritdoc cref="IChartView.LegendTextPaint" />
+    public Paint? LegendTextPaint { get; set; }
+
+    /// <inheritdoc cref="IChartView.LegendBackgroundPaint" />
+    public Paint? LegendBackgroundPaint { get; set; }
+
+    /// <inheritdoc cref="IChartView.LegendTextSize" />
+    public double LegendTextSize { get; set; }
+
+    /// <inheritdoc cref="IChartView.Title" />
+    public IChartElement? Title { get; set; }
+
+    /// <inheritdoc cref="IChartView.Legend" />
+    public IChartLegend? Legend { get; set; }
+
+    /// <inheritdoc cref="IChartView.VisualElements" />
+    public IEnumerable<IChartElement> VisualElements { get; set; } = [];
+
+    // Series and Tooltip on IGeoMapView shadow the IChartView properties (different
+    // element type). Explicit impls satisfy the base interface as no-ops.
+    IEnumerable<ISeries> IChartView.Series { get => []; set { } }
+    IChartTooltip? IChartView.Tooltip { get => null; set { } }
+
+    /// <inheritdoc cref="IChartView.Measuring" />
+    public event ChartEventHandler? Measuring;
+    /// <inheritdoc cref="IChartView.UpdateStarted" />
+    public event ChartEventHandler? UpdateStarted;
+    /// <inheritdoc cref="IChartView.UpdateFinished" />
+    public event ChartEventHandler? UpdateFinished;
+    /// <inheritdoc cref="IChartView.DataPointerDown" />
+    public event ChartPointsHandler? DataPointerDown;
+    /// <inheritdoc cref="IChartView.HoveredPointsChanged" />
+    public event ChartPointHoverHandler? HoveredPointsChanged;
+    /// <inheritdoc cref="IChartView.ChartPointPointerDown" />
+    [Obsolete("Use DataPointerDown.")]
+    public event ChartPointHandler? ChartPointPointerDown;
+    /// <inheritdoc cref="IChartView.VisualElementsPointerDown"/>
+    public event VisualElementsHandler? VisualElementsPointerDown;
+
+    /// <inheritdoc cref="IChartView.GetPointsAt(LvcPointD, FindingStrategy, FindPointFor)"/>
+    public IEnumerable<ChartPoint> GetPointsAt(
+        LvcPointD point,
+        FindingStrategy strategy = FindingStrategy.Automatic,
+        FindPointFor findPointFor = FindPointFor.HoverEvent) => [];
+
+    /// <inheritdoc cref="IChartView.GetVisualsAt"/>
+    public IEnumerable<IChartElement> GetVisualsAt(LvcPointD point) => [];
+
+    /// <inheritdoc cref="IChartView.OnDataPointerDown"/>
+    public void OnDataPointerDown(IEnumerable<ChartPoint> points, LvcPoint pointer)
+    {
+        DataPointerDown?.Invoke(this, points);
+    }
+
+    /// <inheritdoc cref="IChartView.OnHoveredPointsChanged"/>
+    public void OnHoveredPointsChanged(IEnumerable<ChartPoint>? newItems, IEnumerable<ChartPoint>? oldItems)
+    {
+        HoveredPointsChanged?.Invoke(this, newItems, oldItems);
+    }
+
+    /// <inheritdoc cref="IChartView.OnVisualElementPointerDown"/>
+    public void OnVisualElementPointerDown(IEnumerable<IInteractable> visualElements, LvcPoint pointer)
+    {
+        VisualElementsPointerDown?.Invoke(this, new VisualElementsEventArgs(CoreChart, visualElements, pointer));
+    }
+
+    // Invalidate is platform-specific (calls native InvalidateVisual / equivalent)
+    // and lives on the per-platform partial. We define a fallback that delegates
+    // to the canvas for platforms whose per-platform file hasn't been updated yet.
+    /// <inheritdoc cref="IChartView.Invalidate"/>
+    public virtual void Invalidate() => CoreCanvas.Invalidate();
 }

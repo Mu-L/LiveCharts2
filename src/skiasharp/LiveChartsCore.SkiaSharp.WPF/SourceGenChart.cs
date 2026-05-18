@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -21,44 +21,36 @@
 // SOFTWARE.
 
 using System;
-using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Motion;
-using LiveChartsCore.SkiaSharpView.WPF;
 
 namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
-// this file is the base class for this UI framework controls, in this file we
-// define the UI framework specific code. 
-// expanding this file in the solution explorer will show 2 more files:
-//    - *.shared.cs:        shared code between all UI frameworks
-//    - *.sgp.cs:           the source generated properties
+// this file is the WPF-specific base class for the cartesian / pie / polar
+// controls. Common drawn-view scaffolding (MotionCanvas hosting, size / load /
+// unload wiring, CoreCanvas / ControlSize / DesignerMode / etc) lives in
+// SourceGenDrawnView.wpf.cs. Chart-specific plumbing (modifier-aware pointer
+// handlers, pointer-capture recovery, commands, series template inflation,
+// observer lifecycle) lives here.
 // ==============================================================================
 
 /// <inheritdoc cref="IChartView" />
-public abstract partial class SourceGenChart : UserControl, IChartView
+public abstract partial class SourceGenChart : SourceGenDrawnView, IChartView
 {
     private bool _isPointerDown;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Chart"/> class.
+    /// Initializes a new instance of the <see cref="SourceGenChart"/> class.
     /// </summary>
     /// <exception cref="Exception">Default colors are not valid</exception>
     protected SourceGenChart()
     {
-        Content = new MotionCanvas();
-
-        SizeChanged += (s, e) =>
-            CoreChart.Update();
-
         InitializeChartControl();
         InitializeObservedProperties();
 
@@ -67,31 +59,26 @@ public abstract partial class SourceGenChart : UserControl, IChartView
         MouseUp += Chart_MouseUp;
         MouseLeave += OnMouseLeave;
         LostMouseCapture += OnLostMouseCapture;
-
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
     }
 
-    private MotionCanvas MotionCanvas => (MotionCanvas)Content;
-
-    /// <inheritdoc cref="IDrawnView.CoreCanvas" />
-    public CoreMotionCanvas CoreCanvas => MotionCanvas.CanvasCore;
-
-    bool IChartView.DesignerMode => DesignerProperties.GetIsInDesignMode(this);
-    bool IChartView.IsDarkMode => false;
+    /// <inheritdoc cref="IChartView.BackColor" />
     LvcColor IChartView.BackColor =>
         Background is not SolidColorBrush b
             ? CoreCanvas._virtualBackgroundColor
             : LvcColor.FromArgb(b.Color.A, b.Color.R, b.Color.G, b.Color.B);
-    LvcSize IDrawnView.ControlSize => new() { Width = (float)ActualWidth, Height = (float)ActualHeight };
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewSizeChanged() => CoreChart?.Update();
+
+    /// <inheritdoc />
+    protected override void OnDrawnViewLoaded()
     {
         StartObserving();
         CoreChart.Load();
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs e)
+    /// <inheritdoc />
+    protected override void OnDrawnViewUnloaded()
     {
         StopObserving();
         CoreChart?.Unload();
@@ -99,14 +86,14 @@ public abstract partial class SourceGenChart : UserControl, IChartView
 
     private void AddUIElement(object item)
     {
-        if (MotionCanvas is null || item is not FrameworkElement view) return;
-        _ = MotionCanvas.Children.Add(view);
+        if (Content is null || item is not FrameworkElement view) return;
+        _ = ((System.Windows.Controls.Panel)Content).Children.Add(view);
     }
 
     private void RemoveUIElement(object item)
     {
-        if (MotionCanvas is null || item is not FrameworkElement view) return;
-        MotionCanvas.Children.Remove(view);
+        if (Content is null || item is not FrameworkElement view) return;
+        ((System.Windows.Controls.Panel)Content).Children.Remove(view);
     }
 
     private void Chart_MouseDown(object sender, MouseButtonEventArgs e)
@@ -193,7 +180,4 @@ public abstract partial class SourceGenChart : UserControl, IChartView
 
     private static object GetSeriesSource(ISeries series) =>
         ((FrameworkElement)series).DataContext!;
-
-    void IChartView.InvokeOnUIThread(Action action) =>
-        Dispatcher.Invoke(action);
 }

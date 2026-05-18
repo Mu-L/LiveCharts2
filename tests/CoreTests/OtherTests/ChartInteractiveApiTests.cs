@@ -497,10 +497,10 @@ public class ChartInteractiveApiTests
 
         // Drives InvokePointerDown/Move/Up/Left — these raise events and the factory
         // may react via hover/pan hooks. Must run before GetImage.
-        chart.CoreChart.InvokePointerDown(new LvcPoint(50, 50));
+        chart.CoreChart.InvokePointerDown(new LvcPoint(50, 50), isSecondaryAction: false);
         chart.CoreChart.InvokePointerMove(new LvcPoint(60, 55));
         chart.CoreChart.InvokePointerMove(new LvcPoint(80, 75));
-        chart.CoreChart.InvokePointerUp(new LvcPoint(100, 100));
+        chart.CoreChart.InvokePointerUp(new LvcPoint(100, 100), isSecondaryAction: false);
         chart.CoreChart.InvokePointerLeft();
 
         _ = chart.GetImage();

@@ -269,3 +269,55 @@ currently it only support the `Default` (none) and `Mercator` projections.
 {{~ end ~}}
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-mercator.png)
+
+## InteractionMode property
+
+Controls which user interactions the map responds to. Defaults to
+`MapInteractionMode.Zoom` — mouse wheel zooms, click-drag does **not** pan.
+Set it to `Both` to enable click-drag panning, or `None` to make the map
+static.
+
+| Value  | Wheel zoom | Click-drag pan |
+| ------ | ---------- | -------------- |
+| `None` | ✗          | ✗              |
+| `Pan`  | ✗          | ✓              |
+| `Zoom` | ✓          | ✗ *(default)*  |
+| `Both` | ✓          | ✓              |
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    InteractionMode="Both">&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    InteractionMode="LiveChartsCore.Geo.MapInteractionMode.Both">&lt;!-- mark -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.InteractionMode = LiveChartsCore.Geo.MapInteractionMode.Both;</code></pre>
+{{~ end ~}}
+
+To hide the tooltip, set `TooltipPosition` to `Hidden`:
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    TooltipPosition="Hidden">&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    TooltipPosition="LiveChartsCore.Measure.TooltipPosition.Hidden">&lt;!-- mark -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden;</code></pre>
+{{~ end ~}}

@@ -1,5 +1,10 @@
 <Project>
   <ItemGroup>
+    <Compile Include="..\_Shared\SourceGenDrawnView.*.cs">
+      <Link>%(Filename).cs</Link>
+      <DependentUpon>SourceGenDrawnView.cs</DependentUpon>
+    </Compile>
+
     <Compile Include="..\_Shared\SourceGenChart.*.cs">
       <Link>%(Filename).cs</Link>
       <DependentUpon>SourceGenChart.cs</DependentUpon>
