@@ -108,4 +108,15 @@ public abstract class VectorGeometry : BaseVectorGeometry, IDrawnElement<SkiaSha
 
         if (!isValid) IsValid = false;
     }
+
+    internal override void OnDisposed()
+    {
+        // Release the cached native SKPath deterministically when the geometry is removed
+        // from its paint task. GC finalization is the safety net if a geometry is dropped
+        // without going through the normal removal path.
+        _cachedPath?.Dispose();
+        _cachedPath = null;
+
+        base.OnDisposed();
+    }
 }
