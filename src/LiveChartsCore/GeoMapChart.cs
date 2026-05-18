@@ -531,12 +531,19 @@ public class GeoMapChart : Chart
 
     private LvcPoint ComputeLandScreenCenter(LandDefinition land, MapProjector projector)
     {
-        float minX = float.MaxValue, minY = float.MaxValue;
-        float maxX = float.MinValue, maxY = float.MinValue;
-        var hasPoints = false;
+        // Anchor on the largest visible contour, not the union of all contours.
+        // Lands like Russia that cross the antimeridian have one contour at ~170°E
+        // and another at ~-170°W; a unified bbox spans the whole map and the
+        // centroid lands mid-Pacific. Per-contour selection picks the mainland.
+        float bestMinX = 0f, bestMinY = 0f, bestMaxX = 0f, bestMaxY = 0f;
+        var bestArea = -1f;
 
         foreach (var data in land.Data)
         {
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+            var hasContourPoints = false;
+
             foreach (var coord in data.Coordinates)
             {
                 if (!projector.IsVisible(coord.X, coord.Y)) continue;
@@ -545,14 +552,24 @@ public class GeoMapChart : Chart
                 if (py < minY) minY = py;
                 if (px > maxX) maxX = px;
                 if (py > maxY) maxY = py;
-                hasPoints = true;
+                hasContourPoints = true;
+            }
+
+            if (!hasContourPoints) continue;
+
+            var area = (maxX - minX) * (maxY - minY);
+            if (area > bestArea)
+            {
+                bestArea = area;
+                bestMinX = minX; bestMinY = minY;
+                bestMaxX = maxX; bestMaxY = maxY;
             }
         }
 
-        if (!hasPoints) return _pointerPosition;
+        if (bestArea < 0f) return _pointerPosition;
 
-        var baseCx = (minX + maxX) / 2f;
-        var baseCy = (minY + maxY) / 2f;
+        var baseCx = (bestMinX + bestMaxX) / 2f;
+        var baseCy = (bestMinY + bestMaxY) / 2f;
         var ctrlCx = MapView.ControlSize.Width * 0.5f;
         var ctrlCy = MapView.ControlSize.Height * 0.5f;
         var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
