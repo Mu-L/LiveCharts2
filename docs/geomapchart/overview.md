@@ -100,22 +100,10 @@ namespace ViewModelsSamples.Maps.World
 };</code></pre>
 {{~ end ~}}
 
-## Series
-
-There are ~multiple~ series available in the library, you can add one or mix them all in the same chart, every series has unique properties,
-any image below is a link to an article explaining more about them.
-
-<a href="{{ website_url }}/docs/{{ platform }}/{{ version }}/GeoMap.Heat%20land%20series">
-<div class="series-miniature">
-<img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/samples/polarLines/basic/geomaphs.png" alt="series"/>
-<div class="text-center"><b>Heat Land series</b></div>
-</div>
-</a>
-
 ## Stroke property
 
-Determines the default stroke of every land, if the stroke property is not set, then LiveCharts will create it based on the series position in your series collection
-and the current theme.
+Paints the outline of every land. When `null` (the default) no outline is
+drawn — the heat fill alone defines each land's silhouette.
 
 {{~ if xaml ~}}
 <pre><code>using LiveChartsCore.SkiaSharpView;
@@ -181,8 +169,10 @@ a look at the [Paints article]({{ website_url }}/docs/{{ platform }}/{{ version 
 
 ## Fill property
 
-Determines the default fill of every land, if the stroke property is not set, then LiveCharts will create it based on the series position in your series collection
-and the current theme.
+Paints lands that have **no value** in any series — the "background" lands
+on the map. Lands that participate in a heat series keep their interpolated
+heat color regardless of `Fill`. When `null` (the default) unmapped lands
+stay transparent.
 
 {{~ if xaml ~}}
 <pre><code>using LiveChartsCore.SkiaSharpView;
