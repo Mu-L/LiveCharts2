@@ -72,9 +72,56 @@ public interface IGeoMapView : IChartView
     MapProjection MapProjection { get; set; }
 
     /// <summary>
+    /// Gets or sets the minimum latitude (in degrees) clipped to the bottom
+    /// edge of the rendered map. <see cref="double.NaN"/> (the default) means
+    /// the projection picks its own default — Mercator uses
+    /// <see cref="MercatorProjector.DefaultMinLatitudeDegrees"/> (-65°),
+    /// cropping the sub-Antarctic empty band; Default uses
+    /// <see cref="ControlCoordinatesProjector.DefaultMinLatitudeDegrees"/>
+    /// (-90°). Honored by Mercator and Default; <see cref="MapProjection.Orthographic"/>
+    /// ignores it (use <see cref="GeoMapChart.CenterLatitude"/> instead).
+    /// </summary>
+    double MinLatitude { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum latitude (in degrees) clipped to the top edge
+    /// of the rendered map. <see cref="double.NaN"/> (the default) means the
+    /// projection picks its own default — Mercator uses
+    /// <see cref="MercatorProjector.DefaultMaxLatitudeDegrees"/> (85°), which
+    /// already covers Greenland; Default uses
+    /// <see cref="ControlCoordinatesProjector.DefaultMaxLatitudeDegrees"/>
+    /// (90°). To render the classic full-earth Mercator including Antarctica,
+    /// extend the bottom edge: set <see cref="MinLatitude"/> = -85.
+    /// Honored by Mercator and Default; <see cref="MapProjection.Orthographic"/>
+    /// ignores it.
+    /// </summary>
+    double MaxLatitude { get; set; }
+
+    /// <summary>
+    /// Gets or sets the minimum longitude (in degrees) clipped to the left
+    /// edge of the rendered map. <see cref="double.NaN"/> (the default) means
+    /// the projection picks its own default (-180° for both Mercator and
+    /// Default). Honored by Mercator and Default;
+    /// <see cref="MapProjection.Orthographic"/> ignores it
+    /// (use <see cref="GeoMapChart.CenterLongitude"/> instead).
+    /// </summary>
+    double MinLongitude { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum longitude (in degrees) clipped to the right
+    /// edge of the rendered map. <see cref="double.NaN"/> (the default) means
+    /// the projection picks its own default (180° for both Mercator and
+    /// Default). Honored by Mercator and Default;
+    /// <see cref="MapProjection.Orthographic"/> ignores it.
+    /// </summary>
+    double MaxLongitude { get; set; }
+
+    /// <summary>
     /// Gets or sets which interactions are enabled (pan / zoom / both / none).
-    /// Defaults to <see cref="MapInteractionMode.Zoom"/> — wheel-zoom is on,
-    /// pan is off. Set <see cref="MapInteractionMode.Both"/> to enable pan too.
+    /// Defaults to <see cref="MapInteractionMode.None"/> — geo maps are most
+    /// often embedded as static dashboard tiles, so the default is no
+    /// interaction. Set <see cref="MapInteractionMode.Zoom"/> for wheel-zoom,
+    /// or <see cref="MapInteractionMode.Both"/> for wheel-zoom + click-drag pan.
     /// </summary>
     MapInteractionMode InteractionMode { get; set; }
 

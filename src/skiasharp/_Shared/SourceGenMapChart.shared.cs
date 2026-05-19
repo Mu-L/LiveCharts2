@@ -168,7 +168,10 @@ public partial class SourceGenMapChart : IGeoMapView
     public Paint? LegendBackgroundPaint { get; set; }
 
     /// <inheritdoc cref="IChartView.LegendTextSize" />
-    public double LegendTextSize { get; set; }
+    // -1 matches the cartesian default from LiveCharts.DefaultSettings so
+    // SKHeatLegend/SKDefaultLegend's "if (textSize < 0) textSize = theme.LegendTextSize"
+    // fallback kicks in; a 0 default would render the labels at 0pt (invisible).
+    public double LegendTextSize { get; set; } = LiveCharts.DefaultSettings.LegendTextSize;
 
     /// <inheritdoc cref="IChartView.Title" />
     public IChartElement? Title { get; set; }

@@ -83,6 +83,10 @@ public class GeoMapChart : Chart
     // an accurate oldPoints arg. A geo "hover" is at most one land — but the
     // contract accepts an enumerable so we keep that shape.
     private ChartPoint[]? _hoveredChartPoints;
+    // Last projector built by Measure(); reused by FindLandAt /
+    // ComputeLandScreenBounds so hit-testing matches the on-screen layout
+    // (including title / legend margin reservations).
+    private MapProjector? _lastProjector;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
@@ -114,6 +118,10 @@ public class GeoMapChart : Chart
     /// <inheritdoc/>
     public override IEnumerable<ISeries> Series => [];
 
+    /// <inheritdoc cref="Chart.EnumerateHeatLegendSources" />
+    public override IEnumerable<IHeatLegendSource> EnumerateHeatLegendSources() =>
+        MapView.Series?.OfType<IHeatLegendSource>() ?? [];
+
     /// <inheritdoc/>
     public override IEnumerable<ISeries> VisibleSeries => [];
 
@@ -129,11 +137,22 @@ public class GeoMapChart : Chart
     internal override bool IsPanEnabled =>
         (MapView.InteractionMode & MapInteractionMode.Pan) == MapInteractionMode.Pan;
 
-    /// <summary>Gets the current zoom level.</summary>
+    /// <summary>
+    /// Gets or sets the current zoom level. 1 is the default scale; values
+    /// greater than 1 zoom in around the chart center. Mirrors the imperative
+    /// API exposed alongside <see cref="CenterLongitude"/> /
+    /// <see cref="CenterLatitude"/> — pair them to drive the viewport from
+    /// code. <see cref="Zoom(LvcPoint, ZoomDirection)"/> is the gesture form
+    /// (wheel zoom around a pivot).
+    /// </summary>
     public float ZoomLevel
     {
         get => _zoomLevel;
-        internal set => _zoomLevel = value;
+        set
+        {
+            _zoomLevel = value;
+            Update(new ChartUpdateParams { Throttling = false });
+        }
     }
 
     /// <summary>Gets the current pan offset.</summary>
@@ -143,12 +162,16 @@ public class GeoMapChart : Chart
         internal set => _panOffset = value;
     }
 
-    /// <summary>Rotation center longitude (used for Orthographic projection).</summary>
+    /// <summary>
+    /// Longitude of the viewport center — where the camera is looking. For
+    /// <see cref="MapProjection.Orthographic"/> this rotates the globe;
+    /// future flat-projection support uses it for horizontal panning.
+    /// </summary>
     /// <remarks>
     /// Direct sets snap immediately (no animation). Use <see cref="RotateTo"/>
     /// for an animated transition.
     /// </remarks>
-    public double RotationX
+    public double CenterLongitude
     {
         get => _rotation.X;
         set
@@ -159,12 +182,16 @@ public class GeoMapChart : Chart
         }
     }
 
-    /// <summary>Rotation center latitude (used for Orthographic projection).</summary>
+    /// <summary>
+    /// Latitude of the viewport center. For
+    /// <see cref="MapProjection.Orthographic"/> this rotates the globe;
+    /// future flat-projection support uses it for vertical panning.
+    /// </summary>
     /// <remarks>
     /// Direct sets snap immediately (no animation). Use <see cref="RotateTo"/>
     /// for an animated transition.
     /// </remarks>
-    public double RotationY
+    public double CenterLatitude
     {
         get => _rotation.Y;
         set
@@ -397,9 +424,13 @@ public class GeoMapChart : Chart
         }
         _activeMap = MapView.ActiveMap;
 
+        // Map paints go in the DrawMargin zone so lands beyond the projection's
+        // rendering rectangle (Mercator extrapolation past ±MercatorMaxLatitude
+        // — Greenland, Antarctica, etc.) get pixel-clipped to the map's draw
+        // area instead of bleeding into Title / Legend space.
         if (!_isHeatInCanvas)
         {
-            Canvas.AddDrawableTask(_heatPaint);
+            Canvas.AddDrawableTask(_heatPaint, zone: CanvasZone.DrawMargin);
             _isHeatInCanvas = true;
         }
 
@@ -411,7 +442,7 @@ public class GeoMapChart : Chart
             {
                 if (MapView.Stroke.ZIndex == 0) MapView.Stroke.ZIndex = PaintConstants.GeoMapStrokeZIndex;
                 MapView.Stroke.PaintStyle = PaintStyle.Stroke;
-                Canvas.AddDrawableTask(MapView.Stroke);
+                Canvas.AddDrawableTask(MapView.Stroke, zone: CanvasZone.DrawMargin);
             }
 
             _previousStroke = MapView.Stroke;
@@ -424,7 +455,7 @@ public class GeoMapChart : Chart
             if (MapView.Fill is not null)
             {
                 MapView.Fill.PaintStyle = PaintStyle.Fill;
-                Canvas.AddDrawableTask(MapView.Fill);
+                Canvas.AddDrawableTask(MapView.Fill, zone: CanvasZone.DrawMargin);
             }
 
             _previousFill = MapView.Fill;
@@ -433,6 +464,50 @@ public class GeoMapChart : Chart
         var i = _previousFill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
+        // Mirror the cartesian engine: copy Legend/Title-adjacent properties
+        // from the view onto Chart base so DrawLegend / MeasureTitle see the
+        // current values. Without this DrawLegend would always early-out on
+        // LegendPosition.Hidden (the protected default), and
+        // ControlSize-derived positioning (title centering,
+        // GetLegendPosition for Right/Bottom) would compute against (0,0).
+        ControlSize = MapView.ControlSize;
+        LegendPosition = MapView.LegendPosition;
+        Legend = MapView.Legend;
+
+        // Provisional draw margin so SKHeatLegend.GetLayout has a sane
+        // chart.DrawMarginSize to size its gradient bar against on the first
+        // measure (cartesian engine does the same trick at the same point).
+        // The final draw margin is set below from the title/legend reservation.
+        SetDrawMargin(ControlSize, new Margin());
+
+        // Reserve space for Title + Legend before sizing the map render area.
+        // Mirrors CartesianChartEngine's pattern: title first (Top reserve),
+        // then DrawLegend mutates ts/bs/ls/rs based on LegendPosition.
+        var m = new Margin();
+        float ts = 0f, bs = 0f, ls = 0f, rs = 0f;
+        if (View.Title is not null)
+        {
+            var titleSize = MeasureTitle();
+            m.Top = titleSize.Height;
+            ts = titleSize.Height;
+        }
+        DrawLegend(ref ts, ref bs, ref ls, ref rs);
+        m.Top = ts;
+        m.Bottom = bs;
+        m.Left = ls;
+        m.Right = rs;
+        SetDrawMargin(MapView.ControlSize, m);
+
+        if (View.Title is not null) AddTitleToChart();
+
+        // Bail when the chart is too small for a map after reservations
+        // (matches cartesian behavior).
+        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0)
+        {
+            Canvas.Invalidate();
+            return;
+        }
+
         // Reset IsValid before reading the motion properties so GetMovement
         // can flip it back to false only if the rotation animation is still
         // mid-flight. The OnCanvasValidatedForRotation hook checks this flag
@@ -440,12 +515,25 @@ public class GeoMapChart : Chart
         _rotation.IsValid = true;
         var rotX = _rotation.X;
         var rotY = _rotation.Y;
-        var context = new MapContext(
-            this, MapView, MapView.ActiveMap,
-            Maps.BuildProjector(
-                MapView.MapProjection,
-                [MapView.ControlSize.Width, MapView.ControlSize.Height],
-                rotX, rotY));
+        var projector = Maps.BuildProjector(
+            MapView.MapProjection,
+            [DrawMarginSize.Width, DrawMarginSize.Height],
+            DrawMarginLocation.X, DrawMarginLocation.Y,
+            rotX, rotY,
+            MapView.MinLatitude, MapView.MaxLatitude,
+            MapView.MinLongitude, MapView.MaxLongitude);
+        _lastProjector = projector;
+
+        // Pixel-clip painting to the projector's actual rendering rectangle so
+        // lands extrapolated beyond it (e.g. Antarctica when the default
+        // Mercator MinLatitude = -65° drops the south pole) don't bleed into
+        // Title/Legend space.
+        Canvas.Zones[CanvasZone.NoClip].Clip = LvcRectangle.Empty;
+        Canvas.Zones[CanvasZone.DrawMargin].Clip = new(
+            new(projector.XOffset, projector.YOffset),
+            new(projector.MapWidth, projector.MapHeight));
+
+        var context = new MapContext(this, MapView, MapView.ActiveMap, projector);
 
         _mapFactory.GenerateLands(context);
 
@@ -508,11 +596,7 @@ public class GeoMapChart : Chart
                     if (!landData.Shape.ContainsPoint(pointerPosition.X, pointerPosition.Y)) continue;
 
                     var values = CollectLandValues(landDefinition);
-                    var projector = Maps.BuildProjector(
-                        MapView.MapProjection,
-                        [MapView.ControlSize.Width, MapView.ControlSize.Height],
-                        _rotation.X, _rotation.Y);
-                    var center = ComputeLandScreenCenter(landDefinition, projector);
+                    var center = ComputeLandScreenCenter(landDefinition, GetOrBuildProjector());
 
                     return (landDefinition, values, center);
                 }
@@ -654,12 +738,21 @@ public class GeoMapChart : Chart
         return [new ChartPoint(View, hit.Land, hoverArea)];
     }
 
-    private (float MinX, float MinY, float MaxX, float MaxY) ComputeLandScreenBounds(LandDefinition land)
-    {
-        var projector = Maps.BuildProjector(
+    // Reuse Measure()'s projector when available; fall back to a fresh
+    // control-size build when hit-test APIs are called before any measure
+    // (rare but covered by GetPointsAt before first paint).
+    private MapProjector GetOrBuildProjector() =>
+        _lastProjector ?? Maps.BuildProjector(
             MapView.MapProjection,
             [MapView.ControlSize.Width, MapView.ControlSize.Height],
-            _rotation.X, _rotation.Y);
+            0f, 0f,
+            _rotation.X, _rotation.Y,
+            MapView.MinLatitude, MapView.MaxLatitude,
+            MapView.MinLongitude, MapView.MaxLongitude);
+
+    private (float MinX, float MinY, float MaxX, float MaxY) ComputeLandScreenBounds(LandDefinition land)
+    {
+        var projector = GetOrBuildProjector();
 
         float minX = float.MaxValue, minY = float.MaxValue;
         float maxX = float.MinValue, maxY = float.MinValue;

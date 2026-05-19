@@ -136,8 +136,8 @@ public class SKHeatLegend : Container, IChartLegend
             Padding = BadgePadding
         };
 
-        var heatSeries = (IHeatSeries?)chart.Series
-            .FirstOrDefault(x => x.IsVisibleAtLegend && x is IHeatSeries);
+        var heatSeries = chart.EnumerateHeatLegendSources()
+            .FirstOrDefault(x => x.IsVisibleAtLegend);
 
         var gradient = heatSeries?.HeatMap.Select(x => x.AsSKColor()).ToArray();
 

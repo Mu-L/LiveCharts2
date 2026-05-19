@@ -30,7 +30,9 @@ using System.Linq;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Observers;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
+using LiveChartsCore.Motion;
 using LiveChartsCore.Painting;
 
 namespace LiveChartsCore;
@@ -39,7 +41,7 @@ namespace LiveChartsCore;
 /// Defines the heat land series class.
 /// </summary>
 /// <typeparam name="TModel">The type fo the model.</typeparam>
-public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyChanged
+public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource, INotifyPropertyChanged
     where TModel : IWeigthedMapLand
 {
     private Paint? _heatPaint;
@@ -89,12 +91,67 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
             _observer?.Dispose();
             _observer?.Initialize(value);
             field = value;
+            _cachedBounds = null;
             OnPropertyChanged();
         }
     }
 
     /// <inheritdoc cref="IGeoSeries.IsVisible"/>
     public bool IsVisible { get; set { field = value; OnPropertyChanged(); } }
+
+    private Bounds? _cachedBounds;
+
+    /// <summary>
+    /// Gets the data weight bounds (min/max) over <see cref="Lands"/>, honoring
+    /// any <see cref="MinValue"/> / <see cref="MaxValue"/> overrides. Cached
+    /// after the first read; the cache is invalidated when <see cref="Lands"/>
+    /// (or any item within it via the collection observer),
+    /// <see cref="MinValue"/>, or <see cref="MaxValue"/> change. SKHeatLegend
+    /// reads this during every layout pass, so the cache keeps that hot path
+    /// allocation-free.
+    /// </summary>
+    public Bounds WeightBounds
+    {
+        get
+        {
+            if (_cachedBounds is not null) return _cachedBounds;
+
+            var bounds = new Bounds();
+            foreach (var land in Lands ?? [])
+                bounds.AppendValue(land.Value);
+            if (MinValue is not null) bounds.Min = MinValue.Value;
+            if (MaxValue is not null) bounds.Max = MaxValue.Value;
+            _cachedBounds = bounds;
+            return bounds;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the minimum value override used for color mapping. When
+    /// null, the observed minimum value across <see cref="Lands"/> is used.
+    /// </summary>
+    public double? MinValue
+    {
+        get;
+        set { field = value; _cachedBounds = null; OnPropertyChanged(); }
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum value override used for color mapping. When
+    /// null, the observed maximum value across <see cref="Lands"/> is used.
+    /// </summary>
+    public double? MaxValue
+    {
+        get;
+        set { field = value; _cachedBounds = null; OnPropertyChanged(); }
+    }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this series contributes to the
+    /// chart's legend. Defaults to true; set false to keep a series rendered
+    /// on the map but suppress its row in the legend.
+    /// </summary>
+    public bool IsVisibleAtLegend { get; set { field = value; OnPropertyChanged(); } } = true;
 
     /// <inheritdoc cref="IGeoSeries.Measure(MapContext)"/>
     public void Measure(MapContext context)
@@ -105,18 +162,18 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
 
         if (!_isHeatInCanvas)
         {
-            context.View.CoreCanvas.AddDrawableTask(_heatPaint);
+            // DrawMargin zone so heat fills clip to the projection's rendering
+            // rectangle (matches the base GeoMapChart paints — see Measure()).
+            context.View.CoreCanvas.AddDrawableTask(_heatPaint, zone: CanvasZone.DrawMargin);
             _isHeatInCanvas = true;
         }
 
         var i = context.View.Fill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
-        var bounds = new Bounds();
-        foreach (var shape in Lands ?? [])
-        {
-            bounds.AppendValue(shape.Value);
-        }
+        // Pull bounds via the computed property so the heat ramp and the
+        // legend agree on the gradient endpoints (both honor Min/MaxValue).
+        var bounds = WeightBounds;
 
         var heatStops = HeatFunctions.BuildColorStops(HeatMap, ColorStops);
         _ = new MapShapeContext(context.View, _heatPaint, heatStops, bounds);
@@ -199,6 +256,10 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
 
     private void NotifySubscribers()
     {
+        // The observer fires when items inside Lands change (e.g. a HeatLand.Value
+        // is mutated in place). Drop the cached bounds so the legend re-reads
+        // the new extrema on the next layout pass.
+        _cachedBounds = null;
         foreach (var chart in _subscribedTo) chart.Update();
     }
 

@@ -70,8 +70,20 @@ public partial class SourceGenMapChart
     /// <inheritdoc cref="IGeoMapView.MapProjection"/>
     static UIProperty<MapProjection>            mapProjection       = new(defaultValue: MapProjection.Default);
 
+    /// <inheritdoc cref="IGeoMapView.MinLatitude"/>
+    static UIProperty<double>                   minLatitude         = new(defaultValue: double.NaN);
+
+    /// <inheritdoc cref="IGeoMapView.MaxLatitude"/>
+    static UIProperty<double>                   maxLatitude         = new(defaultValue: double.NaN);
+
+    /// <inheritdoc cref="IGeoMapView.MinLongitude"/>
+    static UIProperty<double>                   minLongitude        = new(defaultValue: double.NaN);
+
+    /// <inheritdoc cref="IGeoMapView.MaxLongitude"/>
+    static UIProperty<double>                   maxLongitude        = new(defaultValue: double.NaN);
+
     /// <inheritdoc cref="IGeoMapView.InteractionMode"/>
-    static UIProperty<MapInteractionMode>       interactionMode     = new(defaultValue: MapInteractionMode.Zoom);
+    static UIProperty<MapInteractionMode>       interactionMode     = new(defaultValue: MapInteractionMode.None);
 
     /// <inheritdoc cref="IGeoMapView.Stroke"/>
     static UIProperty<Paint>                    stroke              = new(defaultValue: GetPaint(new(255, 255, 255, 255), PaintStyle.Stroke), onChanged: OnPaintPropertyChanged(nameof(Stroke)));

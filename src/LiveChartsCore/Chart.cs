@@ -163,6 +163,14 @@ public abstract class Chart
     public abstract IEnumerable<ISeries> Series { get; }
 
     /// <summary>
+    /// Enumerates the chart's series that contribute a heat gradient to the
+    /// legend. Default reads <see cref="Series"/>; chart engines whose series
+    /// don't satisfy <see cref="ISeries"/> (the geo map) override this.
+    /// </summary>
+    public virtual IEnumerable<IHeatLegendSource> EnumerateHeatLegendSources() =>
+        Series.OfType<IHeatLegendSource>();
+
+    /// <summary>
     /// Gets the view.
     /// </summary>
     /// <value>

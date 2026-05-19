@@ -74,7 +74,7 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
         DataLabelsPosition = DataLabelsPosition.Middle;
     }
 
-    /// <inheritdoc cref="IHeatSeries.WeightBounds"/>
+    /// <inheritdoc cref="IHeatLegendSource.WeightBounds"/>
     public Bounds WeightBounds { get; private set; } = new();
 
     /// <inheritdoc cref="IHeatSeries.HeatMap"/>

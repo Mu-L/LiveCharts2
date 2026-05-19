@@ -235,6 +235,105 @@ Paints can create gradients, dashed lines and more, if you need help using the `
 a look at the [Paints article]({{ website_url }}/docs/{{ platform }}/{{ version }}/Overview.Paints).
 :::
 
+## Title property
+
+A `Title` is a `VisualElement` rendered above the map. The same
+`DrawnLabelVisual` used by cartesian and pie charts works here — set
+`Text`, `TextSize`, `Padding`, and the `Paint` that draws it. The map
+shrinks vertically to make room for the title.
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap Series="{Binding Series}"&gt;
+    &lt;lvc:GeoMap.Title&gt;&lt;!-- mark -->
+        &lt;lvc:XamlDrawnLabelVisual
+            Text="World population by country"
+            Paint="{lvc:SolidColorPaint Color='#303030'}"
+            TextSize="20"
+            Padding="{lvc:Padding '12'}"/&gt;
+    &lt;/lvc:GeoMap.Title&gt;
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap Series="series" Title="title"&gt;&lt;/GeoMap&gt;
+
+@code {
+    private DrawnLabelVisual title = new DrawnLabelVisual(
+        new LabelGeometry
+        {
+            Text = "World population by country",
+            TextSize = 20,
+            Padding = new Padding(12),
+            Paint = new SolidColorPaint(SKColors.Black)
+        });
+}</code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.Title = new DrawnLabelVisual(
+    new LabelGeometry
+    {
+        Text = "World population by country",
+        TextSize = 20,
+        Padding = new Padding(12),
+        Paint = new SolidColorPaint(SKColors.Black)
+    });</code></pre>
+{{~ end ~}}
+
+## Legend property
+
+Heat maps benefit from a gradient legend so the reader can map colors
+back to values. Set `LegendPosition` and assign an `SKHeatLegend` —
+the legend reads `HeatMap`, `ColorStops`, and the per-series
+`WeightBounds` (min/max value across the data) to render the gradient
+bar and its end labels.
+
+| LegendPosition | Effect                                           |
+| -------------- | ------------------------------------------------ |
+| `Hidden`       | Default — no legend.                             |
+| `Left`         | Vertical gradient bar pinned to the left.        |
+| `Right`        | Vertical gradient bar pinned to the right.       |
+| `Top`          | Horizontal gradient bar pinned to the top.      |
+| `Bottom`       | Horizontal gradient bar pinned to the bottom.    |
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    LegendPosition="Right"&gt;&lt;!-- mark -->
+    &lt;lvc:GeoMap.Legend&gt;
+        &lt;draw:SKHeatLegend BadgePadding="{lvc:Padding '20, 16, 8, 16'}"/&gt;&lt;!-- mark -->
+    &lt;/lvc:GeoMap.Legend&gt;
+&lt;/lvc:GeoMap></code></pre>
+
+Make sure to declare the `draw` namespace on the root element:
+
+<pre><code>xmlns:draw="using:LiveChartsCore.SkiaSharpView.SKCharts"</code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    LegendPosition="LiveChartsCore.Measure.LegendPosition.Right"
+    Legend="legend"&gt;&lt;!-- mark -->
+&lt;/GeoMap>
+
+@code {
+    private SKHeatLegend legend = new();
+}</code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.LegendPosition = LiveChartsCore.Measure.LegendPosition.Right;
+geoMap1.Legend = new SKHeatLegend(); // mark</code></pre>
+{{~ end ~}}
+
+:::info
+Override the gradient endpoints (e.g. to pin the legend to 0–100 even
+when the data only spans 5–87) by setting `MinValue` and `MaxValue`
+on the `HeatLandSeries`. The map's heat ramp uses the same bounds, so
+the rendered colors and the legend stay in sync.
+:::
+
 ## MapProjection property
 
 Defines the [projection](https://en.wikipedia.org/wiki/Map_projection) of the
@@ -268,32 +367,128 @@ map coordinates in the control coordinates. Three projections are available:
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-mercator.png)
 
+By default the Mercator projection is clipped to latitudes -65° (south)
+to +85° (north) — drops the sub-Antarctic empty band while keeping
+Greenland fully visible. Each edge is configurable via `MinLatitude`,
+`MaxLatitude`, `MinLongitude`, and `MaxLongitude` on the chart — leave a
+value as `double.NaN` (the default) to keep the projection's natural
+default.
+
+To render the classic full-earth Mercator including Antarctica, extend
+the bottom edge with `MinLatitude = -85` (the top is already at +85):
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    MapProjection="Mercator"
+    MinLatitude="-85"
+    MaxLatitude="85"/&gt;&lt;!-- mark, full earth --></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator"
+    MinLatitude="-85"
+    MaxLatitude="85"&gt;&lt;!-- mark, full earth -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MinLatitude = -85; // mark
+geoMap1.MaxLatitude = 85;  // mark, full earth</code></pre>
+{{~ end ~}}
+
+Combine all four bounds to focus the map on a region — Iceland to the
+Caucasus, North Africa coast to North Cape gives a tight Europe frame:
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    MapProjection="Mercator"
+    MinLatitude="35"&lt;!-- mark -->
+    MaxLatitude="72"&lt;!-- mark -->
+    MinLongitude="-25"&lt;!-- mark -->
+    MaxLongitude="45"/&gt;&lt;!-- mark --></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator"
+    MinLatitude="35"
+    MaxLatitude="72"
+    MinLongitude="-25"
+    MaxLongitude="45"&gt;&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MinLatitude  =  35; // mark
+geoMap1.MaxLatitude  =  72; // mark
+geoMap1.MinLongitude = -25; // mark
+geoMap1.MaxLongitude =  45; // mark</code></pre>
+{{~ end ~}}
+
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_MercatorEuropeView.png)
+
+The same bounds work with `MapProjection.Default` (equirectangular),
+just without Mercator's poleward stretching:
+
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_DefaultProjectionEuropeView.png)
+
+`Orthographic` ignores these bounds — on a globe, viewpoint is set via
+`CoreChart.CenterLongitude` / `CenterLatitude` / `ZoomLevel` instead
+(see [Rotating the globe](#rotating-the-globe) below).
+
 ### Orthographic
 
-`Orthographic` renders the map as a 3D globe — only the hemisphere facing the
-camera is drawn, lands that cross the horizon are clipped along the disc rim.
-`CoreChart.RotationX` (longitude) and `CoreChart.RotationY` (latitude) control
-the center of view; setting them directly snaps, `CoreChart.RotateTo(lon, lat)`
-animates.
+`Orthographic` renders the map as a 3D globe — only the hemisphere facing
+the camera is drawn, lands that cross the horizon are clipped along the
+disc rim. Out of the box the globe is centered at 0° longitude / 0°
+latitude (the Gulf of Guinea):
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    MapProjection="Orthographic"/&gt;&lt;!-- mark --></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MapProjection = LiveChartsCore.Geo.MapProjection.Orthographic;</code></pre>
+{{~ end ~}}
+
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_OrthographicDefault.png)
+
+#### Rotating the globe
+
+`CoreChart.CenterLongitude` and `CoreChart.CenterLatitude` control the
+center of view; setting them directly snaps, while
+`CoreChart.RotateTo(longitude, latitude, durationMs)` animates the
+transition. The example below snaps to `CenterLongitude = 15` /
+`CenterLatitude = 20` to center on Europe and Africa:
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap
     x:Name="geoMap"
     Series="{Binding Series}"
-    MapProjection="Orthographic"&gt;&lt;!-- mark -->
-&lt;/lvc:GeoMap></code></pre>
+    MapProjection="Orthographic"/&gt;</code></pre>
 
 <pre><code>// Code-behind / ViewModel: center the globe on Europe + Africa.
-geoMap.CoreChart.RotationX = 15;  // longitude
-geoMap.CoreChart.RotationY = 20;  // latitude</code></pre>
+geoMap.CoreChart.CenterLongitude = 15; // mark
+geoMap.CoreChart.CenterLatitude  = 20; // mark</code></pre>
 {{~ end ~}}
 
 {{~ if blazor ~}}
 <pre><code>&lt;GeoMap
     @ref="geoMap"
     Series="series"
-    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;!-- mark -->
-&lt;/GeoMap>
+    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;/GeoMap>
 
 @code {
     private GeoMap geoMap = null!;
@@ -301,35 +496,42 @@ geoMap.CoreChart.RotationY = 20;  // latitude</code></pre>
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
-        geoMap.CoreChart.RotationX = 15;
-        geoMap.CoreChart.RotationY = 20;
+        geoMap.CoreChart.CenterLongitude = 15; // mark
+        geoMap.CoreChart.CenterLatitude  = 20; // mark
     }
 }</code></pre>
 {{~ end ~}}
 
 {{~ if winforms ~}}
 <pre><code>geoMap1.MapProjection = LiveChartsCore.Geo.MapProjection.Orthographic;
-geoMap1.CoreChart.RotationX = 15;  // longitude
-geoMap1.CoreChart.RotationY = 20;  // latitude</code></pre>
+geoMap1.CoreChart.CenterLongitude = 15; // mark
+geoMap1.CoreChart.CenterLatitude  = 20; // mark</code></pre>
 {{~ end ~}}
 
-![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-orthographic.png)
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_OrthographicRotated.png)
 
-Mouse-wheel zoom is supported the same way as on the flat projections; pan is
-disabled by default — set `InteractionMode="Both"` to enable click-drag pan.
+For an animated transition between viewpoints, use `RotateTo` instead
+of setting the properties directly:
+
+<pre><code>// Animate to Tokyo over 800 ms (the default).
+geoMap.CoreChart.RotateTo(longitude: 139.69, latitude: 35.69);</code></pre>
+
+Mouse-wheel zoom is supported the same way as on the flat projections;
+pan is disabled by default — set `InteractionMode="Both"` to enable
+click-drag pan.
 
 ## InteractionMode property
 
 Controls which user interactions the map responds to. Defaults to
-`MapInteractionMode.Zoom` — mouse wheel zooms, click-drag does **not** pan.
-Set it to `Both` to enable click-drag panning, or `None` to make the map
-static.
+`MapInteractionMode.None` — geo maps are most often embedded as static
+dashboard tiles, so the default is no interaction. Set it to `Zoom`
+for wheel-zoom only, `Pan` for click-drag pan only, or `Both` for both.
 
 | Value  | Wheel zoom | Click-drag pan |
 | ------ | ---------- | -------------- |
-| `None` | ✗          | ✗              |
+| `None` | ✗          | ✗ *(default)*  |
 | `Pan`  | ✗          | ✓              |
-| `Zoom` | ✓          | ✗ *(default)*  |
+| `Zoom` | ✓          | ✗              |
 | `Both` | ✓          | ✓              |
 
 {{~ if xaml ~}}
@@ -406,23 +608,41 @@ geoMap1.TooltipTextPaint = new SolidColorPaint(SKColors.White);
 geoMap1.TooltipBackgroundPaint = new SolidColorPaint(SKColors.Black);</code></pre>
 {{~ end ~}}
 
-## Programmatic zoom, pan and reset
+## Programmatic viewport control
 
-`MapInteractionMode` covers user gestures; the methods on `CoreChart` cover
-programmatic viewport control:
+There are **two parallel ways** to control where the map is looking:
+
+1. **Declarative bounds** on the view — `MinLatitude`, `MaxLatitude`,
+   `MinLongitude`, `MaxLongitude`. XAML-bindable, ideal for the
+   "frame on this region by default" use case. Honored by the
+   `Default` and `Mercator` projections.
+2. **Imperative center + zoom** on `CoreChart` — `CenterLongitude`,
+   `CenterLatitude`, `ZoomLevel`. Settable from code at any time
+   (responds to interactions, animations, business logic). Works for
+   every projection — for `Orthographic` it rotates the globe; for
+   the flat projections it pans within the bounds.
+
+Setting `CenterLongitude` / `CenterLatitude` / `ZoomLevel` snaps; for
+animated transitions on the globe use
+`CoreChart.RotateTo(longitude, latitude, durationMs)`.
+
+Other viewport methods:
 
 - `CoreChart.ResetViewport()` — snap back to zoom 1.0 / no pan.
-- `CoreChart.Pan(LvcPoint delta)` — pan by a screen-space offset.
-- `CoreChart.Zoom(LvcPoint pivot, ZoomDirection direction)` — zoom in / out
-  around a screen point.
-- `CoreChart.RotateTo(double longitude, double latitude, int durationMs = 800)`
-  — animated globe rotation for `MapProjection.Orthographic`. `RotationX` and
-  `RotationY` set rotation without animation.
+- `CoreChart.Pan(LvcPoint delta)` — pan by a screen-space offset
+  (in pixels, not lat/lon).
+- `CoreChart.Zoom(LvcPoint pivot, ZoomDirection direction)` — zoom in
+  / out around a screen point (the gesture form;
+  `CoreChart.ZoomLevel = …` is the value form).
 
 <pre><code>// Reset zoom and pan to defaults.
 geoMap.CoreChart.ResetViewport();
 
-// Animate the orthographic globe to look at Tokyo.
+// Snap the orthographic globe to look at Tokyo.
+geoMap.CoreChart.CenterLongitude = 139.69;
+geoMap.CoreChart.CenterLatitude  =  35.69;
+
+// Or animate it over 800 ms.
 geoMap.CoreChart.RotateTo(longitude: 139.69, latitude: 35.69);</code></pre>
 
 ## Finding lands on click or hover
