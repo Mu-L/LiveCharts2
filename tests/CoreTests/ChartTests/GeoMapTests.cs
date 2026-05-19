@@ -4,8 +4,11 @@ using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.SkiaSharpView.VisualElements;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoreTests.ChartTests;
@@ -372,5 +375,106 @@ public class GeoMapTests
         var task = (System.Threading.Tasks.Task)unlocked!.Invoke(chart.CoreChart, null)!;
         task.Wait();
         _ = throttler; // silence unused
+    }
+
+    // Title participation: setting View.Title reserves space at the top of the
+    // draw margin and AddTitleToChart positions the visual at the top of the
+    // canvas. Before the Measure wiring, the title stub was a no-op and the
+    // map filled the whole control.
+    [TestMethod]
+    public void GeoMap_TitleSet_ReducesDrawMarginAndAddsVisualToCanvas()
+    {
+        var chart = new SKGeoMap
+        {
+            Width = 600,
+            Height = 600,
+            Title = new DrawnLabelVisual(new LiveChartsCore.SkiaSharpView.Drawing.Geometries.LabelGeometry
+            {
+                Text = "Hello",
+                TextSize = 30,
+                Padding = new Padding(10),
+                Paint = new LiveChartsCore.SkiaSharpView.Painting.SolidColorPaint(0xff303030),
+            }),
+            Series = [new HeatLandSeries { Lands = [new() { Name = "rus", Value = 1 }] }],
+        };
+        chart.CoreChart.Measure();
+
+        Assert.IsTrue(
+            chart.CoreChart.DrawMarginLocation.Y > 0,
+            "Title height must shift the map draw area down");
+        Assert.IsTrue(
+            chart.CoreChart.DrawMarginSize.Height < 600,
+            "Map draw area must shrink by the title height");
+    }
+
+    // Legend participation: setting Legend + LegendPosition=Right reserves
+    // width on the right edge of the draw margin. Before the EnumerateHeat-
+    // LegendSources hook, SKHeatLegend hid itself on the map (its
+    // chart.Series query returned no heat series, since geo series aren't
+    // ISeries) and no reservation happened.
+    [TestMethod]
+    public void GeoMap_HeatLegendRight_ReducesDrawMarginWidth()
+    {
+        var chart = new SKGeoMap
+        {
+            Width = 800,
+            Height = 600,
+            LegendPosition = LegendPosition.Right,
+            Legend = new SKHeatLegend(),
+            Series = [new HeatLandSeries { Lands = [
+                new() { Name = "rus", Value = 1 },
+                new() { Name = "usa", Value = 9 },
+            ] }],
+        };
+        chart.CoreChart.Measure();
+
+        Assert.IsTrue(
+            chart.CoreChart.DrawMarginSize.Width < 800,
+            "A Right-positioned legend must reserve width from the map's draw area");
+    }
+
+    // The chart-level heat-legend source lookup must find HeatLandSeries on
+    // the map; cartesian charts ignore geo series and vice versa.
+    [TestMethod]
+    public void GeoMap_EnumerateHeatLegendSources_ReturnsHeatLandSeries()
+    {
+        var heat = new HeatLandSeries { Lands = [new() { Name = "rus", Value = 7 }] };
+        var chart = new SKGeoMap
+        {
+            Width = 400,
+            Height = 400,
+            Series = [heat],
+        };
+        chart.CoreChart.Measure();
+
+        var sources = chart.CoreChart.EnumerateHeatLegendSources().ToArray();
+        Assert.AreEqual(1, sources.Length);
+        Assert.AreSame(heat, sources[0]);
+    }
+
+    // CoreHeatLandSeries caches WeightBounds during Measure so the legend
+    // can read the gradient endpoints without re-scanning the lands.
+    [TestMethod]
+    public void GeoMap_HeatLandSeriesMeasure_CachesWeightBoundsForLegend()
+    {
+        var heat = new HeatLandSeries { Lands = [
+            new() { Name = "rus", Value = 3 },
+            new() { Name = "usa", Value = 17 },
+        ] };
+        var chart = new SKGeoMap
+        {
+            Width = 400,
+            Height = 400,
+            Series = [heat],
+        };
+
+        // Bounds starts in the "no values appended" sentinel state.
+        Assert.AreEqual(double.MaxValue, heat.WeightBounds.Min, "WeightBounds is unwritten before any measure");
+        Assert.AreEqual(double.MinValue, heat.WeightBounds.Max);
+
+        chart.CoreChart.Measure();
+
+        Assert.AreEqual(3d, heat.WeightBounds.Min);
+        Assert.AreEqual(17d, heat.WeightBounds.Max);
     }
 }
