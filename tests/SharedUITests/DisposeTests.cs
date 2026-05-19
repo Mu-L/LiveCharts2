@@ -58,9 +58,23 @@ public class DisposeTests
         // Let the platform's dispatcher drain any queued unload work.
         await Task.Delay(2000);
 
-        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-        GC.WaitForPendingFinalizers();
-        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        // Drain to a fixed point. On Maui Android (Mono GC + native skia
+        // finalizers) the chart graph can survive a single Collect/Wait/Collect
+        // round — pass-1 finalizers release native handles that only the next
+        // Gen2 sweep can reclaim. Pre-#2251 the chart graph fit in one pass;
+        // the geomap rework added enough per-instance state (Chart-base
+        // throttlers, Canvas.Validated rotation hook, RotationTracker) to push
+        // it over. Loop until everything is gone or we hit the deadline; on
+        // platforms where one round is enough the loop exits immediately, so
+        // this is a no-op for non-Android-Mono targets.
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            if (!weakRefs.Any(r => r.IsAlive)) break;
+            await Task.Delay(500);
+        }
 
         var alive = weakRefs.Count(r => r.IsAlive);
         var expected = Iterations * ChartsPerPage;
