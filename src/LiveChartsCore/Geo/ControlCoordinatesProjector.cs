@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -28,24 +28,60 @@ namespace LiveChartsCore.Geo;
 /// <seealso cref="MapProjector" />
 public class ControlCoordinatesProjector : MapProjector
 {
+    /// <summary>Default minimum latitude (full earth: -90°).</summary>
+    public const double DefaultMinLatitudeDegrees = -90d;
+
+    /// <summary>Default maximum latitude (full earth: +90°).</summary>
+    public const double DefaultMaxLatitudeDegrees = 90d;
+
+    /// <summary>Default minimum longitude (full earth: -180°).</summary>
+    public const double DefaultMinLongitudeDegrees = -180d;
+
+    /// <summary>Default maximum longitude (full earth: +180°).</summary>
+    public const double DefaultMaxLongitudeDegrees = 180d;
+
     private readonly float _w;
     private readonly float _h;
     private readonly float _ox;
     private readonly float _oy;
+    private readonly double _minLat;
+    private readonly double _maxLat;
+    private readonly double _minLon;
+    private readonly double _maxLon;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ControlCoordinatesProjector"/>
+    /// class with the projection's default (full-earth) bounds.
+    /// </summary>
+    public ControlCoordinatesProjector(float mapWidth, float mapHeight, float offsetX, float offsetY)
+        : this(mapWidth, mapHeight, offsetX, offsetY, double.NaN, double.NaN, double.NaN, double.NaN)
+    { }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ControlCoordinatesProjector"/> class.
+    /// Any NaN bound falls back to the projection's default.
     /// </summary>
     /// <param name="mapWidth">Width of the map.</param>
     /// <param name="mapHeight">Height of the map.</param>
     /// <param name="offsetX">The offset x.</param>
     /// <param name="offsetY">The offset y.</param>
-    public ControlCoordinatesProjector(float mapWidth, float mapHeight, float offsetX, float offsetY)
+    /// <param name="minLatitudeDegrees">Latitude clipped to the bottom edge; NaN for default.</param>
+    /// <param name="maxLatitudeDegrees">Latitude clipped to the top edge; NaN for default.</param>
+    /// <param name="minLongitudeDegrees">Longitude clipped to the left edge; NaN for default.</param>
+    /// <param name="maxLongitudeDegrees">Longitude clipped to the right edge; NaN for default.</param>
+    public ControlCoordinatesProjector(
+        float mapWidth, float mapHeight, float offsetX, float offsetY,
+        double minLatitudeDegrees, double maxLatitudeDegrees,
+        double minLongitudeDegrees, double maxLongitudeDegrees)
     {
         _w = mapWidth;
         _h = mapHeight;
         _ox = offsetX;
         _oy = offsetY;
+        _minLat = double.IsNaN(minLatitudeDegrees) ? DefaultMinLatitudeDegrees : minLatitudeDegrees;
+        _maxLat = double.IsNaN(maxLatitudeDegrees) ? DefaultMaxLatitudeDegrees : maxLatitudeDegrees;
+        _minLon = double.IsNaN(minLongitudeDegrees) ? DefaultMinLongitudeDegrees : minLongitudeDegrees;
+        _maxLon = double.IsNaN(maxLongitudeDegrees) ? DefaultMaxLongitudeDegrees : maxLongitudeDegrees;
         XOffset = _ox;
         YOffset = _oy;
         MapWidth = mapWidth;
@@ -53,12 +89,28 @@ public class ControlCoordinatesProjector : MapProjector
     }
 
     /// <summary>
-    /// Gets the preferred ratio.
+    /// Gets the preferred ratio for the projection's default (full-earth) bounds.
+    /// Use <see cref="GetPreferredRatio(double, double, double, double)"/> for custom bounds.
     /// </summary>
-    /// <value>
-    /// The preferred ratio.
-    /// </value>
-    public static float[] PreferredRatio => new[] { 2f, 1f };
+    public static float[] PreferredRatio => GetPreferredRatio(
+        DefaultMinLatitudeDegrees, DefaultMaxLatitudeDegrees,
+        DefaultMinLongitudeDegrees, DefaultMaxLongitudeDegrees);
+
+    /// <summary>
+    /// Returns the natural aspect ratio (width:height) of the equirectangular
+    /// rendering for the given lat/lon bounds. Any NaN argument falls back to
+    /// the projection's default.
+    /// </summary>
+    public static float[] GetPreferredRatio(
+        double minLatitudeDegrees, double maxLatitudeDegrees,
+        double minLongitudeDegrees, double maxLongitudeDegrees)
+    {
+        var minLat = double.IsNaN(minLatitudeDegrees) ? DefaultMinLatitudeDegrees : minLatitudeDegrees;
+        var maxLat = double.IsNaN(maxLatitudeDegrees) ? DefaultMaxLatitudeDegrees : maxLatitudeDegrees;
+        var minLon = double.IsNaN(minLongitudeDegrees) ? DefaultMinLongitudeDegrees : minLongitudeDegrees;
+        var maxLon = double.IsNaN(maxLongitudeDegrees) ? DefaultMaxLongitudeDegrees : maxLongitudeDegrees;
+        return new[] { (float)(maxLon - minLon), (float)(maxLat - minLat) };
+    }
 
     /// <inheritdoc cref="MapProjector.ToMap(double[])"/>
     public override float[] ToMap(double[] point)
@@ -70,13 +122,7 @@ public class ControlCoordinatesProjector : MapProjector
     /// <inheritdoc cref="MapProjector.ToMap(double, double, out float, out float)"/>
     public override void ToMap(double longitude, double latitude, out float x, out float y)
     {
-        // simplified formula
-        x = (float)(_ox + (longitude + 180) / 360d * _w);
-        y = (float)(_oy + (90 - latitude) / 180d * _h);
-
-        // the following code explains the formula better:
-        // 1. to Cartesian:        x += 180;  y = 90 - y;
-        // 2. fit to map size:     x = x / 360d * _w;  y = y / 180d * _h;
-        // 3. add offset:          x += _ox;  y += _oy;
+        x = (float)(_ox + (longitude - _minLon) / (_maxLon - _minLon) * _w);
+        y = (float)(_oy + (_maxLat - latitude) / (_maxLat - _minLat) * _h);
     }
 }

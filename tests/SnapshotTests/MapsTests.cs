@@ -76,9 +76,9 @@ public sealed class MapsTests
             Height = 600
         };
 
-        // Rotate to show Europe/Africa centered view
-        chart.CoreChart.RotationX = 15;
-        chart.CoreChart.RotationY = 20;
+        // Center the globe on Europe / Africa
+        chart.CoreChart.CenterLongitude = 15;
+        chart.CoreChart.CenterLatitude = 20;
 
         chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(OrthographicRotated)}");
     }
@@ -102,8 +102,8 @@ public sealed class MapsTests
             Height = 600
         };
 
-        chart.CoreChart.RotationX = 80;
-        chart.CoreChart.RotationY = 20;
+        chart.CoreChart.CenterLongitude = 80;
+        chart.CoreChart.CenterLatitude = 20;
 
         chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(OrthographicHorizonClipsAlongDiscRim)}");
     }
@@ -173,5 +173,27 @@ public sealed class MapsTests
         };
 
         chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(MercatorEuropeView)}");
+    }
+
+    // Same Europe bounds applied to Default (equirectangular) projection —
+    // proves the lat/lon-bounds API is projection-agnostic on flat
+    // projections. Visual differs from MercatorEuropeView because
+    // equirectangular doesn't stretch poleward.
+    [TestMethod]
+    public void DefaultProjectionEuropeView()
+    {
+        var chart = new SKGeoMap
+        {
+            Series = CreateHeatSeries(),
+            MapProjection = MapProjection.Default,
+            Width = 600,
+            Height = 600,
+            MinLatitude = 35,
+            MaxLatitude = 72,
+            MinLongitude = -25,
+            MaxLongitude = 45,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(DefaultProjectionEuropeView)}");
     }
 }

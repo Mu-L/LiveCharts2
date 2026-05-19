@@ -99,7 +99,7 @@ public static class Maps
     {
         var mapRatio =
             projection == MapProjection.Default
-            ? ControlCoordinatesProjector.PreferredRatio
+            ? ControlCoordinatesProjector.GetPreferredRatio(minLatitude, maxLatitude, minLongitude, maxLongitude)
             : projection == MapProjection.Orthographic
             ? OrthographicProjector.PreferredRatio
             : MercatorProjector.GetPreferredRatio(minLatitude, maxLatitude, minLongitude, maxLongitude);
@@ -123,7 +123,7 @@ public static class Maps
 
         return projection switch
         {
-            MapProjection.Default => new ControlCoordinatesProjector(mapSize[0], mapSize[1], ox, oy),
+            MapProjection.Default => new ControlCoordinatesProjector(mapSize[0], mapSize[1], ox, oy, minLatitude, maxLatitude, minLongitude, maxLongitude),
             MapProjection.Orthographic => new OrthographicProjector(mapSize[0], mapSize[1], ox, oy, centerLon, centerLat),
             _ => new MercatorProjector(mapSize[0], mapSize[1], ox, oy, minLatitude, maxLatitude, minLongitude, maxLongitude)
         };

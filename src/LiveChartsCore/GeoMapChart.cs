@@ -137,11 +137,22 @@ public class GeoMapChart : Chart
     internal override bool IsPanEnabled =>
         (MapView.InteractionMode & MapInteractionMode.Pan) == MapInteractionMode.Pan;
 
-    /// <summary>Gets the current zoom level.</summary>
+    /// <summary>
+    /// Gets or sets the current zoom level. 1 is the default scale; values
+    /// greater than 1 zoom in around the chart center. Mirrors the imperative
+    /// API exposed alongside <see cref="CenterLongitude"/> /
+    /// <see cref="CenterLatitude"/> — pair them to drive the viewport from
+    /// code. <see cref="Zoom(LvcPoint, ZoomDirection)"/> is the gesture form
+    /// (wheel zoom around a pivot).
+    /// </summary>
     public float ZoomLevel
     {
         get => _zoomLevel;
-        internal set => _zoomLevel = value;
+        set
+        {
+            _zoomLevel = value;
+            Update(new ChartUpdateParams { Throttling = false });
+        }
     }
 
     /// <summary>Gets the current pan offset.</summary>
@@ -151,12 +162,16 @@ public class GeoMapChart : Chart
         internal set => _panOffset = value;
     }
 
-    /// <summary>Rotation center longitude (used for Orthographic projection).</summary>
+    /// <summary>
+    /// Longitude of the viewport center — where the camera is looking. For
+    /// <see cref="MapProjection.Orthographic"/> this rotates the globe;
+    /// future flat-projection support uses it for horizontal panning.
+    /// </summary>
     /// <remarks>
     /// Direct sets snap immediately (no animation). Use <see cref="RotateTo"/>
     /// for an animated transition.
     /// </remarks>
-    public double RotationX
+    public double CenterLongitude
     {
         get => _rotation.X;
         set
@@ -167,12 +182,16 @@ public class GeoMapChart : Chart
         }
     }
 
-    /// <summary>Rotation center latitude (used for Orthographic projection).</summary>
+    /// <summary>
+    /// Latitude of the viewport center. For
+    /// <see cref="MapProjection.Orthographic"/> this rotates the globe;
+    /// future flat-projection support uses it for vertical panning.
+    /// </summary>
     /// <remarks>
     /// Direct sets snap immediately (no animation). Use <see cref="RotateTo"/>
     /// for an animated transition.
     /// </remarks>
-    public double RotationY
+    public double CenterLatitude
     {
         get => _rotation.Y;
         set
