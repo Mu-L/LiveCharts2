@@ -27,8 +27,7 @@ public class GeoMapEventsTests
 
         Assert.IsNotNull(captured);
         Assert.AreEqual(1, captured.Length);
-        var land = captured[0].Context.DataSource as LandDefinition;
-        Assert.IsNotNull(land);
+        var land = Assert.IsInstanceOfType<LandDefinition>(captured[0].Context.DataSource);
         Assert.AreEqual("rus", land.ShortName);
     }
 
@@ -65,7 +64,7 @@ public class GeoMapEventsTests
         chart.CoreChart.InvokePointerUp(moscow, isSecondaryAction: false);
 
         Assert.IsNotNull(captured);
-        var land = (LandDefinition)captured![0].Context.DataSource!;
+        var land = Assert.IsInstanceOfType<LandDefinition>(captured[0].Context.DataSource);
         Assert.AreEqual("rus", land.ShortName);
 
         // Heat value is read off the source series (see overview.md recipe).
@@ -75,7 +74,7 @@ public class GeoMapEventsTests
 
         // The hover area is the projected screen bbox of the land; the click
         // pixel must fall inside it.
-        var bbox = (RectangleHoverArea)captured[0].Context.HoverArea!;
+        var bbox = Assert.IsInstanceOfType<RectangleHoverArea>(captured[0].Context.HoverArea);
         Assert.IsTrue(moscow.X >= bbox.X && moscow.X <= bbox.X + bbox.Width);
         Assert.IsTrue(moscow.Y >= bbox.Y && moscow.Y <= bbox.Y + bbox.Height);
     }
