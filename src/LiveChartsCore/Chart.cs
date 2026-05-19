@@ -941,7 +941,10 @@ public abstract class Chart
         return removed;
     }
 
-    private Task TooltipThrottlerUnlocked()
+    // internal (not private) so CoreTests can synchronously drive the hover
+    // pipeline without waiting on the 50ms ActionThrottler delay; production
+    // call sites only reach this through _tooltipThrottler.
+    internal Task TooltipThrottlerUnlocked()
     {
         return Task.Run(() =>
              View.InvokeOnUIThread(() =>
