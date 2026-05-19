@@ -1,7 +1,12 @@
-﻿using LiveChartsCore.Geo;
+﻿using LiveChartsCore.Drawing;
+using LiveChartsCore.Geo;
+using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
+using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
+using LiveChartsCore.SkiaSharpView.VisualElements;
+using SkiaSharp;
 
 namespace SnapshotTests;
 
@@ -101,5 +106,31 @@ public sealed class MapsTests
         chart.CoreChart.RotationY = 20;
 
         chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(OrthographicHorizonClipsAlongDiscRim)}");
+    }
+
+    // Mirrors the Avalonia World sample: Title above the map + Right-anchored
+    // SKHeatLegend. Locks both the title position and the legend gradient
+    // rendering against the layout reservation done by GeoMapChart.Measure.
+    [TestMethod]
+    public void BasicWithTitleAndLegend()
+    {
+        var chart = new SKGeoMap
+        {
+            Series = CreateHeatSeries(),
+            MapProjection = MapProjection.Mercator,
+            Width = 800,
+            Height = 600,
+            LegendPosition = LegendPosition.Right,
+            Legend = new SKHeatLegend(),
+            Title = new DrawnLabelVisual(new LabelGeometry
+            {
+                Text = "World population by country",
+                TextSize = 20,
+                Padding = new Padding(12),
+                Paint = new SolidColorPaint(SKColors.Black),
+            }),
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(BasicWithTitleAndLegend)}");
     }
 }
