@@ -78,14 +78,41 @@ public class ControlCoordinatesProjector : MapProjector
         _h = mapHeight;
         _ox = offsetX;
         _oy = offsetY;
-        _minLat = double.IsNaN(minLatitudeDegrees) ? DefaultMinLatitudeDegrees : minLatitudeDegrees;
-        _maxLat = double.IsNaN(maxLatitudeDegrees) ? DefaultMaxLatitudeDegrees : maxLatitudeDegrees;
-        _minLon = double.IsNaN(minLongitudeDegrees) ? DefaultMinLongitudeDegrees : minLongitudeDegrees;
-        _maxLon = double.IsNaN(maxLongitudeDegrees) ? DefaultMaxLongitudeDegrees : maxLongitudeDegrees;
+        NormalizeBounds(
+            minLatitudeDegrees, maxLatitudeDegrees,
+            minLongitudeDegrees, maxLongitudeDegrees,
+            out _minLat, out _maxLat, out _minLon, out _maxLon);
         XOffset = _ox;
         YOffset = _oy;
         MapWidth = mapWidth;
         MapHeight = mapHeight;
+    }
+
+    // NaN → default; inverted (min > max) → swap; degenerate (min == max) →
+    // fall back to the projection defaults for that axis so the ToMap math
+    // never divides by zero.
+    private static void NormalizeBounds(
+        double minLat, double maxLat, double minLon, double maxLon,
+        out double normMinLat, out double normMaxLat, out double normMinLon, out double normMaxLon)
+    {
+        normMinLat = double.IsNaN(minLat) ? DefaultMinLatitudeDegrees : minLat;
+        normMaxLat = double.IsNaN(maxLat) ? DefaultMaxLatitudeDegrees : maxLat;
+        normMinLon = double.IsNaN(minLon) ? DefaultMinLongitudeDegrees : minLon;
+        normMaxLon = double.IsNaN(maxLon) ? DefaultMaxLongitudeDegrees : maxLon;
+
+        if (normMinLat > normMaxLat) (normMinLat, normMaxLat) = (normMaxLat, normMinLat);
+        if (normMinLon > normMaxLon) (normMinLon, normMaxLon) = (normMaxLon, normMinLon);
+
+        if (normMinLat == normMaxLat)
+        {
+            normMinLat = DefaultMinLatitudeDegrees;
+            normMaxLat = DefaultMaxLatitudeDegrees;
+        }
+        if (normMinLon == normMaxLon)
+        {
+            normMinLon = DefaultMinLongitudeDegrees;
+            normMaxLon = DefaultMaxLongitudeDegrees;
+        }
     }
 
     /// <summary>
@@ -105,10 +132,10 @@ public class ControlCoordinatesProjector : MapProjector
         double minLatitudeDegrees, double maxLatitudeDegrees,
         double minLongitudeDegrees, double maxLongitudeDegrees)
     {
-        var minLat = double.IsNaN(minLatitudeDegrees) ? DefaultMinLatitudeDegrees : minLatitudeDegrees;
-        var maxLat = double.IsNaN(maxLatitudeDegrees) ? DefaultMaxLatitudeDegrees : maxLatitudeDegrees;
-        var minLon = double.IsNaN(minLongitudeDegrees) ? DefaultMinLongitudeDegrees : minLongitudeDegrees;
-        var maxLon = double.IsNaN(maxLongitudeDegrees) ? DefaultMaxLongitudeDegrees : maxLongitudeDegrees;
+        NormalizeBounds(
+            minLatitudeDegrees, maxLatitudeDegrees,
+            minLongitudeDegrees, maxLongitudeDegrees,
+            out var minLat, out var maxLat, out var minLon, out var maxLon);
         return new[] { (float)(maxLon - minLon), (float)(maxLat - minLat) };
     }
 
