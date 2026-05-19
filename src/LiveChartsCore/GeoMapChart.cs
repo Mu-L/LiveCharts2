@@ -241,6 +241,36 @@ public class GeoMapChart : Chart
         Update(new ChartUpdateParams { Throttling = false });
     }
 
+    /// <summary>
+    /// Projects (longitude, latitude) onto the chart's screen-space pixel
+    /// coordinates using the projector built by the last <see cref="Measure"/>
+    /// pass. Returns null when the coordinate isn't visible — e.g. the back
+    /// hemisphere on <see cref="MapProjection.Orthographic"/>. The
+    /// projection honors the current draw margin, title/legend reservations,
+    /// and orthographic rotation; pair with <see cref="Unproject"/> for the
+    /// inverse.
+    /// </summary>
+    public LvcPoint? Project(double longitude, double latitude)
+    {
+        var projector = GetOrBuildProjector();
+        if (!projector.IsVisible(longitude, latitude)) return null;
+        projector.ToMap(longitude, latitude, out var x, out var y);
+        return new LvcPoint(x, y);
+    }
+
+    /// <summary>
+    /// Inverse of <see cref="Project"/> — converts a screen-space pixel back
+    /// to (longitude, latitude). Returns null when the pixel doesn't map to
+    /// a valid coordinate (e.g. a click outside the orthographic disc).
+    /// </summary>
+    public (double Longitude, double Latitude)? Unproject(LvcPoint screenPoint)
+    {
+        var projector = GetOrBuildProjector();
+        return projector.ToCoordinates(screenPoint.X, screenPoint.Y, out var lon, out var lat)
+            ? (lon, lat)
+            : null;
+    }
+
     private void OnCanvasValidatedForRotation(CoreMotionCanvas _)
     {
         if (_isUnloaded) return;
