@@ -91,6 +91,7 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
             _observer?.Dispose();
             _observer?.Initialize(value);
             field = value;
+            _cachedBounds = null;
             OnPropertyChanged();
         }
     }
@@ -98,21 +99,29 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
     /// <inheritdoc cref="IGeoSeries.IsVisible"/>
     public bool IsVisible { get; set { field = value; OnPropertyChanged(); } }
 
+    private Bounds? _cachedBounds;
+
     /// <summary>
     /// Gets the data weight bounds (min/max) over <see cref="Lands"/>, honoring
-    /// any <see cref="MinValue"/> / <see cref="MaxValue"/> overrides. Computed
-    /// on demand so consumers (the heat legend) can read it before the first
-    /// Measure pass without seeing the empty-bounds sentinel.
+    /// any <see cref="MinValue"/> / <see cref="MaxValue"/> overrides. Cached
+    /// after the first read; the cache is invalidated when <see cref="Lands"/>
+    /// (or any item within it via the collection observer),
+    /// <see cref="MinValue"/>, or <see cref="MaxValue"/> change. SKHeatLegend
+    /// reads this during every layout pass, so the cache keeps that hot path
+    /// allocation-free.
     /// </summary>
     public Bounds WeightBounds
     {
         get
         {
+            if (_cachedBounds is not null) return _cachedBounds;
+
             var bounds = new Bounds();
             foreach (var land in Lands ?? [])
                 bounds.AppendValue(land.Value);
             if (MinValue is not null) bounds.Min = MinValue.Value;
             if (MaxValue is not null) bounds.Max = MaxValue.Value;
+            _cachedBounds = bounds;
             return bounds;
         }
     }
@@ -121,13 +130,21 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
     /// Gets or sets the minimum value override used for color mapping. When
     /// null, the observed minimum value across <see cref="Lands"/> is used.
     /// </summary>
-    public double? MinValue { get; set { field = value; OnPropertyChanged(); } }
+    public double? MinValue
+    {
+        get;
+        set { field = value; _cachedBounds = null; OnPropertyChanged(); }
+    }
 
     /// <summary>
     /// Gets or sets the maximum value override used for color mapping. When
     /// null, the observed maximum value across <see cref="Lands"/> is used.
     /// </summary>
-    public double? MaxValue { get; set { field = value; OnPropertyChanged(); } }
+    public double? MaxValue
+    {
+        get;
+        set { field = value; _cachedBounds = null; OnPropertyChanged(); }
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether this series contributes to the
@@ -239,6 +256,10 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
 
     private void NotifySubscribers()
     {
+        // The observer fires when items inside Lands change (e.g. a HeatLand.Value
+        // is mutated in place). Drop the cached bounds so the legend re-reads
+        // the new extrema on the next layout pass.
+        _cachedBounds = null;
         foreach (var chart in _subscribedTo) chart.Update();
     }
 
