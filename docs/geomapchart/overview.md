@@ -420,15 +420,15 @@ disabled by default — set `InteractionMode="Both"` to enable click-drag pan.
 ## InteractionMode property
 
 Controls which user interactions the map responds to. Defaults to
-`MapInteractionMode.Zoom` — mouse wheel zooms, click-drag does **not** pan.
-Set it to `Both` to enable click-drag panning, or `None` to make the map
-static.
+`MapInteractionMode.None` — geo maps are most often embedded as static
+dashboard tiles, so the default is no interaction. Set it to `Zoom`
+for wheel-zoom only, `Pan` for click-drag pan only, or `Both` for both.
 
 | Value  | Wheel zoom | Click-drag pan |
 | ------ | ---------- | -------------- |
-| `None` | ✗          | ✗              |
+| `None` | ✗          | ✗ *(default)*  |
 | `Pan`  | ✗          | ✓              |
-| `Zoom` | ✓          | ✗ *(default)*  |
+| `Zoom` | ✓          | ✗              |
 | `Both` | ✓          | ✓              |
 
 {{~ if xaml ~}}

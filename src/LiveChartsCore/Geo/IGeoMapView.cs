@@ -73,8 +73,10 @@ public interface IGeoMapView : IChartView
 
     /// <summary>
     /// Gets or sets which interactions are enabled (pan / zoom / both / none).
-    /// Defaults to <see cref="MapInteractionMode.Zoom"/> — wheel-zoom is on,
-    /// pan is off. Set <see cref="MapInteractionMode.Both"/> to enable pan too.
+    /// Defaults to <see cref="MapInteractionMode.None"/> — geo maps are most
+    /// often embedded as static dashboard tiles, so the default is no
+    /// interaction. Set <see cref="MapInteractionMode.Zoom"/> for wheel-zoom,
+    /// or <see cref="MapInteractionMode.Both"/> for wheel-zoom + click-drag pan.
     /// </summary>
     MapInteractionMode InteractionMode { get; set; }
 
