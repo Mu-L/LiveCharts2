@@ -429,8 +429,14 @@ geoMap1.MaxLongitude =  45; // mark</code></pre>
 
 ![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_MercatorEuropeView.png)
 
-Only the Mercator projection honors these bounds today; `Default` and
-`Orthographic` ignore them.
+The same bounds work with `MapProjection.Default` (equirectangular),
+just without Mercator's poleward stretching:
+
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_DefaultProjectionEuropeView.png)
+
+`Orthographic` ignores these bounds — on a globe, viewpoint is set via
+`CoreChart.CenterLongitude` / `CenterLatitude` / `ZoomLevel` instead
+(see [Rotating the globe](#rotating-the-globe) below).
 
 ### Orthographic
 
@@ -459,11 +465,11 @@ latitude (the Gulf of Guinea):
 
 #### Rotating the globe
 
-`CoreChart.RotationX` (longitude) and `CoreChart.RotationY` (latitude)
-control the center of view; setting them directly snaps, while
+`CoreChart.CenterLongitude` and `CoreChart.CenterLatitude` control the
+center of view; setting them directly snaps, while
 `CoreChart.RotateTo(longitude, latitude, durationMs)` animates the
-transition. The example below snaps to RotationX = 15° / RotationY = 20°
-to center on Europe and Africa:
+transition. The example below snaps to `CenterLongitude = 15` /
+`CenterLatitude = 20` to center on Europe and Africa:
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap
@@ -472,8 +478,8 @@ to center on Europe and Africa:
     MapProjection="Orthographic"/&gt;</code></pre>
 
 <pre><code>// Code-behind / ViewModel: center the globe on Europe + Africa.
-geoMap.CoreChart.RotationX = 15;  // longitude // mark
-geoMap.CoreChart.RotationY = 20;  // latitude  // mark</code></pre>
+geoMap.CoreChart.CenterLongitude = 15; // mark
+geoMap.CoreChart.CenterLatitude  = 20; // mark</code></pre>
 {{~ end ~}}
 
 {{~ if blazor ~}}
@@ -488,16 +494,16 @@ geoMap.CoreChart.RotationY = 20;  // latitude  // mark</code></pre>
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
-        geoMap.CoreChart.RotationX = 15; // mark
-        geoMap.CoreChart.RotationY = 20; // mark
+        geoMap.CoreChart.CenterLongitude = 15; // mark
+        geoMap.CoreChart.CenterLatitude  = 20; // mark
     }
 }</code></pre>
 {{~ end ~}}
 
 {{~ if winforms ~}}
 <pre><code>geoMap1.MapProjection = LiveChartsCore.Geo.MapProjection.Orthographic;
-geoMap1.CoreChart.RotationX = 15;  // longitude // mark
-geoMap1.CoreChart.RotationY = 20;  // latitude  // mark</code></pre>
+geoMap1.CoreChart.CenterLongitude = 15; // mark
+geoMap1.CoreChart.CenterLatitude  = 20; // mark</code></pre>
 {{~ end ~}}
 
 ![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_OrthographicRotated.png)
@@ -600,23 +606,41 @@ geoMap1.TooltipTextPaint = new SolidColorPaint(SKColors.White);
 geoMap1.TooltipBackgroundPaint = new SolidColorPaint(SKColors.Black);</code></pre>
 {{~ end ~}}
 
-## Programmatic zoom, pan and reset
+## Programmatic viewport control
 
-`MapInteractionMode` covers user gestures; the methods on `CoreChart` cover
-programmatic viewport control:
+There are **two parallel ways** to control where the map is looking:
+
+1. **Declarative bounds** on the view — `MinLatitude`, `MaxLatitude`,
+   `MinLongitude`, `MaxLongitude`. XAML-bindable, ideal for the
+   "frame on this region by default" use case. Honored by the
+   `Default` and `Mercator` projections.
+2. **Imperative center + zoom** on `CoreChart` — `CenterLongitude`,
+   `CenterLatitude`, `ZoomLevel`. Settable from code at any time
+   (responds to interactions, animations, business logic). Works for
+   every projection — for `Orthographic` it rotates the globe; for
+   the flat projections it pans within the bounds.
+
+Setting `CenterLongitude` / `CenterLatitude` / `ZoomLevel` snaps; for
+animated transitions on the globe use
+`CoreChart.RotateTo(longitude, latitude, durationMs)`.
+
+Other viewport methods:
 
 - `CoreChart.ResetViewport()` — snap back to zoom 1.0 / no pan.
-- `CoreChart.Pan(LvcPoint delta)` — pan by a screen-space offset.
-- `CoreChart.Zoom(LvcPoint pivot, ZoomDirection direction)` — zoom in / out
-  around a screen point.
-- `CoreChart.RotateTo(double longitude, double latitude, int durationMs = 800)`
-  — animated globe rotation for `MapProjection.Orthographic`. `RotationX` and
-  `RotationY` set rotation without animation.
+- `CoreChart.Pan(LvcPoint delta)` — pan by a screen-space offset
+  (in pixels, not lat/lon).
+- `CoreChart.Zoom(LvcPoint pivot, ZoomDirection direction)` — zoom in
+  / out around a screen point (the gesture form;
+  `CoreChart.ZoomLevel = …` is the value form).
 
 <pre><code>// Reset zoom and pan to defaults.
 geoMap.CoreChart.ResetViewport();
 
-// Animate the orthographic globe to look at Tokyo.
+// Snap the orthographic globe to look at Tokyo.
+geoMap.CoreChart.CenterLongitude = 139.69;
+geoMap.CoreChart.CenterLatitude  =  35.69;
+
+// Or animate it over 800 ms.
 geoMap.CoreChart.RotateTo(longitude: 139.69, latitude: 35.69);</code></pre>
 
 ## Finding lands on click or hover
