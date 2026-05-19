@@ -397,37 +397,90 @@ Pass ±85° to render the classic full-earth Mercator including Antarctica:
 geoMap1.MaxLatitude = 85;  // mark, full earth</code></pre>
 {{~ end ~}}
 
-Combine all four bounds to focus the map on a region — e.g. central
-Europe (`MinLatitude=35`, `MaxLatitude=72`, `MinLongitude=-15`,
-`MaxLongitude=45`). Only the Mercator projection honors these today;
-`Default` and `Orthographic` ignore them.
+Combine all four bounds to focus the map on a region — Iceland to the
+Caucasus, North Africa coast to North Cape gives a tight Europe frame:
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    MapProjection="Mercator"
+    MinLatitude="35"&lt;!-- mark -->
+    MaxLatitude="72"&lt;!-- mark -->
+    MinLongitude="-25"&lt;!-- mark -->
+    MaxLongitude="45"/&gt;&lt;!-- mark --></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator"
+    MinLatitude="35"
+    MaxLatitude="72"
+    MinLongitude="-25"
+    MaxLongitude="45"&gt;&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MinLatitude  =  35; // mark
+geoMap1.MaxLatitude  =  72; // mark
+geoMap1.MinLongitude = -25; // mark
+geoMap1.MaxLongitude =  45; // mark</code></pre>
+{{~ end ~}}
+
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_MercatorEuropeView.png)
+
+Only the Mercator projection honors these bounds today; `Default` and
+`Orthographic` ignore them.
 
 ### Orthographic
 
-`Orthographic` renders the map as a 3D globe — only the hemisphere facing the
-camera is drawn, lands that cross the horizon are clipped along the disc rim.
-`CoreChart.RotationX` (longitude) and `CoreChart.RotationY` (latitude) control
-the center of view; setting them directly snaps, `CoreChart.RotateTo(lon, lat)`
-animates.
+`Orthographic` renders the map as a 3D globe — only the hemisphere facing
+the camera is drawn, lands that cross the horizon are clipped along the
+disc rim. Out of the box the globe is centered at 0° longitude / 0°
+latitude (the Gulf of Guinea):
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    MapProjection="Orthographic"/&gt;&lt;!-- mark --></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MapProjection = LiveChartsCore.Geo.MapProjection.Orthographic;</code></pre>
+{{~ end ~}}
+
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_OrthographicDefault.png)
+
+#### Rotating the globe
+
+`CoreChart.RotationX` (longitude) and `CoreChart.RotationY` (latitude)
+control the center of view; setting them directly snaps, while
+`CoreChart.RotateTo(longitude, latitude, durationMs)` animates the
+transition. The example below snaps to RotationX = 15° / RotationY = 20°
+to center on Europe and Africa:
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap
     x:Name="geoMap"
     Series="{Binding Series}"
-    MapProjection="Orthographic"&gt;&lt;!-- mark -->
-&lt;/lvc:GeoMap></code></pre>
+    MapProjection="Orthographic"/&gt;</code></pre>
 
 <pre><code>// Code-behind / ViewModel: center the globe on Europe + Africa.
-geoMap.CoreChart.RotationX = 15;  // longitude
-geoMap.CoreChart.RotationY = 20;  // latitude</code></pre>
+geoMap.CoreChart.RotationX = 15;  // longitude // mark
+geoMap.CoreChart.RotationY = 20;  // latitude  // mark</code></pre>
 {{~ end ~}}
 
 {{~ if blazor ~}}
 <pre><code>&lt;GeoMap
     @ref="geoMap"
     Series="series"
-    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;!-- mark -->
-&lt;/GeoMap>
+    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;/GeoMap>
 
 @code {
     private GeoMap geoMap = null!;
@@ -435,22 +488,29 @@ geoMap.CoreChart.RotationY = 20;  // latitude</code></pre>
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
-        geoMap.CoreChart.RotationX = 15;
-        geoMap.CoreChart.RotationY = 20;
+        geoMap.CoreChart.RotationX = 15; // mark
+        geoMap.CoreChart.RotationY = 20; // mark
     }
 }</code></pre>
 {{~ end ~}}
 
 {{~ if winforms ~}}
 <pre><code>geoMap1.MapProjection = LiveChartsCore.Geo.MapProjection.Orthographic;
-geoMap1.CoreChart.RotationX = 15;  // longitude
-geoMap1.CoreChart.RotationY = 20;  // latitude</code></pre>
+geoMap1.CoreChart.RotationX = 15;  // longitude // mark
+geoMap1.CoreChart.RotationY = 20;  // latitude  // mark</code></pre>
 {{~ end ~}}
 
-![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-orthographic.png)
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_OrthographicRotated.png)
 
-Mouse-wheel zoom is supported the same way as on the flat projections; pan is
-disabled by default — set `InteractionMode="Both"` to enable click-drag pan.
+For an animated transition between viewpoints, use `RotateTo` instead
+of setting the properties directly:
+
+<pre><code>// Animate to Tokyo over 800 ms (the default).
+geoMap.CoreChart.RotateTo(longitude: 139.69, latitude: 35.69);</code></pre>
+
+Mouse-wheel zoom is supported the same way as on the flat projections;
+pan is disabled by default — set `InteractionMode="Both"` to enable
+click-drag pan.
 
 ## InteractionMode property
 
