@@ -27,6 +27,7 @@ using LiveChartsCore.Drawing;
 using LiveChartsCore.Drawing.Segments;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Measure;
+using LiveChartsCore.Motion;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 using SkiaSharp;
@@ -100,13 +101,16 @@ public class MapFactory : IMapFactory
 
             if (fill is not null)
             {
-                context.View.CoreCanvas.AddDrawableTask(fill);
+                // DrawMargin zone so Mercator extrapolation past the
+                // clipped latitude (Greenland, Antarctica) is pixel-clipped
+                // to the projection's rendering rectangle.
+                context.View.CoreCanvas.AddDrawableTask(fill, zone: CanvasZone.DrawMargin);
                 _ = _usedPaints.Add(fill);
                 _ = toRemovePaints.Remove(fill);
             }
             if (stroke is not null)
             {
-                context.View.CoreCanvas.AddDrawableTask(stroke);
+                context.View.CoreCanvas.AddDrawableTask(stroke, zone: CanvasZone.DrawMargin);
                 _ = _usedPaints.Add(stroke);
                 _ = toRemovePaints.Remove(stroke);
             }

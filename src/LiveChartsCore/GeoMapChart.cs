@@ -405,9 +405,13 @@ public class GeoMapChart : Chart
         }
         _activeMap = MapView.ActiveMap;
 
+        // Map paints go in the DrawMargin zone so lands beyond the projection's
+        // rendering rectangle (Mercator extrapolation past ±MercatorMaxLatitude
+        // — Greenland, Antarctica, etc.) get pixel-clipped to the map's draw
+        // area instead of bleeding into Title / Legend space.
         if (!_isHeatInCanvas)
         {
-            Canvas.AddDrawableTask(_heatPaint);
+            Canvas.AddDrawableTask(_heatPaint, zone: CanvasZone.DrawMargin);
             _isHeatInCanvas = true;
         }
 
@@ -419,7 +423,7 @@ public class GeoMapChart : Chart
             {
                 if (MapView.Stroke.ZIndex == 0) MapView.Stroke.ZIndex = PaintConstants.GeoMapStrokeZIndex;
                 MapView.Stroke.PaintStyle = PaintStyle.Stroke;
-                Canvas.AddDrawableTask(MapView.Stroke);
+                Canvas.AddDrawableTask(MapView.Stroke, zone: CanvasZone.DrawMargin);
             }
 
             _previousStroke = MapView.Stroke;
@@ -432,7 +436,7 @@ public class GeoMapChart : Chart
             if (MapView.Fill is not null)
             {
                 MapView.Fill.PaintStyle = PaintStyle.Fill;
-                Canvas.AddDrawableTask(MapView.Fill);
+                Canvas.AddDrawableTask(MapView.Fill, zone: CanvasZone.DrawMargin);
             }
 
             _previousFill = MapView.Fill;
@@ -496,8 +500,18 @@ public class GeoMapChart : Chart
             MapView.MapProjection,
             [DrawMarginSize.Width, DrawMarginSize.Height],
             DrawMarginLocation.X, DrawMarginLocation.Y,
-            rotX, rotY);
+            rotX, rotY,
+            MapView.MercatorMaxLatitude);
         _lastProjector = projector;
+
+        // Pixel-clip painting to the projector's actual rendering rectangle so
+        // lands extrapolated beyond it (e.g. Greenland and Antarctica when
+        // MercatorMaxLatitude=65) don't bleed into Title/Legend space.
+        Canvas.Zones[CanvasZone.NoClip].Clip = LvcRectangle.Empty;
+        Canvas.Zones[CanvasZone.DrawMargin].Clip = new(
+            new(projector.XOffset, projector.YOffset),
+            new(projector.MapWidth, projector.MapHeight));
+
         var context = new MapContext(this, MapView, MapView.ActiveMap, projector);
 
         _mapFactory.GenerateLands(context);
@@ -710,7 +724,9 @@ public class GeoMapChart : Chart
         _lastProjector ?? Maps.BuildProjector(
             MapView.MapProjection,
             [MapView.ControlSize.Width, MapView.ControlSize.Height],
-            _rotation.X, _rotation.Y);
+            0f, 0f,
+            _rotation.X, _rotation.Y,
+            MapView.MercatorMaxLatitude);
 
     private (float MinX, float MinY, float MaxX, float MaxY) ComputeLandScreenBounds(LandDefinition land)
     {

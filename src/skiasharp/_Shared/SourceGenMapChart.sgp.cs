@@ -70,6 +70,9 @@ public partial class SourceGenMapChart
     /// <inheritdoc cref="IGeoMapView.MapProjection"/>
     static UIProperty<MapProjection>            mapProjection       = new(defaultValue: MapProjection.Default);
 
+    /// <inheritdoc cref="IGeoMapView.MercatorMaxLatitude"/>
+    static UIProperty<double>                   mercatorMaxLatitude = new(defaultValue: MercatorProjector.DefaultMaxLatitudeDegrees);
+
     /// <inheritdoc cref="IGeoMapView.InteractionMode"/>
     static UIProperty<MapInteractionMode>       interactionMode     = new(defaultValue: MapInteractionMode.None);
 

@@ -72,6 +72,16 @@ public interface IGeoMapView : IChartView
     MapProjection MapProjection { get; set; }
 
     /// <summary>
+    /// Gets or sets the latitude (in degrees) clipped to the top and bottom
+    /// edges of the Mercator projection. Defaults to
+    /// <see cref="MercatorProjector.DefaultMaxLatitudeDegrees"/> (65°), which
+    /// crops the sub-Antarctic empty band; set to 85 to render the full
+    /// standard Mercator including Antarctica. Ignored for non-Mercator
+    /// projections.
+    /// </summary>
+    double MercatorMaxLatitude { get; set; }
+
+    /// <summary>
     /// Gets or sets which interactions are enabled (pan / zoom / both / none).
     /// Defaults to <see cref="MapInteractionMode.None"/> — geo maps are most
     /// often embedded as static dashboard tiles, so the default is no

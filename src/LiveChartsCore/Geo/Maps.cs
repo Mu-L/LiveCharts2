@@ -87,16 +87,19 @@ public static class Maps
     /// <param name="baseOffsetY">Screen-space Y of the map render area's top-left.</param>
     /// <param name="centerLon">The center longitude (used for Orthographic projection).</param>
     /// <param name="centerLat">The center latitude (used for Orthographic projection).</param>
+    /// <param name="mercatorMaxLatitude">The latitude clip for Mercator (ignored for other projections).
+    /// Defaults to <see cref="MercatorProjector.DefaultMaxLatitudeDegrees"/>.</param>
     public static MapProjector BuildProjector(
         MapProjection projection, float[] mapSize, float baseOffsetX, float baseOffsetY,
-        double centerLon = 0, double centerLat = 0)
+        double centerLon = 0, double centerLat = 0,
+        double mercatorMaxLatitude = MercatorProjector.DefaultMaxLatitudeDegrees)
     {
         var mapRatio =
             projection == MapProjection.Default
             ? ControlCoordinatesProjector.PreferredRatio
             : projection == MapProjection.Orthographic
             ? OrthographicProjector.PreferredRatio
-            : MercatorProjector.PreferredRatio;
+            : MercatorProjector.GetPreferredRatio(mercatorMaxLatitude);
 
         var normalizedW = mapSize[0] / mapRatio[0];
         var normalizedH = mapSize[1] / mapRatio[1];
@@ -119,7 +122,7 @@ public static class Maps
         {
             MapProjection.Default => new ControlCoordinatesProjector(mapSize[0], mapSize[1], ox, oy),
             MapProjection.Orthographic => new OrthographicProjector(mapSize[0], mapSize[1], ox, oy, centerLon, centerLat),
-            _ => new MercatorProjector(mapSize[0], mapSize[1], ox, oy)
+            _ => new MercatorProjector(mapSize[0], mapSize[1], ox, oy, mercatorMaxLatitude)
         };
     }
 }

@@ -32,6 +32,7 @@ using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Observers;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
+using LiveChartsCore.Motion;
 using LiveChartsCore.Painting;
 
 namespace LiveChartsCore;
@@ -144,7 +145,9 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
 
         if (!_isHeatInCanvas)
         {
-            context.View.CoreCanvas.AddDrawableTask(_heatPaint);
+            // DrawMargin zone so heat fills clip to the projection's rendering
+            // rectangle (matches the base GeoMapChart paints — see Measure()).
+            context.View.CoreCanvas.AddDrawableTask(_heatPaint, zone: CanvasZone.DrawMargin);
             _isHeatInCanvas = true;
         }
 
