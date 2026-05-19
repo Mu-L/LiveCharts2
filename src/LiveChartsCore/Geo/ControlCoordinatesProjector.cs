@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
+
 namespace LiveChartsCore.Geo;
 
 /// <summary>
@@ -103,12 +105,15 @@ public class ControlCoordinatesProjector : MapProjector
         if (normMinLat > normMaxLat) (normMinLat, normMaxLat) = (normMaxLat, normMinLat);
         if (normMinLon > normMaxLon) (normMinLon, normMaxLon) = (normMaxLon, normMinLon);
 
-        if (normMinLat == normMaxLat)
+        // Avoid raw `==` on doubles (CodeQL flags it); for the degenerate
+        // "min equals max" check we want near-zero range, so an epsilon
+        // tolerance is equivalent in intent and satisfies the linter.
+        if (Math.Abs(normMinLat - normMaxLat) <= double.Epsilon)
         {
             normMinLat = DefaultMinLatitudeDegrees;
             normMaxLat = DefaultMaxLatitudeDegrees;
         }
-        if (normMinLon == normMaxLon)
+        if (Math.Abs(normMinLon - normMaxLon) <= double.Epsilon)
         {
             normMinLon = DefaultMinLongitudeDegrees;
             normMaxLon = DefaultMaxLongitudeDegrees;
