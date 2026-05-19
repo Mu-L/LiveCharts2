@@ -157,4 +157,15 @@ public class ControlCoordinatesProjector : MapProjector
         x = (float)(_ox + (longitude - _minLon) / (_maxLon - _minLon) * _w);
         y = (float)(_oy + (_maxLat - latitude) / (_maxLat - _minLat) * _h);
     }
+
+    /// <inheritdoc cref="MapProjector.ToCoordinates(float, float, out double, out double)"/>
+    public override bool ToCoordinates(float screenX, float screenY, out double longitude, out double latitude)
+    {
+        // Linear inverse of ToMap — equirectangular has no horizon, every
+        // pixel maps back to a valid coordinate (may be outside the bounds
+        // rectangle, but still a real lon/lat).
+        longitude = _minLon + (screenX - _ox) / _w * (_maxLon - _minLon);
+        latitude = _maxLat - (screenY - _oy) / _h * (_maxLat - _minLat);
+        return true;
+    }
 }

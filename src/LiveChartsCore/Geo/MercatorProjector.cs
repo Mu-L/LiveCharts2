@@ -185,6 +185,20 @@ public class MercatorProjector : MapProjector
         y = (float)py + _oy;
     }
 
+    /// <inheritdoc cref="MapProjector.ToCoordinates(float, float, out double, out double)"/>
+    public override bool ToCoordinates(float screenX, float screenY, out double longitude, out double latitude)
+    {
+        // Inverse of ToMap. Closed-form: invert the linear longitude step,
+        // recover mercN from py, then invert the Gudermannian:
+        //   lat = 2 * atan(e^mercN) − π/2.
+        longitude = _minLon + (screenX - _ox) / _w * (_maxLon - _minLon);
+        var py = screenY - _oy;
+        var mercN = (_h - py) / _h * _mercNRange + _minLatMercN;
+        var latRad = 2d * Math.Atan(Math.Exp(mercN)) - Math.PI / 2d;
+        latitude = latRad * 180d / Math.PI;
+        return true;
+    }
+
     private static double MercN(double latitudeDegrees)
     {
         var latRad = latitudeDegrees * Math.PI / 180d;
