@@ -235,6 +235,105 @@ Paints can create gradients, dashed lines and more, if you need help using the `
 a look at the [Paints article]({{ website_url }}/docs/{{ platform }}/{{ version }}/Overview.Paints).
 :::
 
+## Title property
+
+A `Title` is a `VisualElement` rendered above the map. The same
+`DrawnLabelVisual` used by cartesian and pie charts works here — set
+`Text`, `TextSize`, `Padding`, and the `Paint` that draws it. The map
+shrinks vertically to make room for the title.
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap Series="{Binding Series}"&gt;
+    &lt;lvc:GeoMap.Title&gt;&lt;!-- mark -->
+        &lt;lvc:XamlDrawnLabelVisual
+            Text="World population by country"
+            Paint="{lvc:SolidColorPaint Color='#303030'}"
+            TextSize="20"
+            Padding="{lvc:Padding '12'}"/&gt;
+    &lt;/lvc:GeoMap.Title&gt;
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap Series="series" Title="title"&gt;&lt;/GeoMap&gt;
+
+@code {
+    private DrawnLabelVisual title = new DrawnLabelVisual(
+        new LabelGeometry
+        {
+            Text = "World population by country",
+            TextSize = 20,
+            Padding = new Padding(12),
+            Paint = new SolidColorPaint(SKColors.Black)
+        });
+}</code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.Title = new DrawnLabelVisual(
+    new LabelGeometry
+    {
+        Text = "World population by country",
+        TextSize = 20,
+        Padding = new Padding(12),
+        Paint = new SolidColorPaint(SKColors.Black)
+    });</code></pre>
+{{~ end ~}}
+
+## Legend property
+
+Heat maps benefit from a gradient legend so the reader can map colors
+back to values. Set `LegendPosition` and assign an `SKHeatLegend` —
+the legend reads `HeatMap`, `ColorStops`, and the per-series
+`WeightBounds` (min/max value across the data) to render the gradient
+bar and its end labels.
+
+| LegendPosition | Effect                                           |
+| -------------- | ------------------------------------------------ |
+| `Hidden`       | Default — no legend.                             |
+| `Left`         | Vertical gradient bar pinned to the left.        |
+| `Right`        | Vertical gradient bar pinned to the right.       |
+| `Top`          | Horizontal gradient bar pinned to the top.      |
+| `Bottom`       | Horizontal gradient bar pinned to the bottom.    |
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    LegendPosition="Right"&gt;&lt;!-- mark -->
+    &lt;lvc:GeoMap.Legend&gt;
+        &lt;draw:SKHeatLegend BadgePadding="{lvc:Padding '20, 16, 8, 16'}"/&gt;&lt;!-- mark -->
+    &lt;/lvc:GeoMap.Legend&gt;
+&lt;/lvc:GeoMap></code></pre>
+
+Make sure to declare the `draw` namespace on the root element:
+
+<pre><code>xmlns:draw="using:LiveChartsCore.SkiaSharpView.SKCharts"</code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    LegendPosition="LiveChartsCore.Measure.LegendPosition.Right"
+    Legend="legend"&gt;&lt;!-- mark -->
+&lt;/GeoMap>
+
+@code {
+    private SKHeatLegend legend = new();
+}</code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.LegendPosition = LiveChartsCore.Measure.LegendPosition.Right;
+geoMap1.Legend = new SKHeatLegend(); // mark</code></pre>
+{{~ end ~}}
+
+:::info
+Override the gradient endpoints (e.g. to pin the legend to 0–100 even
+when the data only spans 5–87) by setting `MinValue` and `MaxValue`
+on the `HeatLandSeries`. The map's heat ramp uses the same bounds, so
+the rendered colors and the legend stay in sync.
+:::
+
 ## MapProjection property
 
 Defines the [projection](https://en.wikipedia.org/wiki/Map_projection) of the
