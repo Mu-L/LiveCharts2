@@ -367,13 +367,15 @@ map coordinates in the control coordinates. Three projections are available:
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-mercator.png)
 
-By default the Mercator projection is clipped at ±65° latitude to drop
-the sub-Antarctic empty band (and a sliver of Greenland). Each edge is
-configurable via `MinLatitude`, `MaxLatitude`, `MinLongitude`, and
-`MaxLongitude` on the chart — leave a value as `double.NaN` (the default)
-to keep the projection's natural default.
+By default the Mercator projection is clipped to latitudes -65° (south)
+to +85° (north) — drops the sub-Antarctic empty band while keeping
+Greenland fully visible. Each edge is configurable via `MinLatitude`,
+`MaxLatitude`, `MinLongitude`, and `MaxLongitude` on the chart — leave a
+value as `double.NaN` (the default) to keep the projection's natural
+default.
 
-Pass ±85° to render the classic full-earth Mercator including Antarctica:
+To render the classic full-earth Mercator including Antarctica, extend
+the bottom edge with `MinLatitude = -85` (the top is already at +85):
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap

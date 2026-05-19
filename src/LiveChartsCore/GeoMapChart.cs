@@ -525,8 +525,9 @@ public class GeoMapChart : Chart
         _lastProjector = projector;
 
         // Pixel-clip painting to the projector's actual rendering rectangle so
-        // lands extrapolated beyond it (e.g. Greenland and Antarctica when
-        // MercatorMaxLatitude=65) don't bleed into Title/Legend space.
+        // lands extrapolated beyond it (e.g. Antarctica when the default
+        // Mercator MinLatitude = -65° drops the south pole) don't bleed into
+        // Title/Legend space.
         Canvas.Zones[CanvasZone.NoClip].Clip = LvcRectangle.Empty;
         Canvas.Zones[CanvasZone.DrawMargin].Clip = new(
             new(projector.XOffset, projector.YOffset),

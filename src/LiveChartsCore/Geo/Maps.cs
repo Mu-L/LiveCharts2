@@ -87,10 +87,10 @@ public static class Maps
     /// <param name="baseOffsetY">Screen-space Y of the map render area's top-left.</param>
     /// <param name="centerLon">The center longitude (used for Orthographic projection).</param>
     /// <param name="centerLat">The center latitude (used for Orthographic projection).</param>
-    /// <param name="minLatitude">The minimum latitude clip; NaN for the projection's default. Only Mercator honors this today.</param>
-    /// <param name="maxLatitude">The maximum latitude clip; NaN for the projection's default.</param>
-    /// <param name="minLongitude">The minimum longitude clip; NaN for the projection's default.</param>
-    /// <param name="maxLongitude">The maximum longitude clip; NaN for the projection's default.</param>
+    /// <param name="minLatitude">The minimum latitude clip; NaN for the projection's default. Honored by Mercator and Default; Orthographic ignores it.</param>
+    /// <param name="maxLatitude">The maximum latitude clip; NaN for the projection's default. Honored by Mercator and Default; Orthographic ignores it.</param>
+    /// <param name="minLongitude">The minimum longitude clip; NaN for the projection's default. Honored by Mercator and Default; Orthographic ignores it.</param>
+    /// <param name="maxLongitude">The maximum longitude clip; NaN for the projection's default. Honored by Mercator and Default; Orthographic ignores it.</param>
     public static MapProjector BuildProjector(
         MapProjection projection, float[] mapSize, float baseOffsetX, float baseOffsetY,
         double centerLon = 0, double centerLat = 0,
