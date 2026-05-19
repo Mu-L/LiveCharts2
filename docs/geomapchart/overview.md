@@ -367,6 +367,30 @@ map coordinates in the control coordinates. Three projections are available:
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-mercator.png)
 
+By default the projection is clipped at ±65° latitude to drop the sub-
+Antarctic empty band (and a sliver of Greenland). Override
+`MercatorMaxLatitude` to widen or narrow the clip — pass `85` for the
+classic full-earth Mercator including Antarctica.
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    MapProjection="Mercator"
+    MercatorMaxLatitude="85"/&gt;&lt;!-- mark, full earth including Antarctica --></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator"
+    MercatorMaxLatitude="85"&gt;&lt;!-- mark, full earth -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MercatorMaxLatitude = 85; // mark, full earth including Antarctica</code></pre>
+{{~ end ~}}
+
 ### Orthographic
 
 `Orthographic` renders the map as a 3D globe — only the hemisphere facing the
