@@ -30,6 +30,7 @@ using System.Linq;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Observers;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
 
@@ -39,7 +40,7 @@ namespace LiveChartsCore;
 /// Defines the heat land series class.
 /// </summary>
 /// <typeparam name="TModel">The type fo the model.</typeparam>
-public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyChanged
+public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource, INotifyPropertyChanged
     where TModel : IWeigthedMapLand
 {
     private Paint? _heatPaint;
@@ -96,6 +97,32 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
     /// <inheritdoc cref="IGeoSeries.IsVisible"/>
     public bool IsVisible { get; set { field = value; OnPropertyChanged(); } }
 
+    /// <summary>
+    /// Gets the data weight bounds (min/max) of the most recently measured pass.
+    /// Read by <see cref="IHeatLegendSource"/> consumers (the heat legend) to
+    /// label the gradient ends.
+    /// </summary>
+    public Bounds WeightBounds { get; private set; } = new();
+
+    /// <summary>
+    /// Gets or sets the minimum value override used for color mapping. When
+    /// null, the observed minimum value across <see cref="Lands"/> is used.
+    /// </summary>
+    public double? MinValue { get; set { field = value; OnPropertyChanged(); } }
+
+    /// <summary>
+    /// Gets or sets the maximum value override used for color mapping. When
+    /// null, the observed maximum value across <see cref="Lands"/> is used.
+    /// </summary>
+    public double? MaxValue { get; set { field = value; OnPropertyChanged(); } }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this series contributes to the
+    /// chart's legend. Defaults to true; set false to keep a series rendered
+    /// on the map but suppress its row in the legend.
+    /// </summary>
+    public bool IsVisibleAtLegend { get; set { field = value; OnPropertyChanged(); } } = true;
+
     /// <inheritdoc cref="IGeoSeries.Measure(MapContext)"/>
     public void Measure(MapContext context)
     {
@@ -117,6 +144,12 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, INotifyPropertyCh
         {
             bounds.AppendValue(shape.Value);
         }
+
+        // Apply optional Min/MaxValue overrides so the heat ramp and the
+        // legend agree on the gradient endpoints (matches CoreHeatSeries).
+        if (MinValue is not null) bounds.Min = MinValue.Value;
+        if (MaxValue is not null) bounds.Max = MaxValue.Value;
+        WeightBounds = bounds;
 
         var heatStops = HeatFunctions.BuildColorStops(HeatMap, ColorStops);
         _ = new MapShapeContext(context.View, _heatPaint, heatStops, bounds);
