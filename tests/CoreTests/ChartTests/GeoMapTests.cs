@@ -452,29 +452,26 @@ public class GeoMapTests
         Assert.AreSame(heat, sources[0]);
     }
 
-    // CoreHeatLandSeries caches WeightBounds during Measure so the legend
-    // can read the gradient endpoints without re-scanning the lands.
+    // CoreHeatLandSeries computes WeightBounds on-demand from Lands so the
+    // heat legend can read the gradient endpoints BEFORE the chart's first
+    // Measure pass (DrawLegend runs before series.Measure in the geomap
+    // flow). MinValue/MaxValue overrides win when set.
     [TestMethod]
-    public void GeoMap_HeatLandSeriesMeasure_CachesWeightBoundsForLegend()
+    public void GeoMap_HeatLandSeriesWeightBounds_AvailableBeforeMeasure()
     {
         var heat = new HeatLandSeries { Lands = [
             new() { Name = "rus", Value = 3 },
             new() { Name = "usa", Value = 17 },
         ] };
-        var chart = new SKGeoMap
-        {
-            Width = 400,
-            Height = 400,
-            Series = [heat],
-        };
 
-        // Bounds starts in the "no values appended" sentinel state.
-        Assert.AreEqual(double.MaxValue, heat.WeightBounds.Min, "WeightBounds is unwritten before any measure");
-        Assert.AreEqual(double.MinValue, heat.WeightBounds.Max);
-
-        chart.CoreChart.Measure();
-
+        // Even before the chart has measured, WeightBounds reflects the
+        // current Lands so the legend has real numbers to format.
         Assert.AreEqual(3d, heat.WeightBounds.Min);
         Assert.AreEqual(17d, heat.WeightBounds.Max);
+
+        heat.MinValue = 0;
+        heat.MaxValue = 100;
+        Assert.AreEqual(0d, heat.WeightBounds.Min, "MinValue override wins over observed min");
+        Assert.AreEqual(100d, heat.WeightBounds.Max, "MaxValue override wins over observed max");
     }
 }

@@ -98,11 +98,23 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
     public bool IsVisible { get; set { field = value; OnPropertyChanged(); } }
 
     /// <summary>
-    /// Gets the data weight bounds (min/max) of the most recently measured pass.
-    /// Read by <see cref="IHeatLegendSource"/> consumers (the heat legend) to
-    /// label the gradient ends.
+    /// Gets the data weight bounds (min/max) over <see cref="Lands"/>, honoring
+    /// any <see cref="MinValue"/> / <see cref="MaxValue"/> overrides. Computed
+    /// on demand so consumers (the heat legend) can read it before the first
+    /// Measure pass without seeing the empty-bounds sentinel.
     /// </summary>
-    public Bounds WeightBounds { get; private set; } = new();
+    public Bounds WeightBounds
+    {
+        get
+        {
+            var bounds = new Bounds();
+            foreach (var land in Lands ?? [])
+                bounds.AppendValue(land.Value);
+            if (MinValue is not null) bounds.Min = MinValue.Value;
+            if (MaxValue is not null) bounds.Max = MaxValue.Value;
+            return bounds;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the minimum value override used for color mapping. When
@@ -139,17 +151,9 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
         var i = context.View.Fill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
-        var bounds = new Bounds();
-        foreach (var shape in Lands ?? [])
-        {
-            bounds.AppendValue(shape.Value);
-        }
-
-        // Apply optional Min/MaxValue overrides so the heat ramp and the
-        // legend agree on the gradient endpoints (matches CoreHeatSeries).
-        if (MinValue is not null) bounds.Min = MinValue.Value;
-        if (MaxValue is not null) bounds.Max = MaxValue.Value;
-        WeightBounds = bounds;
+        // Pull bounds via the computed property so the heat ramp and the
+        // legend agree on the gradient endpoints (both honor Min/MaxValue).
+        var bounds = WeightBounds;
 
         var heatStops = HeatFunctions.BuildColorStops(HeatMap, ColorStops);
         _ = new MapShapeContext(context.View, _heatPaint, heatStops, bounds);

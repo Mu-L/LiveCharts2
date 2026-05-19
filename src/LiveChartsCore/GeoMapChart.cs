@@ -444,9 +444,18 @@ public class GeoMapChart : Chart
         // Mirror the cartesian engine: copy Legend/Title-adjacent properties
         // from the view onto Chart base so DrawLegend / MeasureTitle see the
         // current values. Without this DrawLegend would always early-out on
-        // LegendPosition.Hidden (the protected default).
+        // LegendPosition.Hidden (the protected default), and
+        // ControlSize-derived positioning (title centering,
+        // GetLegendPosition for Right/Bottom) would compute against (0,0).
+        ControlSize = MapView.ControlSize;
         LegendPosition = MapView.LegendPosition;
         Legend = MapView.Legend;
+
+        // Provisional draw margin so SKHeatLegend.GetLayout has a sane
+        // chart.DrawMarginSize to size its gradient bar against on the first
+        // measure (cartesian engine does the same trick at the same point).
+        // The final draw margin is set below from the title/legend reservation.
+        SetDrawMargin(ControlSize, new Margin());
 
         // Reserve space for Title + Legend before sizing the map render area.
         // Mirrors CartesianChartEngine's pattern: title first (Top reserve),
