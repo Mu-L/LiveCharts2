@@ -456,6 +456,64 @@ public class GeoMapTests
     // heat legend can read the gradient endpoints BEFORE the chart's first
     // Measure pass (DrawLegend runs before series.Measure in the geomap
     // flow). MinValue/MaxValue overrides win when set.
+    // The Project / Unproject helpers on GeoMapChart wrap the projector built
+    // by the last Measure, honoring the current draw margin and (for ortho)
+    // rotation. Round-trip via the public chart API.
+    [TestMethod]
+    public void GeoMap_ProjectUnproject_RoundTrips()
+    {
+        var chart = new SKGeoMap
+        {
+            Width = 800,
+            Height = 600,
+            MapProjection = MapProjection.Mercator,
+        };
+        chart.CoreChart.Measure();
+
+        foreach (var (lon, lat) in new[] { (0d, 0d), (-74d, 40.7d), (139.69d, 35.69d), (-3.7d, 40.4d) })
+        {
+            var pixel = chart.CoreChart.Project(lon, lat);
+            Assert.IsNotNull(pixel, $"({lon}, {lat}) should project on Mercator");
+            var back = chart.CoreChart.Unproject(pixel.Value);
+            Assert.IsNotNull(back);
+            Assert.AreEqual(lon, back.Value.Longitude, 1e-3, $"lon round-trip @ ({lon}, {lat})");
+            Assert.AreEqual(lat, back.Value.Latitude,  1e-3, $"lat round-trip @ ({lon}, {lat})");
+        }
+    }
+
+    // Orthographic returns null when the coordinate is on the back hemisphere
+    // (IsVisible gates Project). The pole opposite the camera should be null.
+    [TestMethod]
+    public void GeoMap_Project_ReturnsNullForOrthographicBackHemisphere()
+    {
+        var chart = new SKGeoMap
+        {
+            Width = 600,
+            Height = 600,
+            MapProjection = MapProjection.Orthographic,
+        };
+        chart.CoreChart.Measure();
+        // Default rotation: centered at (0°, 0°), so (180°, 0°) is on the
+        // antipode — directly behind the camera.
+        Assert.IsNull(chart.CoreChart.Project(180, 0));
+    }
+
+    // Unproject on a pixel outside the orthographic disc returns null so
+    // consumers can distinguish "user clicked outside the globe" from a
+    // real coordinate.
+    [TestMethod]
+    public void GeoMap_Unproject_ReturnsNullForOrthographicOffDisc()
+    {
+        var chart = new SKGeoMap
+        {
+            Width = 600,
+            Height = 600,
+            MapProjection = MapProjection.Orthographic,
+        };
+        chart.CoreChart.Measure();
+        Assert.IsNull(chart.CoreChart.Unproject(new LvcPoint(0, 0))); // corner is outside the centered disc
+    }
+
     [TestMethod]
     public void GeoMap_HeatLandSeriesWeightBounds_AvailableBeforeMeasure()
     {
