@@ -133,4 +133,45 @@ public sealed class MapsTests
 
         chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(BasicWithTitleAndLegend)}");
     }
+
+    // The Default projection treats geo coordinates as raw equirectangular
+    // (lon -180..180 → 0..w, lat 90..-90 → 0..h) with no Mercator stretching
+    // and no latitude clip. Continents render in their unprojected aspect.
+    [TestMethod]
+    public void DefaultProjection()
+    {
+        var chart = new SKGeoMap
+        {
+            Series = CreateHeatSeries(),
+            MapProjection = MapProjection.Default,
+            Width = 600,
+            Height = 600
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(DefaultProjection)}");
+    }
+
+    // Frames the map on Europe via the lat/lon bounds API. Locks that the
+    // bounds drive both the projection's scale (Iceland..Caucasus fills the
+    // width) and the canvas-clip rect (lands outside the bounds are pixel-
+    // clipped instead of bleeding into the canvas padding).
+    [TestMethod]
+    public void MercatorEuropeView()
+    {
+        var chart = new SKGeoMap
+        {
+            Series = CreateHeatSeries(),
+            MapProjection = MapProjection.Mercator,
+            Width = 600,
+            Height = 600,
+            // Europe: ~Iceland (lon -25°) east to the Caucasus (+45°),
+            // ~North Africa coast (lat 35°) north to North Cape (72°).
+            MinLatitude = 35,
+            MaxLatitude = 72,
+            MinLongitude = -25,
+            MaxLongitude = 45,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(MercatorEuropeView)}");
+    }
 }
