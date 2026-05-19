@@ -106,14 +106,14 @@ public class GeoProjectorsTesting
 
         // Equal lat → fall back to defaults; no NaN/Infinity in the result.
         var degenerate = MercatorProjector.GetPreferredRatio(50, 50, -25, 45);
-        Assert.IsTrue(float.IsFinite(degenerate[0]));
-        Assert.IsTrue(float.IsFinite(degenerate[1]));
+        Assert.IsTrue(IsFinite(degenerate[0]));
+        Assert.IsTrue(IsFinite(degenerate[1]));
 
         // ToMap stays finite for the degenerate constructor too.
         var projector = new MercatorProjector(360, 180, 0, 0, 50, 50, -25, 45);
         projector.ToMap(0, 0, out var x, out var y);
-        Assert.IsTrue(float.IsFinite(x));
-        Assert.IsTrue(float.IsFinite(y));
+        Assert.IsTrue(IsFinite(x));
+        Assert.IsTrue(IsFinite(y));
     }
 
     [TestMethod]
@@ -125,14 +125,17 @@ public class GeoProjectorsTesting
         Assert.AreEqual(normal[1], inverted[1], 0.001f);
 
         var degenerate = ControlCoordinatesProjector.GetPreferredRatio(50, 50, -25, 45);
-        Assert.IsTrue(float.IsFinite(degenerate[0]));
-        Assert.IsTrue(float.IsFinite(degenerate[1]));
+        Assert.IsTrue(IsFinite(degenerate[0]));
+        Assert.IsTrue(IsFinite(degenerate[1]));
 
         var projector = new ControlCoordinatesProjector(360, 180, 0, 0, 50, 50, -25, 45);
         projector.ToMap(0, 0, out var x, out var y);
-        Assert.IsTrue(float.IsFinite(x));
-        Assert.IsTrue(float.IsFinite(y));
+        Assert.IsTrue(IsFinite(x));
+        Assert.IsTrue(IsFinite(y));
     }
+
+    // float.IsFinite is netstandard2.1+; targeting net462 means hand-rolling it.
+    private static bool IsFinite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
 
     [TestMethod]
     public void OrthographicProjectorProjectsCenterToScreenCenter()
