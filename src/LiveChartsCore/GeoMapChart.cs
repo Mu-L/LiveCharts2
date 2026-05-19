@@ -441,6 +441,13 @@ public class GeoMapChart : Chart
         var i = _previousFill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
+        // Mirror the cartesian engine: copy Legend/Title-adjacent properties
+        // from the view onto Chart base so DrawLegend / MeasureTitle see the
+        // current values. Without this DrawLegend would always early-out on
+        // LegendPosition.Hidden (the protected default).
+        LegendPosition = MapView.LegendPosition;
+        Legend = MapView.Legend;
+
         // Reserve space for Title + Legend before sizing the map render area.
         // Mirrors CartesianChartEngine's pattern: title first (Top reserve),
         // then DrawLegend mutates ts/bs/ls/rs based on LegendPosition.
