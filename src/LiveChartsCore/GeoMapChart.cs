@@ -114,6 +114,10 @@ public class GeoMapChart : Chart
     /// <inheritdoc/>
     public override IEnumerable<ISeries> Series => [];
 
+    /// <inheritdoc cref="Chart.EnumerateHeatLegendSources" />
+    public override IEnumerable<IHeatLegendSource> EnumerateHeatLegendSources() =>
+        MapView.Series?.OfType<IHeatLegendSource>() ?? [];
+
     /// <inheritdoc/>
     public override IEnumerable<ISeries> VisibleSeries => [];
 
