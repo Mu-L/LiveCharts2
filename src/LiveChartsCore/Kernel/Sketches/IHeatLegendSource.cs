@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -21,42 +21,49 @@
 // SOFTWARE.
 
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Measure;
 
 namespace LiveChartsCore.Kernel.Sketches;
 
 /// <summary>
-/// Defines a heat series plot. Inherits the heat-legend metadata contract
-/// (<see cref="IHeatLegendSource"/>) and adds the cartesian-side setters.
+/// Exposes the metadata a heat-gradient legend needs to render, decoupled from
+/// any specific series surface. Cartesian <see cref="IHeatSeries"/> and the
+/// geographic heat-land series both implement it so the same legend renderer
+/// works against either chart family.
 /// </summary>
-/// <seealso cref="ISeries" />
-public interface IHeatSeries : ICartesianSeries, IHeatLegendSource
+public interface IHeatLegendSource
 {
     /// <summary>
-    /// Gets or sets the heat map.
+    /// Gets the heat map color stops, from low to high.
     /// </summary>
-    new LvcColor[] HeatMap { get; set; }
+    LvcColor[] HeatMap { get; }
 
     /// <summary>
-    /// Gets or sets the color stops.
+    /// Gets the optional color stop positions in [0, 1]. When null, the stops
+    /// are evenly distributed across <see cref="HeatMap"/>.
     /// </summary>
-    new double[]? ColorStops { get; set; }
+    double[]? ColorStops { get; }
 
     /// <summary>
-    /// Gets or sets the padding for each point.
+    /// Gets the data weight bounds (min/max) that the gradient maps over.
     /// </summary>
-    Padding PointPadding { get; set; }
+    Bounds WeightBounds { get; }
 
     /// <summary>
-    /// Gets or sets the minimum value in the weight axis,
-    /// this value will be used to calculate the color of the point.
-    /// Default is null and means the minimum value in the series.
+    /// Gets the optional minimum-value override used for color mapping. When
+    /// null, <see cref="WeightBounds"/>.Min is used.
     /// </summary>
-    new double? MinValue { get; set; }
+    double? MinValue { get; }
 
     /// <summary>
-    /// Gets or sets the maximum value in the weight axis,
-    /// this value will be used to calculate the color of the point.
-    /// Default is null and means the maximum value in the series.
+    /// Gets the optional maximum-value override used for color mapping. When
+    /// null, <see cref="WeightBounds"/>.Max is used.
     /// </summary>
-    new double? MaxValue { get; set; }
+    double? MaxValue { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether this source should contribute to the
+    /// chart's legend.
+    /// </summary>
+    bool IsVisibleAtLegend { get; }
 }
