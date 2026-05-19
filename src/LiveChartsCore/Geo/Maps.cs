@@ -73,7 +73,23 @@ public static class Maps
     /// <param name="centerLat">The center latitude (used for Orthographic projection).</param>
     /// <returns></returns>
     public static MapProjector BuildProjector(
-        MapProjection projection, float[] mapSize, double centerLon = 0, double centerLat = 0)
+        MapProjection projection, float[] mapSize, double centerLon = 0, double centerLat = 0) =>
+        BuildProjector(projection, mapSize, 0f, 0f, centerLon, centerLat);
+
+    /// <summary>
+    /// Builds a projector that lays the map out inside a sub-rectangle of the
+    /// chart canvas rather than the whole canvas — needed when title / legend
+    /// reservations push the map render area away from (0, 0).
+    /// </summary>
+    /// <param name="projection">The projection.</param>
+    /// <param name="mapSize">Size of the map render area (will be normalized by the projector).</param>
+    /// <param name="baseOffsetX">Screen-space X of the map render area's top-left.</param>
+    /// <param name="baseOffsetY">Screen-space Y of the map render area's top-left.</param>
+    /// <param name="centerLon">The center longitude (used for Orthographic projection).</param>
+    /// <param name="centerLat">The center latitude (used for Orthographic projection).</param>
+    public static MapProjector BuildProjector(
+        MapProjection projection, float[] mapSize, float baseOffsetX, float baseOffsetY,
+        double centerLon = 0, double centerLat = 0)
     {
         var mapRatio =
             projection == MapProjection.Default
@@ -84,18 +100,18 @@ public static class Maps
 
         var normalizedW = mapSize[0] / mapRatio[0];
         var normalizedH = mapSize[1] / mapRatio[1];
-        float ox = 0f, oy = 0f;
+        float ox = baseOffsetX, oy = baseOffsetY;
 
         if (normalizedW < normalizedH)
         {
             var h = mapSize[0] * mapRatio[1] / mapRatio[0];
-            oy = (float)(mapSize[1] - h) * 0.5f;
+            oy += (float)(mapSize[1] - h) * 0.5f;
             mapSize[1] = h;
         }
         else
         {
             var w = mapSize[1] * mapRatio[0] / mapRatio[1];
-            ox = (float)(mapSize[0] - w) * 0.5f;
+            ox += (float)(mapSize[0] - w) * 0.5f;
             mapSize[0] = w;
         }
 

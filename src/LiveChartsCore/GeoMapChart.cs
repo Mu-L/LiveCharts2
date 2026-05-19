@@ -83,6 +83,10 @@ public class GeoMapChart : Chart
     // an accurate oldPoints arg. A geo "hover" is at most one land — but the
     // contract accepts an enumerable so we keep that shape.
     private ChartPoint[]? _hoveredChartPoints;
+    // Last projector built by Measure(); reused by FindLandAt /
+    // ComputeLandScreenBounds so hit-testing matches the on-screen layout
+    // (including title / legend margin reservations).
+    private MapProjector? _lastProjector;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
@@ -437,6 +441,34 @@ public class GeoMapChart : Chart
         var i = _previousFill?.ZIndex ?? 0;
         _heatPaint.ZIndex = i + 1;
 
+        // Reserve space for Title + Legend before sizing the map render area.
+        // Mirrors CartesianChartEngine's pattern: title first (Top reserve),
+        // then DrawLegend mutates ts/bs/ls/rs based on LegendPosition.
+        var m = new Margin();
+        float ts = 0f, bs = 0f, ls = 0f, rs = 0f;
+        if (View.Title is not null)
+        {
+            var titleSize = MeasureTitle();
+            m.Top = titleSize.Height;
+            ts = titleSize.Height;
+        }
+        DrawLegend(ref ts, ref bs, ref ls, ref rs);
+        m.Top = ts;
+        m.Bottom = bs;
+        m.Left = ls;
+        m.Right = rs;
+        SetDrawMargin(MapView.ControlSize, m);
+
+        if (View.Title is not null) AddTitleToChart();
+
+        // Bail when the chart is too small for a map after reservations
+        // (matches cartesian behavior).
+        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0)
+        {
+            Canvas.Invalidate();
+            return;
+        }
+
         // Reset IsValid before reading the motion properties so GetMovement
         // can flip it back to false only if the rotation animation is still
         // mid-flight. The OnCanvasValidatedForRotation hook checks this flag
@@ -444,12 +476,13 @@ public class GeoMapChart : Chart
         _rotation.IsValid = true;
         var rotX = _rotation.X;
         var rotY = _rotation.Y;
-        var context = new MapContext(
-            this, MapView, MapView.ActiveMap,
-            Maps.BuildProjector(
-                MapView.MapProjection,
-                [MapView.ControlSize.Width, MapView.ControlSize.Height],
-                rotX, rotY));
+        var projector = Maps.BuildProjector(
+            MapView.MapProjection,
+            [DrawMarginSize.Width, DrawMarginSize.Height],
+            DrawMarginLocation.X, DrawMarginLocation.Y,
+            rotX, rotY);
+        _lastProjector = projector;
+        var context = new MapContext(this, MapView, MapView.ActiveMap, projector);
 
         _mapFactory.GenerateLands(context);
 
@@ -512,11 +545,7 @@ public class GeoMapChart : Chart
                     if (!landData.Shape.ContainsPoint(pointerPosition.X, pointerPosition.Y)) continue;
 
                     var values = CollectLandValues(landDefinition);
-                    var projector = Maps.BuildProjector(
-                        MapView.MapProjection,
-                        [MapView.ControlSize.Width, MapView.ControlSize.Height],
-                        _rotation.X, _rotation.Y);
-                    var center = ComputeLandScreenCenter(landDefinition, projector);
+                    var center = ComputeLandScreenCenter(landDefinition, GetOrBuildProjector());
 
                     return (landDefinition, values, center);
                 }
@@ -658,12 +687,18 @@ public class GeoMapChart : Chart
         return [new ChartPoint(View, hit.Land, hoverArea)];
     }
 
-    private (float MinX, float MinY, float MaxX, float MaxY) ComputeLandScreenBounds(LandDefinition land)
-    {
-        var projector = Maps.BuildProjector(
+    // Reuse Measure()'s projector when available; fall back to a fresh
+    // control-size build when hit-test APIs are called before any measure
+    // (rare but covered by GetPointsAt before first paint).
+    private MapProjector GetOrBuildProjector() =>
+        _lastProjector ?? Maps.BuildProjector(
             MapView.MapProjection,
             [MapView.ControlSize.Width, MapView.ControlSize.Height],
             _rotation.X, _rotation.Y);
+
+    private (float MinX, float MinY, float MaxX, float MaxY) ComputeLandScreenBounds(LandDefinition land)
+    {
+        var projector = GetOrBuildProjector();
 
         float minX = float.MaxValue, minY = float.MaxValue;
         float maxX = float.MinValue, maxY = float.MinValue;
