@@ -60,18 +60,23 @@ public class GeoProjectorsTesting
     [TestMethod]
     public void MercatorProjectorPreferredRatio()
     {
-        // Default clip at ±65° gives an aspect ratio of π / mercN(65°) ≈ 2.089
+        // Default clip at ±65° × ±180° → aspect ≈ 2π / (2 mercN(65°)) ≈ 2.089
         // (wider than tall, since less latitude is shown per longitude unit).
         var ratio = MercatorProjector.PreferredRatio;
         Assert.IsTrue(ratio.Length == 2);
         Assert.IsTrue(Math.Abs(ratio[0] - 2.089f) < 0.01f, $"width ratio: {ratio[0]}");
         Assert.IsTrue(Math.Abs(ratio[1] - 1f) < 0.001f);
 
-        // Pass 85 (the unclipped Mercator limit) and the aspect becomes
-        // approximately square (1:1) — matching the classic Mercator.
-        var fullEarth = MercatorProjector.GetPreferredRatio(85);
-        Assert.IsTrue(Math.Abs(fullEarth[0] - 1f) < 0.01f, $"width ratio @85°: {fullEarth[0]}");
+        // Passing ±85° (the unclipped Mercator limits) gives the classic
+        // ~1:1 (square) Mercator aspect.
+        var fullEarth = MercatorProjector.GetPreferredRatio(-85, 85, -180, 180);
+        Assert.IsTrue(Math.Abs(fullEarth[0] - 1f) < 0.01f, $"width ratio @±85°: {fullEarth[0]}");
         Assert.IsTrue(Math.Abs(fullEarth[1] - 1f) < 0.001f);
+
+        // NaN args fall back to the projection's defaults — same as the
+        // PreferredRatio property above.
+        var defaulted = MercatorProjector.GetPreferredRatio(double.NaN, double.NaN, double.NaN, double.NaN);
+        Assert.IsTrue(Math.Abs(defaulted[0] - 2.089f) < 0.01f);
     }
 
     [TestMethod]
