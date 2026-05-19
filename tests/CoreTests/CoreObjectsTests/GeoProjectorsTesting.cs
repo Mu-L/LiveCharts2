@@ -10,8 +10,10 @@ public class GeoProjectorsTesting
     [TestMethod]
     public void MercatorProjectorProjectsOriginToCenter()
     {
-        var projector = new MercatorProjector(360, 180, 0, 0);
-        // lon=0, lat=0 should map to center of map
+        // The default clip (-65° to +85°) is asymmetric — the equator no
+        // longer sits at the visual center. Use the symmetric ±85° full-earth
+        // bounds here to assert the classic origin-at-center invariant.
+        var projector = new MercatorProjector(360, 180, 0, 0, -85, 85, -180, 180);
         var result = projector.ToMap(new double[] { 0, 0 });
 
         Assert.IsTrue(Math.Abs(result[0] - 180) < 0.1f);
@@ -60,15 +62,15 @@ public class GeoProjectorsTesting
     [TestMethod]
     public void MercatorProjectorPreferredRatio()
     {
-        // Default clip at ±65° × ±180° → aspect ≈ 2π / (2 mercN(65°)) ≈ 2.089
-        // (wider than tall, since less latitude is shown per longitude unit).
+        // Default asymmetric clip (-65° → +85°, full longitude) →
+        // aspect ≈ 2π / (mercN(85°) − mercN(−65°)) ≈ 1.355
+        // (slightly landscape, fits typical dashboard canvases well).
         var ratio = MercatorProjector.PreferredRatio;
         Assert.IsTrue(ratio.Length == 2);
-        Assert.IsTrue(Math.Abs(ratio[0] - 2.089f) < 0.01f, $"width ratio: {ratio[0]}");
+        Assert.IsTrue(Math.Abs(ratio[0] - 1.355f) < 0.01f, $"width ratio: {ratio[0]}");
         Assert.IsTrue(Math.Abs(ratio[1] - 1f) < 0.001f);
 
-        // Passing ±85° (the unclipped Mercator limits) gives the classic
-        // ~1:1 (square) Mercator aspect.
+        // Symmetric ±85° gives the classic ~1:1 (square) Mercator aspect.
         var fullEarth = MercatorProjector.GetPreferredRatio(-85, 85, -180, 180);
         Assert.IsTrue(Math.Abs(fullEarth[0] - 1f) < 0.01f, $"width ratio @±85°: {fullEarth[0]}");
         Assert.IsTrue(Math.Abs(fullEarth[1] - 1f) < 0.001f);
@@ -76,7 +78,7 @@ public class GeoProjectorsTesting
         // NaN args fall back to the projection's defaults — same as the
         // PreferredRatio property above.
         var defaulted = MercatorProjector.GetPreferredRatio(double.NaN, double.NaN, double.NaN, double.NaN);
-        Assert.IsTrue(Math.Abs(defaulted[0] - 2.089f) < 0.01f);
+        Assert.IsTrue(Math.Abs(defaulted[0] - 1.355f) < 0.01f);
     }
 
     [TestMethod]

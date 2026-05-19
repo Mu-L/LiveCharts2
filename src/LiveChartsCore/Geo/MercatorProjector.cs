@@ -33,16 +33,16 @@ public class MercatorProjector : MapProjector
     /// <summary>
     /// Default minimum latitude (in degrees) when none is specified on the
     /// view. -65° crops the sub-Antarctic empty band beneath the populated
-    /// continents.
+    /// continents — there are mostly penguins below this line.
     /// </summary>
     public const double DefaultMinLatitudeDegrees = -65d;
 
     /// <summary>
     /// Default maximum latitude (in degrees) when none is specified on the
-    /// view. +65° trims Greenland's stretched cap and Arctic ice for a
-    /// landmass-focused frame.
+    /// view. +85° is the standard Mercator northern limit and keeps Greenland
+    /// fully visible.
     /// </summary>
-    public const double DefaultMaxLatitudeDegrees = 65d;
+    public const double DefaultMaxLatitudeDegrees = 85d;
 
     /// <summary>
     /// Default minimum longitude (in degrees) when none is specified on the
