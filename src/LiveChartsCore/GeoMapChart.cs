@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Drawing;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
@@ -78,6 +79,10 @@ public class GeoMapChart : Chart
     private LvcPoint _pointerDownPosition = new(-10, -10);
     private bool _pointerDownIsClick = false;
     private readonly RotationTracker _rotation = new();
+    // Cache of the last hovered ChartPoint set so HoveredPointsChanged can pass
+    // an accurate oldPoints arg. A geo "hover" is at most one land — but the
+    // contract accepts an enumerable so we keep that shape.
+    private ChartPoint[]? _hoveredChartPoints;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GeoMapChart"/> class.
@@ -97,11 +102,6 @@ public class GeoMapChart : Chart
         // capacity instead of queueing Timer ticks on a busy UI thread.
         Canvas.Validated += OnCanvasValidatedForRotation;
     }
-
-    /// <summary>
-    /// Occurs when a land (country) is clicked.
-    /// </summary>
-    public event Action<LandClickedEventArgs>? LandClicked;
 
     /// <summary>
     /// Gets the map view, typed.
@@ -327,18 +327,11 @@ public class GeoMapChart : Chart
 
         if (_isPanning is false) BounceBack();
 
-        if (wasClick && LandClicked is not null)
+        if (wasClick)
         {
-            var result = FindLandAt(point);
-            if (result is not null)
-            {
-                LandClicked.Invoke(new LandClickedEventArgs
-                {
-                    Land = result.Value.Land,
-                    Value = result.Value.Value,
-                    Position = point
-                });
-            }
+            var hit = FindLandAt(point);
+            if (hit is not null)
+                View.OnDataPointerDown(BuildHitPoints(hit.Value), point);
         }
     }
 
@@ -356,6 +349,12 @@ public class GeoMapChart : Chart
                 MapView.Tooltip?.Hide(this);
                 Canvas.Invalidate();
             });
+        }
+
+        if (_hoveredChartPoints is { Length: > 0 } oldPoints)
+        {
+            _hoveredChartPoints = null;
+            View.OnHoveredPointsChanged(null, oldPoints);
         }
     }
 
@@ -472,22 +471,13 @@ public class GeoMapChart : Chart
         if (_hoveredLand is not null && MapView.Tooltip is not null &&
             MapView.TooltipPosition != TooltipPosition.Hidden)
         {
-            var value = 0d;
-            var hasValue = false;
-            foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
-            {
-                if (series.TryGetValue(_hoveredLand.ShortName, out value))
-                { hasValue = true; break; }
-            }
-
             var center = ComputeLandScreenCenter(_hoveredLand, context.Projector);
 
             MapView.Tooltip.Show(
                 new GeoTooltipPoint
                 {
                     Land = _hoveredLand,
-                    Value = value,
-                    HasValue = hasValue,
+                    Values = CollectLandValues(_hoveredLand),
                     LandCenter = center
                 },
                 this);
@@ -497,9 +487,12 @@ public class GeoMapChart : Chart
     }
 
     /// <summary>
-    /// Finds the land definition at the specified pointer position, if any.
+    /// Finds the land at the specified pointer position, returning the land
+    /// definition, the values contributed by every series that covers it
+    /// (in <see cref="IGeoMapView.Series"/> declaration order), and the
+    /// projected screen anchor for tooltip placement.
     /// </summary>
-    public (LandDefinition Land, double Value, bool HasValue, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
+    public (LandDefinition Land, IReadOnlyList<GeoTooltipValue> Values, LvcPoint Center)? FindLandAt(LvcPoint pointerPosition)
     {
         if (_activeMap is null) return null;
 
@@ -514,26 +507,30 @@ public class GeoMapChart : Chart
                     if (landData.Shape is null) continue;
                     if (!landData.Shape.ContainsPoint(pointerPosition.X, pointerPosition.Y)) continue;
 
-                    var value = 0d;
-                    var hasValue = false;
-                    foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
-                    {
-                        if (series.TryGetValue(landDefinition.ShortName, out value))
-                        { hasValue = true; break; }
-                    }
-
+                    var values = CollectLandValues(landDefinition);
                     var projector = Maps.BuildProjector(
                         MapView.MapProjection,
                         [MapView.ControlSize.Width, MapView.ControlSize.Height],
                         _rotation.X, _rotation.Y);
                     var center = ComputeLandScreenCenter(landDefinition, projector);
 
-                    return (landDefinition, value, hasValue, center);
+                    return (landDefinition, values, center);
                 }
             }
         }
 
         return null;
+    }
+
+    private IReadOnlyList<GeoTooltipValue> CollectLandValues(LandDefinition land)
+    {
+        List<GeoTooltipValue>? acc = null;
+        foreach (var series in MapView.Series?.Cast<IGeoSeries>() ?? [])
+        {
+            if (!series.TryGetValue(land.ShortName, out var value)) continue;
+            (acc ??= []).Add(new GeoTooltipValue { Series = series, Value = value });
+        }
+        return acc ?? (IReadOnlyList<GeoTooltipValue>)[];
     }
 
     private LvcPoint ComputeLandScreenCenter(LandDefinition land, MapProjector projector)
@@ -592,40 +589,108 @@ public class GeoMapChart : Chart
                 lock (Canvas.Sync)
                 {
                     if (_isUnloaded || _isPanning || !_isPointerIn) return;
-                    if (MapView.Tooltip is null || MapView.TooltipPosition == TooltipPosition.Hidden) return;
 
                     var result = FindLandAt(_pointerPosition);
+                    var tooltipEnabled =
+                        MapView.Tooltip is not null &&
+                        MapView.TooltipPosition != TooltipPosition.Hidden;
 
                     if (result is null)
                     {
-                        if (_isToolTipOpen)
+                        // Hover left every land — fire HoveredPointsChanged
+                        // regardless of tooltip state so consumers tracking
+                        // hover get a clean exit signal.
+                        if (_hoveredChartPoints is { Length: > 0 } oldExit)
+                        {
+                            _hoveredChartPoints = null;
+                            View.OnHoveredPointsChanged(null, oldExit);
+                        }
+                        if (tooltipEnabled && _isToolTipOpen)
                         {
                             _hoveredLand = null;
                             _isToolTipOpen = false;
-                            MapView.Tooltip.Hide(this);
+                            MapView.Tooltip!.Hide(this);
                             Canvas.Invalidate();
                         }
                         return;
                     }
 
-                    var (land, value, hasValue, center) = result.Value;
+                    var hit = result.Value;
+                    if (hit.Land == _hoveredLand) return;
 
-                    if (land == _hoveredLand) return;
-                    _hoveredLand = land;
-                    _isToolTipOpen = true;
+                    var oldPoints = _hoveredChartPoints;
+                    var newPoints = BuildHitPoints(hit);
+                    _hoveredChartPoints = newPoints;
+                    _hoveredLand = hit.Land;
 
-                    MapView.Tooltip.Show(
-                        new GeoTooltipPoint
-                        {
-                            Land = land,
-                            Value = value,
-                            HasValue = hasValue,
-                            LandCenter = center
-                        },
-                        this);
-                    Canvas.Invalidate();
+                    View.OnHoveredPointsChanged(newPoints, oldPoints);
+
+                    if (tooltipEnabled)
+                    {
+                        _isToolTipOpen = true;
+                        MapView.Tooltip!.Show(
+                            new GeoTooltipPoint
+                            {
+                                Land = hit.Land,
+                                Values = hit.Values,
+                                LandCenter = hit.Center
+                            },
+                            this);
+                        Canvas.Invalidate();
+                    }
                 }
             }));
+    }
+
+    /// <summary>
+    /// Builds the <see cref="ChartPoint"/> set for a land hit. One point per
+    /// land — geo lands aren't owned by a single series (the same country can
+    /// be in zero or many heat series), so the DataSource is the land itself.
+    /// </summary>
+    internal ChartPoint[] BuildHitPoints((LandDefinition Land, IReadOnlyList<GeoTooltipValue> Values, LvcPoint Center) hit)
+    {
+        var bbox = ComputeLandScreenBounds(hit.Land);
+        var hoverArea = new RectangleHoverArea(bbox.MinX, bbox.MinY, bbox.MaxX - bbox.MinX, bbox.MaxY - bbox.MinY);
+        return [new ChartPoint(View, hit.Land, hoverArea)];
+    }
+
+    private (float MinX, float MinY, float MaxX, float MaxY) ComputeLandScreenBounds(LandDefinition land)
+    {
+        var projector = Maps.BuildProjector(
+            MapView.MapProjection,
+            [MapView.ControlSize.Width, MapView.ControlSize.Height],
+            _rotation.X, _rotation.Y);
+
+        float minX = float.MaxValue, minY = float.MaxValue;
+        float maxX = float.MinValue, maxY = float.MinValue;
+        var any = false;
+
+        foreach (var data in land.Data)
+        {
+            foreach (var coord in data.Coordinates)
+            {
+                if (!projector.IsVisible(coord.X, coord.Y)) continue;
+                projector.ToMap(coord.X, coord.Y, out var px, out var py);
+                if (px < minX) minX = px;
+                if (py < minY) minY = py;
+                if (px > maxX) maxX = px;
+                if (py > maxY) maxY = py;
+                any = true;
+            }
+        }
+
+        if (!any) return (0f, 0f, 0f, 0f);
+
+        var ctrlCx = MapView.ControlSize.Width * 0.5f;
+        var ctrlCy = MapView.ControlSize.Height * 0.5f;
+        var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+        var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+
+        return (
+            minX * _zoomLevel + tx,
+            minY * _zoomLevel + ty,
+            maxX * _zoomLevel + tx,
+            maxY * _zoomLevel + ty);
     }
 
     private void BounceBack()

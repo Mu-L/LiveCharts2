@@ -100,22 +100,10 @@ namespace ViewModelsSamples.Maps.World
 };</code></pre>
 {{~ end ~}}
 
-## Series
-
-There are ~multiple~ series available in the library, you can add one or mix them all in the same chart, every series has unique properties,
-any image below is a link to an article explaining more about them.
-
-<a href="{{ website_url }}/docs/{{ platform }}/{{ version }}/GeoMap.Heat%20land%20series">
-<div class="series-miniature">
-<img src="https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/samples/polarLines/basic/geomaphs.png" alt="series"/>
-<div class="text-center"><b>Heat Land series</b></div>
-</div>
-</a>
-
 ## Stroke property
 
-Determines the default stroke of every land, if the stroke property is not set, then LiveCharts will create it based on the series position in your series collection
-and the current theme.
+Paints the outline of every land. When `null` (the default) no outline is
+drawn — the heat fill alone defines each land's silhouette.
 
 {{~ if xaml ~}}
 <pre><code>using LiveChartsCore.SkiaSharpView;
@@ -181,8 +169,10 @@ a look at the [Paints article]({{ website_url }}/docs/{{ platform }}/{{ version 
 
 ## Fill property
 
-Determines the default fill of every land, if the stroke property is not set, then LiveCharts will create it based on the series position in your series collection
-and the current theme.
+Paints lands that have **no value** in any series — the "background" lands
+on the map. Lands that participate in a heat series keep their interpolated
+heat color regardless of `Fill`. When `null` (the default) unmapped lands
+stay transparent.
 
 {{~ if xaml ~}}
 <pre><code>using LiveChartsCore.SkiaSharpView;
@@ -247,20 +237,28 @@ a look at the [Paints article]({{ website_url }}/docs/{{ platform }}/{{ version 
 
 ## MapProjection property
 
-Defines the [projection](https://en.wikipedia.org/wiki/Map_projection) of the map coordinates in the control coordinates,
-currently it only support the `Default` (none) and `Mercator` projections.
+Defines the [projection](https://en.wikipedia.org/wiki/Map_projection) of the
+map coordinates in the control coordinates. Three projections are available:
+
+| Value          | Use case                                                            |
+| -------------- | ------------------------------------------------------------------- |
+| `Default`      | No projection — raw control-coordinate plot. Useful for non-geographic maps. |
+| `Mercator`     | Flat world map; preserves angles, exaggerates polar areas.          |
+| `Orthographic` | 3D globe view — only one hemisphere visible at a time, rotate to look at the other side. |
+
+### Mercator
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap
     Series="{Binding Series}"
-    MapProjection="Mercator">&lt;!-- mark -->
+    MapProjection="Mercator"&gt;&lt;!-- mark -->
 &lt;/lvc:GeoMap></code></pre>
 {{~ end ~}}
 
 {{~ if blazor ~}}
 <pre><code>&lt;GeoMap
     Series="series"
-    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator">&lt;!-- mark --> 
+    MapProjection="LiveChartsCore.Geo.MapProjection.Mercator"&gt;&lt;!-- mark -->
 &lt;/GeoMap></code></pre>
 {{~ end ~}}
 
@@ -269,6 +267,56 @@ currently it only support the `Default` (none) and `Mercator` projections.
 {{~ end ~}}
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-mercator.png)
+
+### Orthographic
+
+`Orthographic` renders the map as a 3D globe — only the hemisphere facing the
+camera is drawn, lands that cross the horizon are clipped along the disc rim.
+`CoreChart.RotationX` (longitude) and `CoreChart.RotationY` (latitude) control
+the center of view; setting them directly snaps, `CoreChart.RotateTo(lon, lat)`
+animates.
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    x:Name="geoMap"
+    Series="{Binding Series}"
+    MapProjection="Orthographic"&gt;&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+
+<pre><code>// Code-behind / ViewModel: center the globe on Europe + Africa.
+geoMap.CoreChart.RotationX = 15;  // longitude
+geoMap.CoreChart.RotationY = 20;  // latitude</code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    @ref="geoMap"
+    Series="series"
+    MapProjection="LiveChartsCore.Geo.MapProjection.Orthographic"&gt;&lt;!-- mark -->
+&lt;/GeoMap>
+
+@code {
+    private GeoMap geoMap = null!;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        geoMap.CoreChart.RotationX = 15;
+        geoMap.CoreChart.RotationY = 20;
+    }
+}</code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.MapProjection = LiveChartsCore.Geo.MapProjection.Orthographic;
+geoMap1.CoreChart.RotationX = 15;  // longitude
+geoMap1.CoreChart.RotationY = 20;  // latitude</code></pre>
+{{~ end ~}}
+
+![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomap-orthographic.png)
+
+Mouse-wheel zoom is supported the same way as on the flat projections; pan is
+disabled by default — set `InteractionMode="Both"` to enable click-drag pan.
 
 ## InteractionMode property
 
@@ -302,22 +350,151 @@ static.
 <pre><code>geoMap1.InteractionMode = LiveChartsCore.Geo.MapInteractionMode.Both;</code></pre>
 {{~ end ~}}
 
-To hide the tooltip, set `TooltipPosition` to `Hidden`:
+## Tooltip placement and styling
+
+The `TooltipPosition` property controls where the popup anchors relative to the
+hovered land's centroid. The map auto-flips between top and bottom when
+`Auto` is set and the popup would clip the chart edge.
+
+| Value    | Behavior                                            |
+| -------- | --------------------------------------------------- |
+| `Auto`   | Default — places above the land, flips below near the top edge. |
+| `Top`    | Always above the land (wedge points down).          |
+| `Bottom` | Always below the land (wedge points up).            |
+| `Hidden` | Disables the tooltip entirely.                      |
 
 {{~ if xaml ~}}
 <pre><code>&lt;lvc:GeoMap
     Series="{Binding Series}"
-    TooltipPosition="Hidden">&lt;!-- mark -->
+    TooltipPosition="Top"&gt;&lt;!-- mark -->
 &lt;/lvc:GeoMap></code></pre>
 {{~ end ~}}
 
 {{~ if blazor ~}}
 <pre><code>&lt;GeoMap
     Series="series"
-    TooltipPosition="LiveChartsCore.Measure.TooltipPosition.Hidden">&lt;!-- mark -->
+    TooltipPosition="LiveChartsCore.Measure.TooltipPosition.Top"&gt;&lt;!-- mark -->
 &lt;/GeoMap></code></pre>
 {{~ end ~}}
 
 {{~ if winforms ~}}
-<pre><code>geoMap1.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Hidden;</code></pre>
+<pre><code>geoMap1.TooltipPosition = LiveChartsCore.Measure.TooltipPosition.Top;</code></pre>
 {{~ end ~}}
+
+`TooltipTextSize`, `TooltipTextPaint`, and `TooltipBackgroundPaint` style the
+default tooltip without replacing it. `TooltipTextSize` defaults to the active
+theme; `TooltipTextPaint` and `TooltipBackgroundPaint` fall back to theme
+paints when null.
+
+{{~ if xaml ~}}
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    TooltipTextSize="16"&gt;&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    TooltipTextSize="16"&gt;&lt;!-- mark -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.TooltipTextSize = 16;
+geoMap1.TooltipTextPaint = new SolidColorPaint(SKColors.White);
+geoMap1.TooltipBackgroundPaint = new SolidColorPaint(SKColors.Black);</code></pre>
+{{~ end ~}}
+
+## Programmatic zoom, pan and reset
+
+`MapInteractionMode` covers user gestures; the methods on `CoreChart` cover
+programmatic viewport control:
+
+- `CoreChart.ResetViewport()` — snap back to zoom 1.0 / no pan.
+- `CoreChart.Pan(LvcPoint delta)` — pan by a screen-space offset.
+- `CoreChart.Zoom(LvcPoint pivot, ZoomDirection direction)` — zoom in / out
+  around a screen point.
+- `CoreChart.RotateTo(double longitude, double latitude, int durationMs = 800)`
+  — animated globe rotation for `MapProjection.Orthographic`. `RotationX` and
+  `RotationY` set rotation without animation.
+
+<pre><code>// Reset zoom and pan to defaults.
+geoMap.CoreChart.ResetViewport();
+
+// Animate the orthographic globe to look at Tokyo.
+geoMap.CoreChart.RotateTo(longitude: 139.69, latitude: 35.69);</code></pre>
+
+## Finding lands on click or hover
+
+The map participates in the same `IChartView` pointer-event surface as the
+other charts. `DataPointerDown` fires once per land click, and
+`HoveredPointsChanged` fires when the pointer enters, transitions between, or
+leaves a land. Each `ChartPoint` carries the `LandDefinition` as its data
+source — unwrap it to read the land's name / short name and look up the
+per-series values yourself.
+
+<pre><code>using LiveChartsCore.Geo;
+using LiveChartsCore.Kernel;
+
+geoMap.DataPointerDown += (sender, points) =>
+{
+    if (points.FirstOrDefault()?.Context.DataSource is not LandDefinition land) return;
+
+    // Look up each series' value for this land.
+    foreach (var series in geoMap.Series ?? [])
+        if (series.TryGetValue(land.ShortName, out var value))
+            Console.WriteLine($"{series.Name}: {value}");
+};</code></pre>
+
+If you only need a synchronous lookup (e.g. on a custom gesture), call
+`geoMap.GetPointsAt(new LvcPointD(x, y))` — same `ChartPoint` shape, no event
+subscription needed.
+
+## Customizing the tooltip
+
+The default tooltip (`SKDefaultGeoTooltip`) renders the land name followed by
+one labeled line per heat series that has a value for it. For most cases the
+quickest knob is `TooltipFormatter` — a `Func<GeoTooltipValue, string>` that
+takes over the per-value line text:
+
+{{~ if xaml ~}}
+<pre><code>// In your ViewModel:
+public Func&lt;GeoTooltipValue, string> TooltipFormatter { get; }
+    = v => $"{v.Series.Name}: {v.Value:C0}"; // mark</code></pre>
+
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    TooltipFormatter="{Binding TooltipFormatter}">&lt;!-- mark -->
+&lt;/lvc:GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    TooltipFormatter="@(v => $"{v.Series.Name}: {v.Value:C0}")">&lt;!-- mark -->
+&lt;/GeoMap></code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.TooltipFormatter = v => $"{v.Series.Name}: {v.Value:C0}"; // mark</code></pre>
+{{~ end ~}}
+
+The default format is `"{Series.Name}: {Value:N2}"` (or just `"{Value:N2}"`
+when the series has no `Name`). When several series cover the same land, you
+get one line per series in the order they appear in `Series`.
+
+For deeper customization (layout, multiple paints, icons, etc.), subclass
+`SKDefaultGeoTooltip` or implement `IGeoMapTooltip` from scratch and assign
+it to the `Tooltip` property:
+
+<pre><code>public class MyTooltip : SKDefaultGeoTooltip
+{
+    protected override Layout&lt;SkiaSharpDrawingContext> GetLayout(
+        GeoTooltipPoint point, GeoMapChart chart, Theme theme, PopUpPlacement placement)
+    {
+        // build and return your own layout
+    }
+}
+
+geoMap.Tooltip = new MyTooltip();</code></pre>

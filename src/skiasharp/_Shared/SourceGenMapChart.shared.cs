@@ -99,6 +99,9 @@ public partial class SourceGenMapChart : IGeoMapView
     // into a smaller core interface that the map can implement cleanly.
     // =====================================================================
 
+    /// <inheritdoc cref="IGeoMapView.TooltipFormatter" />
+    public Func<GeoTooltipValue, string>? TooltipFormatter { get; set; }
+
     /// <inheritdoc cref="IChartView.ChartTheme" />
     public Theme? ChartTheme { get; set; }
 
@@ -201,7 +204,11 @@ public partial class SourceGenMapChart : IGeoMapView
     public IEnumerable<ChartPoint> GetPointsAt(
         LvcPointD point,
         FindingStrategy strategy = FindingStrategy.Automatic,
-        FindPointFor findPointFor = FindPointFor.HoverEvent) => [];
+        FindPointFor findPointFor = FindPointFor.HoverEvent)
+    {
+        var hit = CoreChart?.FindLandAt(new LvcPoint((float)point.X, (float)point.Y));
+        return hit is null ? [] : CoreChart!.BuildHitPoints(hit.Value);
+    }
 
     /// <inheritdoc cref="IChartView.GetVisualsAt"/>
     public IEnumerable<IChartElement> GetVisualsAt(LvcPointD point) => [];
@@ -209,12 +216,24 @@ public partial class SourceGenMapChart : IGeoMapView
     /// <inheritdoc cref="IChartView.OnDataPointerDown"/>
     public void OnDataPointerDown(IEnumerable<ChartPoint> points, LvcPoint pointer)
     {
+        // The base Chart.InvokePointerDown fires this on every press with the
+        // series hit-test result; for maps that's always empty (no series), so
+        // the only meaningful fire is the one from GeoMapChart.InvokePointerUp
+        // (a release that wasn't a drag). Drop the empty pre-fire to give the
+        // map a clean "click hit a land" signal.
+        if (points is null || !points.Any()) return;
         DataPointerDown?.Invoke(this, points);
     }
 
     /// <inheritdoc cref="IChartView.OnHoveredPointsChanged"/>
     public void OnHoveredPointsChanged(IEnumerable<ChartPoint>? newItems, IEnumerable<ChartPoint>? oldItems)
     {
+        // Same reasoning as OnDataPointerDown: base.InvokePointerLeft fires
+        // (null, _activePoints=[]) on every leave; for maps that's a noisy
+        // no-op. Only forward when at least one side carries land points.
+        var newAny = newItems is not null && newItems.Any();
+        var oldAny = oldItems is not null && oldItems.Any();
+        if (!newAny && !oldAny) return;
         HoveredPointsChanged?.Invoke(this, newItems, oldItems);
     }
 

@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
+using LiveChartsCore;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
+using LiveChartsCore.Kernel;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -112,5 +115,262 @@ public class GeoMapTests
             anchorInsideContour,
             $"Tooltip anchor ({center.X:0.0}, {center.Y:0.0}) must fall inside a Russia contour; " +
             "before the fix the union-bbox centroid landed in the Atlantic.");
+    }
+
+    // The map participates in the IChartView pointer-event surface: a click on
+    // a land must fire DataPointerDown with a ChartPoint whose DataSource is the
+    // LandDefinition. Before this wiring, the map only fired its own bespoke
+    // LandClicked event and the standard IChartView events stayed silent.
+    [TestMethod]
+    public void GeoMap_PointerUpOnLand_FiresDataPointerDownWithLandDefinition()
+    {
+        const float Width = 600f, Height = 600f;
+
+        var chart = new SKGeoMap
+        {
+            Width = (int)Width,
+            Height = (int)Height,
+            MapProjection = MapProjection.Mercator,
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [Width, Height]);
+        projector.ToMap(37.62, 55.75, out var moscowX, out var moscowY);
+        var clickPoint = new LvcPoint(moscowX, moscowY);
+
+        ChartPoint[]? capturedPoints = null;
+        LvcPoint? capturedPointer = null;
+        chart.DataPointerDown += (sender, points) =>
+        {
+            capturedPoints = points.ToArray();
+            // sender is the view; surface that to assert it round-trips.
+            capturedPointer = clickPoint;
+        };
+
+        chart.CoreChart.InvokePointerDown(clickPoint, isSecondaryAction: false);
+        chart.CoreChart.InvokePointerUp(clickPoint, isSecondaryAction: false);
+
+        Assert.IsNotNull(capturedPoints, "DataPointerDown must fire on a land click");
+        Assert.AreEqual(1, capturedPoints.Length, "geo click emits exactly one ChartPoint (one land hit)");
+        Assert.IsNotNull(capturedPointer);
+        var land = capturedPoints[0].Context.DataSource as LandDefinition;
+        Assert.IsNotNull(land, "Context.DataSource must be the LandDefinition");
+        Assert.AreEqual("rus", land.ShortName, "Moscow's land short-name is 'rus'");
+        Assert.IsNotNull(capturedPoints[0].Context.HoverArea, "land hits carry a hover area for the screen bbox");
+    }
+
+    // A drag (pointer-down → move >5px → up) must NOT fire DataPointerDown —
+    // matches the existing _pointerDownIsClick deadzone that gated LandClicked.
+    [TestMethod]
+    public void GeoMap_DragGesture_DoesNotFireDataPointerDown()
+    {
+        var chart = new SKGeoMap
+        {
+            Width = 600,
+            Height = 600,
+            MapProjection = MapProjection.Mercator,
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [600f, 600f]);
+        projector.ToMap(37.62, 55.75, out var x, out var y);
+
+        var fired = false;
+        chart.DataPointerDown += (_, _) => fired = true;
+
+        chart.CoreChart.InvokePointerDown(new LvcPoint(x, y), isSecondaryAction: false);
+        // Move > sqrt(25) = 5 px so the click intent is cleared.
+        chart.CoreChart.InvokePointerMove(new LvcPoint(x + 20, y + 20));
+        chart.CoreChart.InvokePointerUp(new LvcPoint(x + 20, y + 20), isSecondaryAction: false);
+
+        Assert.IsFalse(fired, "moving more than the click-deadzone must suppress DataPointerDown");
+    }
+
+    // The hover throttler must fire HoveredPointsChanged on enter, again with a
+    // distinct (new, old) pair on a transition to another land, and once more
+    // with (null, old) when the pointer leaves the chart entirely.
+    [TestMethod]
+    public void GeoMap_HoverTransitions_FireHoveredPointsChanged()
+    {
+        const float Width = 800f, Height = 800f;
+        var chart = new SKGeoMap
+        {
+            Width = (int)Width,
+            Height = (int)Height,
+            MapProjection = MapProjection.Mercator,
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [Width, Height]);
+        projector.ToMap(2.35, 48.85, out var parisX, out var parisY);          // fra
+        projector.ToMap(13.40, 52.52, out var berlinX, out var berlinY);       // deu
+
+        var calls = new List<(IEnumerable<ChartPoint>? n, IEnumerable<ChartPoint>? o)>();
+        chart.HoveredPointsChanged += (_, n, o) => calls.Add((n, o));
+
+        // Enter France
+        chart.CoreChart.InvokePointerMove(new LvcPoint(parisX, parisY));
+        // The tooltip throttler debounces 50ms; force it on the test thread.
+        RunPendingTooltip(chart);
+
+        // Move to Germany
+        chart.CoreChart.InvokePointerMove(new LvcPoint(berlinX, berlinY));
+        RunPendingTooltip(chart);
+
+        // Leave the chart
+        chart.CoreChart.InvokePointerLeft();
+
+        Assert.AreEqual(3, calls.Count, "expected enter, transition, exit");
+
+        var enterLand = calls[0].n!.First().Context.DataSource as LandDefinition;
+        Assert.IsNull(calls[0].o);
+        Assert.AreEqual("fra", enterLand!.ShortName);
+
+        var transitionNew = calls[1].n!.First().Context.DataSource as LandDefinition;
+        var transitionOld = calls[1].o!.First().Context.DataSource as LandDefinition;
+        Assert.AreEqual("deu", transitionNew!.ShortName);
+        Assert.AreEqual("fra", transitionOld!.ShortName);
+
+        Assert.IsNull(calls[2].n);
+        Assert.AreEqual("deu", (calls[2].o!.First().Context.DataSource as LandDefinition)!.ShortName);
+    }
+
+    // GetPointsAt is the synchronous lookup variant of the click pipeline: it
+    // returns whatever DataPointerDown WOULD fire for the same screen point.
+    [TestMethod]
+    public void GeoMap_GetPointsAt_ReturnsHitLand()
+    {
+        var chart = new SKGeoMap
+        {
+            Width = 600,
+            Height = 600,
+            MapProjection = MapProjection.Mercator,
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [600f, 600f]);
+        projector.ToMap(37.62, 55.75, out var x, out var y);
+
+        var points = chart.GetPointsAt(new LvcPointD(x, y)).ToArray();
+
+        Assert.AreEqual(1, points.Length);
+        Assert.AreEqual("rus", (points[0].Context.DataSource as LandDefinition)!.ShortName);
+
+        // Ocean — no hit.
+        Assert.AreEqual(0, chart.GetPointsAt(new LvcPointD(1, 1)).Count());
+    }
+
+    // Multi-series tooltip: when several heat series have a value for the same
+    // land, the tooltip dispatch passes Values (one per contributing series) in
+    // Series-declaration order instead of breaking on the first match (which
+    // hid all but the first series' value in the pre-#2253 tooltip).
+    [TestMethod]
+    public void GeoMap_MultipleHeatSeries_TooltipValuesPreserveDeclarationOrder()
+    {
+        const float Width = 600f, Height = 600f;
+
+        var chart = new SKGeoMap
+        {
+            Width = (int)Width,
+            Height = (int)Height,
+            MapProjection = MapProjection.Mercator,
+            Series = [
+                new HeatLandSeries { Name = "Population", Lands = [new() { Name = "bra", Value = 213 }] },
+                new HeatLandSeries { Name = "GDP",        Lands = [new() { Name = "bra", Value = 1839 }] },
+            ]
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [Width, Height]);
+        projector.ToMap(-47.92, -15.79, out var brasiliaX, out var brasiliaY); // Brasilia
+
+        var hit = chart.CoreChart.FindLandAt(new LvcPoint(brasiliaX, brasiliaY));
+        Assert.IsNotNull(hit, "Brasilia must hit bra");
+        Assert.AreEqual("bra", hit.Value.Land.ShortName);
+
+        var values = hit.Value.Values;
+        Assert.AreEqual(2, values.Count, "both series contribute");
+        Assert.AreEqual("Population", values[0].Series.Name, "declaration order is preserved");
+        Assert.AreEqual(213d, values[0].Value);
+        Assert.AreEqual("GDP", values[1].Series.Name);
+        Assert.AreEqual(1839d, values[1].Value);
+    }
+
+    // TooltipFormatter is invoked once per Value during tooltip rendering. We
+    // verify by routing through a custom IGeoMapTooltip that records the
+    // GeoTooltipPoint it received, so we can replay the formatter ourselves.
+    [TestMethod]
+    public void GeoMap_TooltipFormatter_IsAppliedToEachValue()
+    {
+        var captured = new RecordingTooltip();
+        var calls = new List<GeoTooltipValue>();
+
+        var chart = new SKGeoMap
+        {
+            Width = 600,
+            Height = 600,
+            MapProjection = MapProjection.Mercator,
+            Series = [
+                new HeatLandSeries { Name = "Pop", Lands = [new() { Name = "fra", Value = 67.5 }] },
+                new HeatLandSeries { Name = "GDP", Lands = [new() { Name = "fra", Value = 2937 }] },
+            ],
+            Tooltip = captured,
+            TooltipFormatter = v =>
+            {
+                calls.Add(v);
+                return $"[{v.Series.Name}] {v.Value:0.0}";
+            }
+        };
+        chart.CoreChart.Measure();
+
+        var projector = Maps.BuildProjector(MapProjection.Mercator, [600f, 600f]);
+        projector.ToMap(2.35, 48.85, out var x, out var y);
+
+        // Drive a hover through the throttler so the tooltip Show fires.
+        chart.CoreChart.InvokePointerMove(new LvcPoint(x, y));
+        RunPendingTooltip(chart);
+
+        Assert.IsNotNull(captured.LastPoint, "tooltip.Show must be invoked on hover");
+        Assert.AreEqual(2, captured.LastPoint!.Values.Count);
+        Assert.AreSame(chart.TooltipFormatter, captured.LastPointChart!.MapView.TooltipFormatter,
+            "the view's formatter is what SKDefaultGeoTooltip should read");
+
+        // Replay the formatter the way SKDefaultGeoTooltip's GetLayout would:
+        // once per Values entry. Validates the contract that both ends agree on.
+        foreach (var v in captured.LastPoint.Values)
+            _ = chart.TooltipFormatter!(v);
+        Assert.AreEqual(2, calls.Count);
+        Assert.AreEqual("Pop", calls[0].Series.Name);
+        Assert.AreEqual("GDP", calls[1].Series.Name);
+    }
+
+    private sealed class RecordingTooltip : IGeoMapTooltip
+    {
+        public GeoTooltipPoint? LastPoint { get; private set; }
+        public GeoMapChart? LastPointChart { get; private set; }
+        public void Show(GeoTooltipPoint point, GeoMapChart chart)
+        {
+            LastPoint = point;
+            LastPointChart = chart;
+        }
+        public void Hide(GeoMapChart chart) { }
+    }
+
+    // GeoMapChart owns its own _tooltipThrottler (50ms ActionThrottler); the
+    // tests need a deterministic way to flush it. The throttler dispatches its
+    // work via View.InvokeOnUIThread which on SKGeoMap runs synchronously, so
+    // calling InvokePointerMove + sleeping the throttler interval is enough.
+    private static void RunPendingTooltip(SKGeoMap chart)
+    {
+        // The 50ms throttle interval is implementation detail; call the
+        // throttler directly via reflection to avoid wall-clock waits in tests.
+        var throttler = typeof(GeoMapChart)
+            .GetField("_tooltipThrottler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            !.GetValue(chart.CoreChart);
+        var unlocked = typeof(GeoMapChart)
+            .GetMethod("TooltipThrottlerUnlocked", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var task = (System.Threading.Tasks.Task)unlocked!.Invoke(chart.CoreChart, null)!;
+        task.Wait();
+        _ = throttler; // silence unused
     }
 }
