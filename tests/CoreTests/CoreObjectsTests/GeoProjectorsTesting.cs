@@ -90,6 +90,50 @@ public class GeoProjectorsTesting
         Assert.IsTrue(projector.IsVisible(-180, -90));
     }
 
+    // Both projectors normalize degenerate / inverted bounds so the public
+    // Min/Max Lat/Lon API never crashes the chart on user error. Inverted
+    // bounds swap; equal bounds (which would otherwise divide by zero / a
+    // zero mercN range) fall back to the projection defaults.
+    [TestMethod]
+    public void MercatorProjectorNormalizesDegenerateAndInvertedBounds()
+    {
+        // Inverted lat (min > max) should swap silently — same render as the
+        // non-inverted pair.
+        var inverted = MercatorProjector.GetPreferredRatio(72, 35, -25, 45);
+        var normal = MercatorProjector.GetPreferredRatio(35, 72, -25, 45);
+        Assert.AreEqual(normal[0], inverted[0], 0.001f);
+        Assert.AreEqual(normal[1], inverted[1], 0.001f);
+
+        // Equal lat → fall back to defaults; no NaN/Infinity in the result.
+        var degenerate = MercatorProjector.GetPreferredRatio(50, 50, -25, 45);
+        Assert.IsTrue(float.IsFinite(degenerate[0]));
+        Assert.IsTrue(float.IsFinite(degenerate[1]));
+
+        // ToMap stays finite for the degenerate constructor too.
+        var projector = new MercatorProjector(360, 180, 0, 0, 50, 50, -25, 45);
+        projector.ToMap(0, 0, out var x, out var y);
+        Assert.IsTrue(float.IsFinite(x));
+        Assert.IsTrue(float.IsFinite(y));
+    }
+
+    [TestMethod]
+    public void ControlCoordinatesProjectorNormalizesDegenerateAndInvertedBounds()
+    {
+        var inverted = ControlCoordinatesProjector.GetPreferredRatio(72, 35, 45, -25);
+        var normal = ControlCoordinatesProjector.GetPreferredRatio(35, 72, -25, 45);
+        Assert.AreEqual(normal[0], inverted[0], 0.001f);
+        Assert.AreEqual(normal[1], inverted[1], 0.001f);
+
+        var degenerate = ControlCoordinatesProjector.GetPreferredRatio(50, 50, -25, 45);
+        Assert.IsTrue(float.IsFinite(degenerate[0]));
+        Assert.IsTrue(float.IsFinite(degenerate[1]));
+
+        var projector = new ControlCoordinatesProjector(360, 180, 0, 0, 50, 50, -25, 45);
+        projector.ToMap(0, 0, out var x, out var y);
+        Assert.IsTrue(float.IsFinite(x));
+        Assert.IsTrue(float.IsFinite(y));
+    }
+
     [TestMethod]
     public void OrthographicProjectorProjectsCenterToScreenCenter()
     {
