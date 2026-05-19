@@ -501,7 +501,8 @@ public class GeoMapChart : Chart
             [DrawMarginSize.Width, DrawMarginSize.Height],
             DrawMarginLocation.X, DrawMarginLocation.Y,
             rotX, rotY,
-            MapView.MercatorMaxLatitude);
+            MapView.MinLatitude, MapView.MaxLatitude,
+            MapView.MinLongitude, MapView.MaxLongitude);
         _lastProjector = projector;
 
         // Pixel-clip painting to the projector's actual rendering rectangle so
@@ -726,7 +727,8 @@ public class GeoMapChart : Chart
             [MapView.ControlSize.Width, MapView.ControlSize.Height],
             0f, 0f,
             _rotation.X, _rotation.Y,
-            MapView.MercatorMaxLatitude);
+            MapView.MinLatitude, MapView.MaxLatitude,
+            MapView.MinLongitude, MapView.MaxLongitude);
 
     private (float MinX, float MinY, float MaxX, float MaxY) ComputeLandScreenBounds(LandDefinition land)
     {

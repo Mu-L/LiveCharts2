@@ -31,44 +31,77 @@ namespace LiveChartsCore.Geo;
 public class MercatorProjector : MapProjector
 {
     /// <summary>
-    /// The default maximum latitude (in degrees) for the Mercator projection.
-    /// Standard Mercator extends to ±85° but anything beyond about ±65° is
-    /// inhabited by penguins; clipping there fills the canvas with the
-    /// continents and removes the empty band beneath Antarctica.
+    /// Default minimum latitude (in degrees) when none is specified on the
+    /// view. -65° crops the sub-Antarctic empty band beneath the populated
+    /// continents.
+    /// </summary>
+    public const double DefaultMinLatitudeDegrees = -65d;
+
+    /// <summary>
+    /// Default maximum latitude (in degrees) when none is specified on the
+    /// view. +65° trims Greenland's stretched cap and Arctic ice for a
+    /// landmass-focused frame.
     /// </summary>
     public const double DefaultMaxLatitudeDegrees = 65d;
+
+    /// <summary>
+    /// Default minimum longitude (in degrees) when none is specified on the
+    /// view. Standard antimeridian.
+    /// </summary>
+    public const double DefaultMinLongitudeDegrees = -180d;
+
+    /// <summary>
+    /// Default maximum longitude (in degrees) when none is specified on the
+    /// view. Standard antimeridian.
+    /// </summary>
+    public const double DefaultMaxLongitudeDegrees = 180d;
 
     private readonly float _w;
     private readonly float _h;
     private readonly float _ox;
     private readonly float _oy;
-    private readonly double _maxLatMercN;
+    private readonly double _minLat;
+    private readonly double _maxLat;
+    private readonly double _minLon;
+    private readonly double _maxLon;
+    private readonly double _minLatMercN;
+    private readonly double _mercNRange;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MercatorProjector"/> class
-    /// with the default <see cref="DefaultMaxLatitudeDegrees"/> latitude clip.
+    /// with the projection's default bounds.
     /// </summary>
     public MercatorProjector(float mapWidth, float mapHeight, float offsetX, float offsetY)
-        : this(mapWidth, mapHeight, offsetX, offsetY, DefaultMaxLatitudeDegrees)
+        : this(mapWidth, mapHeight, offsetX, offsetY, double.NaN, double.NaN, double.NaN, double.NaN)
     { }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MercatorProjector"/> class.
+    /// Any NaN bound falls back to the projection's default (<see cref="DefaultMinLatitudeDegrees"/> etc.).
     /// </summary>
     /// <param name="mapWidth">Width of the map.</param>
     /// <param name="mapHeight">Height of the map.</param>
     /// <param name="offsetX">The offset x.</param>
     /// <param name="offsetY">The offset y.</param>
-    /// <param name="maxLatitudeDegrees">The latitude (in degrees) clipped to the
-    /// top and bottom edges. Defaults to <see cref="DefaultMaxLatitudeDegrees"/>;
-    /// pass 85 to render the full standard Mercator including Antarctica.</param>
-    public MercatorProjector(float mapWidth, float mapHeight, float offsetX, float offsetY, double maxLatitudeDegrees)
+    /// <param name="minLatitudeDegrees">Latitude clipped to the bottom edge; NaN for default.</param>
+    /// <param name="maxLatitudeDegrees">Latitude clipped to the top edge; NaN for default.</param>
+    /// <param name="minLongitudeDegrees">Longitude clipped to the left edge; NaN for default.</param>
+    /// <param name="maxLongitudeDegrees">Longitude clipped to the right edge; NaN for default.</param>
+    public MercatorProjector(
+        float mapWidth, float mapHeight, float offsetX, float offsetY,
+        double minLatitudeDegrees, double maxLatitudeDegrees,
+        double minLongitudeDegrees, double maxLongitudeDegrees)
     {
         _w = mapWidth;
         _h = mapHeight;
         _ox = offsetX;
         _oy = offsetY;
-        _maxLatMercN = MercN(maxLatitudeDegrees);
+        _minLat = double.IsNaN(minLatitudeDegrees) ? DefaultMinLatitudeDegrees : minLatitudeDegrees;
+        _maxLat = double.IsNaN(maxLatitudeDegrees) ? DefaultMaxLatitudeDegrees : maxLatitudeDegrees;
+        _minLon = double.IsNaN(minLongitudeDegrees) ? DefaultMinLongitudeDegrees : minLongitudeDegrees;
+        _maxLon = double.IsNaN(maxLongitudeDegrees) ? DefaultMaxLongitudeDegrees : maxLongitudeDegrees;
+        _minLatMercN = MercN(_minLat);
+        _mercNRange = MercN(_maxLat) - _minLatMercN;
         XOffset = _ox;
         YOffset = _oy;
         MapWidth = mapWidth;
@@ -76,17 +109,31 @@ public class MercatorProjector : MapProjector
     }
 
     /// <summary>
-    /// Gets the preferred ratio for the default Mercator latitude clip.
-    /// Use <see cref="GetPreferredRatio(double)"/> for a custom clip.
+    /// Gets the preferred ratio for the projection's default bounds.
+    /// Use <see cref="GetPreferredRatio(double, double, double, double)"/> for custom bounds.
     /// </summary>
-    public static float[] PreferredRatio => GetPreferredRatio(DefaultMaxLatitudeDegrees);
+    public static float[] PreferredRatio => GetPreferredRatio(
+        DefaultMinLatitudeDegrees, DefaultMaxLatitudeDegrees,
+        DefaultMinLongitudeDegrees, DefaultMaxLongitudeDegrees);
 
     /// <summary>
-    /// Returns the natural aspect ratio of the projection clipped at the given
-    /// latitude — wider than tall for smaller clips, square at ±85°.
+    /// Returns the natural conformal aspect ratio (width:height) of a Mercator
+    /// rendering of the given lat/lon bounds. Any NaN argument falls back to
+    /// the projection's default. Wider bounds give a wider ratio.
     /// </summary>
-    public static float[] GetPreferredRatio(double maxLatitudeDegrees) =>
-        new[] { (float)(Math.PI / MercN(maxLatitudeDegrees)), 1f };
+    public static float[] GetPreferredRatio(
+        double minLatitudeDegrees, double maxLatitudeDegrees,
+        double minLongitudeDegrees, double maxLongitudeDegrees)
+    {
+        var minLat = double.IsNaN(minLatitudeDegrees) ? DefaultMinLatitudeDegrees : minLatitudeDegrees;
+        var maxLat = double.IsNaN(maxLatitudeDegrees) ? DefaultMaxLatitudeDegrees : maxLatitudeDegrees;
+        var minLon = double.IsNaN(minLongitudeDegrees) ? DefaultMinLongitudeDegrees : minLongitudeDegrees;
+        var maxLon = double.IsNaN(maxLongitudeDegrees) ? DefaultMaxLongitudeDegrees : maxLongitudeDegrees;
+
+        var mercNRange = MercN(maxLat) - MercN(minLat);
+        var lonRangeRadians = (maxLon - minLon) * Math.PI / 180d;
+        return new[] { (float)(lonRangeRadians / mercNRange), 1f };
+    }
 
     /// <inheritdoc cref="MapProjector.ToMap(double[])"/>
     public override float[] ToMap(double[] point)
@@ -98,13 +145,13 @@ public class MercatorProjector : MapProjector
     /// <inheritdoc cref="MapProjector.ToMap(double, double, out float, out float)"/>
     public override void ToMap(double longitude, double latitude, out float x, out float y)
     {
+        // Scale so [_minLon, _maxLon] spans 0.._w and [mercN(_minLat),
+        // mercN(_maxLat)] spans 0.._h; lands outside these ranges are
+        // extrapolated past the projection's rendering rectangle and rely
+        // on the chart's canvas clip to crop them.
         var mercN = MercN(latitude);
-        // Scale by the clip's mercN (not π = mercN(85°)) so ±maxLatitudeDegrees
-        // spans the full _h; lands beyond the clip are extrapolated and will
-        // fall off the edge.
-        var py = _h / 2d - _h * mercN / (2 * _maxLatMercN);
-
-        x = (float)((longitude + 180) * (_w / 360d) + _ox);
+        var py = _h - _h * (mercN - _minLatMercN) / _mercNRange;
+        x = (float)((longitude - _minLon) * (_w / (_maxLon - _minLon)) + _ox);
         y = (float)py + _oy;
     }
 

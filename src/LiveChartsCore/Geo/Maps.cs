@@ -87,19 +87,22 @@ public static class Maps
     /// <param name="baseOffsetY">Screen-space Y of the map render area's top-left.</param>
     /// <param name="centerLon">The center longitude (used for Orthographic projection).</param>
     /// <param name="centerLat">The center latitude (used for Orthographic projection).</param>
-    /// <param name="mercatorMaxLatitude">The latitude clip for Mercator (ignored for other projections).
-    /// Defaults to <see cref="MercatorProjector.DefaultMaxLatitudeDegrees"/>.</param>
+    /// <param name="minLatitude">The minimum latitude clip; NaN for the projection's default. Only Mercator honors this today.</param>
+    /// <param name="maxLatitude">The maximum latitude clip; NaN for the projection's default.</param>
+    /// <param name="minLongitude">The minimum longitude clip; NaN for the projection's default.</param>
+    /// <param name="maxLongitude">The maximum longitude clip; NaN for the projection's default.</param>
     public static MapProjector BuildProjector(
         MapProjection projection, float[] mapSize, float baseOffsetX, float baseOffsetY,
         double centerLon = 0, double centerLat = 0,
-        double mercatorMaxLatitude = MercatorProjector.DefaultMaxLatitudeDegrees)
+        double minLatitude = double.NaN, double maxLatitude = double.NaN,
+        double minLongitude = double.NaN, double maxLongitude = double.NaN)
     {
         var mapRatio =
             projection == MapProjection.Default
             ? ControlCoordinatesProjector.PreferredRatio
             : projection == MapProjection.Orthographic
             ? OrthographicProjector.PreferredRatio
-            : MercatorProjector.GetPreferredRatio(mercatorMaxLatitude);
+            : MercatorProjector.GetPreferredRatio(minLatitude, maxLatitude, minLongitude, maxLongitude);
 
         var normalizedW = mapSize[0] / mapRatio[0];
         var normalizedH = mapSize[1] / mapRatio[1];
@@ -122,7 +125,7 @@ public static class Maps
         {
             MapProjection.Default => new ControlCoordinatesProjector(mapSize[0], mapSize[1], ox, oy),
             MapProjection.Orthographic => new OrthographicProjector(mapSize[0], mapSize[1], ox, oy, centerLon, centerLat),
-            _ => new MercatorProjector(mapSize[0], mapSize[1], ox, oy, mercatorMaxLatitude)
+            _ => new MercatorProjector(mapSize[0], mapSize[1], ox, oy, minLatitude, maxLatitude, minLongitude, maxLongitude)
         };
     }
 }
