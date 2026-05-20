@@ -23,7 +23,23 @@ namespace CoreTests.Helpers;
 //   - Wrap the call in try/finally and reset CoreMotionCanvas.DebugElapsedMilliseconds = -1
 internal static class SeriesAnimationCapture
 {
-    public readonly record struct Frame(long TimeMs, float X, float Y, float Width, float Height);
+    public readonly struct Frame
+    {
+        public Frame(long timeMs, float x, float y, float width, float height)
+        {
+            TimeMs = timeMs;
+            X = x;
+            Y = y;
+            Width = width;
+            Height = height;
+        }
+
+        public long TimeMs { get; }
+        public float X { get; }
+        public float Y { get; }
+        public float Width { get; }
+        public float Height { get; }
+    }
 
     public static List<Frame[]> CaptureTrajectory(
         IEnumerable<ChartPoint> points,

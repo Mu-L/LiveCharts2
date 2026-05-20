@@ -68,7 +68,7 @@ public class BarSeriesAnimationTests
                 Assert.AreEqual(0f, f.Height, Tolerance, "first-draw entry height");
 
             // final-frame heights are non-zero and monotonically increase with Values
-            var finalFrame = traj[^1];
+            var finalFrame = traj[traj.Count - 1];
             Assert.IsTrue(finalFrame[0].Height > 0);
             Assert.IsTrue(finalFrame[0].Height < finalFrame[1].Height);
             Assert.IsTrue(finalFrame[1].Height < finalFrame[2].Height);
@@ -127,7 +127,7 @@ public class BarSeriesAnimationTests
                     $"data-change t=start: bar {i} must begin at previous stable height");
 
             // Final frame reflects new values — first bar bigger, second smaller, third bigger.
-            var finalFrame = traj[^1];
+            var finalFrame = traj[traj.Count - 1];
             Assert.IsTrue(finalFrame[0].Height > stableHeights[0], "value 10→35 should grow bar");
             Assert.IsTrue(finalFrame[1].Height < stableHeights[1], "value 20→5 should shrink bar");
             Assert.IsTrue(finalFrame[2].Height < stableHeights[2], "value 30→15 should shrink bar");
@@ -171,7 +171,7 @@ public class BarSeriesAnimationTests
             foreach (var f in traj[0])
                 Assert.AreEqual(0f, f.Width, Tolerance, "row first-draw entry width");
 
-            var finalFrame = traj[^1];
+            var finalFrame = traj[traj.Count - 1];
             Assert.IsTrue(finalFrame[0].Width > 0);
             Assert.IsTrue(finalFrame[0].Width < finalFrame[1].Width);
             Assert.IsTrue(finalFrame[1].Width < finalFrame[2].Width);
@@ -225,7 +225,7 @@ public class BarSeriesAnimationTests
                 Assert.AreEqual(stableWidths[i], traj[0][i].Width, Tolerance,
                     $"row data-change t=start: bar {i} must begin at previous stable width");
 
-            var finalFrame = traj[^1];
+            var finalFrame = traj[traj.Count - 1];
             Assert.IsTrue(finalFrame[0].Width > stableWidths[0]);
             Assert.IsTrue(finalFrame[1].Width < stableWidths[1]);
             Assert.IsTrue(finalFrame[2].Width < stableWidths[2]);
@@ -268,8 +268,8 @@ public class BarSeriesAnimationTests
             foreach (var f in traj2[0]) Assert.AreEqual(0f, f.Height, Tolerance, "stacked col s2 entry");
 
             // s2 final bars sit ABOVE s1 final bars (smaller pixel-Y for stack layer 2).
-            var s1Final = traj1[^1];
-            var s2Final = traj2[^1];
+            var s1Final = traj1[traj1.Count - 1];
+            var s2Final = traj2[traj2.Count - 1];
             for (var i = 0; i < s1Final.Length; i++)
                 Assert.IsTrue(s2Final[i].Y < s1Final[i].Y,
                     $"stacked: s2 must sit above s1 at column {i}");
@@ -313,8 +313,8 @@ public class BarSeriesAnimationTests
             foreach (var f in traj2[0]) Assert.AreEqual(0f, f.Width, Tolerance, "stacked row s2 entry");
 
             // s2 final bars sit to the RIGHT of s1 final bars (larger pixel-X for stack layer 2).
-            var s1Final = traj1[^1];
-            var s2Final = traj2[^1];
+            var s1Final = traj1[traj1.Count - 1];
+            var s2Final = traj2[traj2.Count - 1];
             for (var i = 0; i < s1Final.Length; i++)
                 Assert.IsTrue(s2Final[i].X > s1Final[i].X,
                     $"stacked: s2 must sit right-of s1 at row {i}");
