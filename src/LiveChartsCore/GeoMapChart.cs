@@ -586,6 +586,16 @@ public class GeoMapChart : Chart
             _ = _everMeasuredSeries.Add(series);
         }
 
+        // VisualElements on the geo map (GeoVisualElement for lat/lon-anchored
+        // overlays, plain VisualElement for pixel-positioned ones). Mirrors
+        // the cartesian engine's pattern: snapshot the previous set at the
+        // top, mark each visible element as re-measured, then drop anything
+        // still in the to-delete set at the end.
+        InitializeVisualsCollector();
+        foreach (var visual in MapView.VisualElements ?? [])
+            AddVisual(visual);
+        CollectVisuals();
+
         if (_hoveredLand is not null && MapView.Tooltip is not null &&
             MapView.TooltipPosition != TooltipPosition.Hidden)
         {
