@@ -350,7 +350,7 @@ internal static class SeriesAnimationCapture
             {
                 if (j > 0) _ = sb.Append(',');
                 var f = frame[j];
-                _ = sb.Append("{\"t\":").Append(schema.TimeMs.GetValue(f));
+                _ = sb.Append("{\"t\":").Append(((long)schema.TimeMs.GetValue(f)!).ToString(CultureInfo.InvariantCulture));
                 foreach (var (jsonKey, prop) in schema.Floats)
                 {
                     _ = sb.Append(",\"").Append(jsonKey).Append("\":").Append(F((float)prop.GetValue(f)!));
