@@ -1,11 +1,13 @@
 ﻿using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
+using LiveChartsCore.Kernel;
 using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using LiveChartsCore.SkiaSharpView.VisualElements;
+using LiveChartsCore.VisualElements;
 using SkiaSharp;
 
 namespace SnapshotTests;
@@ -195,5 +197,50 @@ public sealed class MapsTests
         };
 
         chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(DefaultProjectionEuropeView)}");
+    }
+
+    // Five city markers placed via GeoVisualElement wrappers in
+    // GeoMap.VisualElements. The wrapper projects (Longitude, Latitude) to
+    // pixels each Measure, the inner GeometryVisual draws an orange-red
+    // circle centered on the projected point via Translate(-half, -half).
+    [TestMethod]
+    public void MarkersOnMap()
+    {
+        var chart = new SKGeoMap
+        {
+            Series = CreateHeatSeries(),
+            MapProjection = MapProjection.Mercator,
+            Width = 800,
+            Height = 600,
+            VisualElements = new IChartElement[]
+            {
+                CityMarker(-74.00,  40.71),  // New York
+                CityMarker(139.69,  35.69),  // Tokyo
+                CityMarker( -3.70,  40.42),  // Madrid
+                CityMarker(-46.63, -23.55),  // São Paulo
+                CityMarker(151.21, -33.87),  // Sydney
+            },
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(MarkersOnMap)}");
+    }
+
+    private static GeoVisualElement CityMarker(double longitude, double latitude)
+    {
+        const float size = 14f;
+        return new GeoVisualElement(new GeometryVisual<CircleGeometry>
+        {
+            Width = size,
+            Height = size,
+            Fill = new SolidColorPaint(new SKColor(255, 87, 51)), // OrangeRed
+            Stroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 2 },
+            // Inner X/Y from the projector is the top-left of the bbox; shift
+            // by -size/2 so the circle is visually centered on the lat/lon.
+            Translate = new LvcPoint(-size / 2f, -size / 2f),
+        })
+        {
+            Longitude = longitude,
+            Latitude = latitude,
+        };
     }
 }
