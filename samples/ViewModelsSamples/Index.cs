@@ -129,6 +129,9 @@ public static class Index
         "Test/MotionCanvasDispose",
 
         "Maps/World",
-        "Maps/OrthographicWorld"
+        "Maps/OrthographicWorld",
+        "Maps/RotatingOrthographic",
+        "Maps/CustomMap",
+        "Maps/MarkersOnMap"
     ];
 }

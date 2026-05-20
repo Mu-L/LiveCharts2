@@ -249,6 +249,59 @@ public sealed class MapsTests
     // must NOT show them — this exercises GeoMapChart.Measure's
     // InitializeVisualsCollector → CollectVisuals path that drops elements
     // removed from the collection between frames.
+    // Loads the Mexico-states GeoJSON shipped with the CustomMap sample
+    // (Natural Earth derivative, CC0) and renders it with a HeatLandSeries
+    // keyed by the ISO 3166-2 region code. Pins the full chain:
+    // Maps.GetMapFromStreamReader → IGeoMapView.ActiveMap → HeatLandSeries
+    // matching by shortName → render.
+    [TestMethod]
+    public void CustomMap_LoadsAndRendersMexicoStates()
+    {
+        // Use the same sample asset the runnable sample uses so any
+        // regeneration of mexico-states.geojson keeps the snapshot in sync.
+        var geojsonPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "samples", "ViewModelsSamples", "Maps", "CustomMap", "mexico-states.geojson");
+        geojsonPath = Path.GetFullPath(geojsonPath);
+
+        using var reader = new StreamReader(geojsonPath);
+        var mexicoMap = LiveChartsCore.Geo.Maps.GetMapFromStreamReader(reader);
+
+        var chart = new SKGeoMap
+        {
+            ActiveMap = mexicoMap,
+            MapProjection = MapProjection.Mercator,
+            Width = 600,
+            Height = 600,
+            // Auto-fit on Mexico's extent — the default world bounds would
+            // letterbox MX into a sliver. Padding a few degrees.
+            MinLatitude = 13,
+            MaxLatitude = 33,
+            MinLongitude = -120,
+            MaxLongitude = -85,
+            Series =
+            [
+                new HeatLandSeries
+                {
+                    Lands =
+                    [
+                        new HeatLand { Name = "cmx", Value = 92 },
+                        new HeatLand { Name = "mex", Value = 70 },
+                        new HeatLand { Name = "jal", Value = 84 },
+                        new HeatLand { Name = "nle", Value = 58 },
+                        new HeatLand { Name = "pue", Value = 65 },
+                        new HeatLand { Name = "ver", Value = 80 },
+                        new HeatLand { Name = "yuc", Value = 23 },
+                        new HeatLand { Name = "bcn", Value = 36 },
+                    ],
+                },
+            ],
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(CustomMap_LoadsAndRendersMexicoStates)}");
+    }
+
     [TestMethod]
     public void MarkersOnMap_RemovedBetweenFrames()
     {
