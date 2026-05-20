@@ -9,6 +9,16 @@ then based on the gradient a color will be assigned to each region, colors are i
 
 ![image](https://raw.githubusercontent.com/beto-rodriguez/LiveCharts2/master/docs/_assets/geomaphs.png)
 
+:::info
+**A note on disputed boundaries.** Maps reflect the borders encoded in
+the underlying GeoJSON file — there are real disagreements about
+Crimea, Taiwan, Western Sahara, Kashmir, and other regions, and no
+single GeoJSON satisfies every audience. LiveCharts2 doesn't take a
+position; it just renders the GeoJSON you give it. If the borders
+shown don't match what you need, load a different GeoJSON — see the
+[Custom maps](custommaps) article for the recipe.
+:::
+
 {{~ if xaml ~}}
 ```csharp
 using LiveChartsCore.SkiaSharpView;
