@@ -667,6 +667,109 @@ geoMap.DataPointerDown += (sender, points) =>
             Console.WriteLine($"{series.Name}: {value}");
 };</code></pre>
 
+## Custom overlays at lat/lon (markers, callouts, etc.)
+
+The map's `VisualElements` collection accepts any `VisualElement` — the
+same primitives the cartesian charts use (`GeometryVisual`,
+`DrawnLabelVisual`, `LineVisual`, ...). Wrap one in a
+`GeoVisualElement(visual) { Longitude, Latitude }` to anchor it at a
+geographic coordinate; the wrapper re-projects on every measure so the
+overlay follows zoom, pan, and orthographic rotation.
+
+{{~ if xaml ~}}
+<pre><code>// In your ViewModel:
+public IChartElement[] CityMarkers { get; } = [
+    Marker(longitude: -74.00, latitude:  40.71), // New York
+    Marker(longitude: 139.69, latitude:  35.69), // Tokyo
+    Marker(longitude:  -3.70, latitude:  40.42), // Madrid
+];
+
+static GeoVisualElement Marker(double longitude, double latitude) =>
+    new(new GeometryVisual&lt;CircleGeometry&gt;
+    {
+        Width = 14, Height = 14,
+        Fill = new SolidColorPaint(new SKColor(255, 87, 51)),
+        Stroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 2 },
+        // Inner X/Y is the bbox top-left; center the dot on the point.
+        Translate = new LvcPoint(-7, -7),
+    })
+    {
+        Longitude = longitude,
+        Latitude = latitude,
+    };</code></pre>
+
+<pre><code>&lt;lvc:GeoMap
+    Series="{Binding Series}"
+    VisualElements="{Binding CityMarkers}"/&gt;&lt;!-- mark --></code></pre>
+{{~ end ~}}
+
+{{~ if blazor ~}}
+<pre><code>&lt;GeoMap
+    Series="series"
+    VisualElements="markers"/&gt;
+
+@code {
+    private IChartElement[] markers = [
+        Marker(-74.00,  40.71),
+        Marker(139.69,  35.69),
+        Marker( -3.70,  40.42),
+    ];
+
+    static GeoVisualElement Marker(double lon, double lat) =>
+        new(new GeometryVisual&lt;CircleGeometry&gt;
+        {
+            Width = 14, Height = 14,
+            Fill = new SolidColorPaint(new SKColor(255, 87, 51)),
+            Stroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 2 },
+            Translate = new LvcPoint(-7, -7),
+        })
+        {
+            Longitude = lon,
+            Latitude = lat,
+        };
+}</code></pre>
+{{~ end ~}}
+
+{{~ if winforms ~}}
+<pre><code>geoMap1.VisualElements = new IChartElement[]
+{
+    Marker(longitude: -74.00, latitude:  40.71),
+    Marker(longitude: 139.69, latitude:  35.69),
+    Marker(longitude:  -3.70, latitude:  40.42),
+};
+
+static GeoVisualElement Marker(double longitude, double latitude) =>
+    new(new GeometryVisual&lt;CircleGeometry&gt;
+    {
+        Width = 14, Height = 14,
+        Fill = new SolidColorPaint(new SKColor(255, 87, 51)),
+        Stroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 2 },
+        Translate = new LvcPoint(-7, -7),
+    })
+    {
+        Longitude = longitude,
+        Latitude = latitude,
+    };</code></pre>
+{{~ end ~}}
+
+![image](https://raw.githubusercontent.com/Live-Charts/LiveCharts2/refs/heads/master/tests/SnapshotTests/Snapshots/MapsTests_MarkersOnMap.png)
+
+If you need the raw projector — to position something yourself, hit-test
+a click, etc. — use `GeoMapChart.Project(lon, lat)` and the inverse
+`GeoMapChart.Unproject(LvcPoint)`. Both return `null` when the
+coordinate / pixel is outside the visible region (e.g. the back
+hemisphere of the orthographic globe), so you can distinguish "clicked
+the void" from a real coordinate:
+
+<pre><code>// Pixel → coordinate (returns null off-disc on Orthographic).
+var coord = geoMap.CoreChart.Unproject(new LvcPoint(clickX, clickY));
+if (coord is null) return; // click was outside the projection's visible area
+
+Console.WriteLine($"clicked at {coord.Value.Longitude:0.00}°, {coord.Value.Latitude:0.00}°");
+
+// Coordinate → pixel (returns null if the coordinate isn't currently visible).
+var pixel = geoMap.CoreChart.Project(longitude: -74, latitude: 40.7);</code></pre>
+
 If you only need a synchronous lookup (e.g. on a custom gesture), call
 `geoMap.GetPointsAt(new LvcPointD(x, y))` — same `ChartPoint` shape, no event
 subscription needed.

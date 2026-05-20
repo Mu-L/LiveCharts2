@@ -81,4 +81,17 @@ public abstract class MapProjector
     /// <param name="latitude">The latitude.</param>
     /// <returns>True if the point is visible.</returns>
     public virtual bool IsVisible(double longitude, double latitude) => true;
+
+    /// <summary>
+    /// Inverse of <see cref="ToMap(double, double, out float, out float)"/> —
+    /// converts a screen-space pixel back to (longitude, latitude). Returns
+    /// false when the pixel is outside the projection's visible region
+    /// (e.g. the back hemisphere on Orthographic).
+    /// </summary>
+    /// <param name="screenX">Pixel X.</param>
+    /// <param name="screenY">Pixel Y.</param>
+    /// <param name="longitude">The longitude, if recoverable.</param>
+    /// <param name="latitude">The latitude, if recoverable.</param>
+    /// <returns>True if the pixel maps back to a valid coordinate.</returns>
+    public abstract bool ToCoordinates(float screenX, float screenY, out double longitude, out double latitude);
 }

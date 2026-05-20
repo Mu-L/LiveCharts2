@@ -241,6 +241,60 @@ public class GeoMapChart : Chart
         Update(new ChartUpdateParams { Throttling = false });
     }
 
+    /// <summary>
+    /// Projects (longitude, latitude) onto the chart's screen-space pixel
+    /// coordinates using the projector built by the last <see cref="Measure"/>
+    /// pass. Returns null when the coordinate isn't visible — e.g. the back
+    /// hemisphere on <see cref="MapProjection.Orthographic"/>. The
+    /// projection honors the current draw margin, title/legend reservations,
+    /// and orthographic rotation; pair with <see cref="Unproject"/> for the
+    /// inverse.
+    /// </summary>
+    public LvcPoint? Project(double longitude, double latitude)
+    {
+        var projector = GetOrBuildProjector();
+        if (!projector.IsVisible(longitude, latitude)) return null;
+        projector.ToMap(longitude, latitude, out var x, out var y);
+        return ApplyViewportTransform(new LvcPoint(x, y));
+    }
+
+    /// <summary>
+    /// Inverse of <see cref="Project"/> — converts a screen-space pixel back
+    /// to (longitude, latitude). Returns null when the pixel doesn't map to
+    /// a valid coordinate (e.g. a click outside the orthographic disc).
+    /// </summary>
+    public (double Longitude, double Latitude)? Unproject(LvcPoint screenPoint)
+    {
+        var projector = GetOrBuildProjector();
+        var unzoomed = InverseViewportTransform(screenPoint);
+        return projector.ToCoordinates(unzoomed.X, unzoomed.Y, out var lon, out var lat)
+            ? (lon, lat)
+            : null;
+    }
+
+    // The map applies a viewport transform on top of the projector's raw
+    // output to support pan/zoom (see ComputeLandScreenCenter /
+    // ComputeLandScreenBounds and MapFactory's _viewportTransform). Overlays
+    // need the same transform applied / inverted or they won't track pan/zoom.
+    private LvcPoint ApplyViewportTransform(LvcPoint baseCoord)
+    {
+        var ctrlCx = MapView.ControlSize.Width * 0.5f;
+        var ctrlCy = MapView.ControlSize.Height * 0.5f;
+        var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+        var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+        return new LvcPoint(baseCoord.X * _zoomLevel + tx, baseCoord.Y * _zoomLevel + ty);
+    }
+
+    private LvcPoint InverseViewportTransform(LvcPoint screenCoord)
+    {
+        var ctrlCx = MapView.ControlSize.Width * 0.5f;
+        var ctrlCy = MapView.ControlSize.Height * 0.5f;
+        var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+        var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+        var zoom = _zoomLevel == 0f ? 1f : _zoomLevel;
+        return new LvcPoint((screenCoord.X - tx) / zoom, (screenCoord.Y - ty) / zoom);
+    }
+
     private void OnCanvasValidatedForRotation(CoreMotionCanvas _)
     {
         if (_isUnloaded) return;
@@ -405,6 +459,13 @@ public class GeoMapChart : Chart
     /// <inheritdoc/>
     protected internal override void Measure()
     {
+        // Snapshot last frame's measured elements into _toDeleteElements; each
+        // AddVisual call below pulls its element out of the set. Anything
+        // still there at the bottom (CollectVisuals) gets removed from the
+        // canvas. Must run BEFORE AddTitleToChart / AddVisual so the title
+        // doesn't get marked for deletion every frame.
+        InitializeVisualsCollector();
+
         // GetTheme has the side effect of wiring Canvas._virtualBackgroundColor,
         // which platform views fall back to in IChartView.BackColor when no
         // native control Background is set. Without it, GPU mode (SKGLView on
@@ -555,6 +616,17 @@ public class GeoMapChart : Chart
             series.Measure(context);
             _ = _everMeasuredSeries.Add(series);
         }
+
+        // VisualElements on the geo map (GeoVisualElement for lat/lon-anchored
+        // overlays, plain VisualElement for pixel-positioned ones). Each
+        // visible one goes through AddVisual which removes the element from
+        // the to-delete set (set up at the top of Measure by
+        // InitializeVisualsCollector). CollectVisuals at the end drops any
+        // elements still in the to-delete set — i.e. ones removed from
+        // VisualElements between frames OR hidden by IsVisible=false.
+        foreach (var visual in (MapView.VisualElements ?? []).Where(static x => x.IsVisible))
+            AddVisual(visual);
+        CollectVisuals();
 
         if (_hoveredLand is not null && MapView.Tooltip is not null &&
             MapView.TooltipPosition != TooltipPosition.Hidden)

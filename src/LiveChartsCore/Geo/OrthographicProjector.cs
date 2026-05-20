@@ -132,4 +132,43 @@ public class OrthographicProjector : MapProjector
         x = (float)(_screenCenterX + px);
         y = (float)(_screenCenterY - py);
     }
+
+    /// <inheritdoc cref="MapProjector.ToCoordinates(float, float, out double, out double)"/>
+    public override bool ToCoordinates(float screenX, float screenY, out double longitude, out double latitude)
+    {
+        // Standard inverse orthographic (Snyder, USGS Map Projections):
+        // ρ = sqrt(px² + py²); reject pixels outside the disc rim. The
+        // visible hemisphere is two-to-one with the sphere (front only) so
+        // only the visible-side coordinates are recoverable.
+        double px = screenX - _screenCenterX;
+        double py = _screenCenterY - screenY;
+        var rho = Math.Sqrt(px * px + py * py);
+
+        if (rho > _radius)
+        {
+            longitude = 0;
+            latitude = 0;
+            return false;
+        }
+
+        if (rho < double.Epsilon)
+        {
+            // Globe center: looks straight at (centerLon, centerLat).
+            longitude = _centerLon;
+            latitude = _centerLat;
+            return true;
+        }
+
+        var sinC = rho / _radius;
+        var cosC = Math.Sqrt(1d - sinC * sinC);
+
+        var latRad = Math.Asin(cosC * _sinCenterLat + py * sinC * _cosCenterLat / rho);
+        var lonRad = Math.Atan2(
+            px * sinC,
+            rho * _cosCenterLat * cosC - py * _sinCenterLat * sinC);
+
+        latitude = latRad * 180d / Math.PI;
+        longitude = _centerLon + lonRad * 180d / Math.PI;
+        return true;
+    }
 }
