@@ -255,7 +255,7 @@ public class GeoMapChart : Chart
         var projector = GetOrBuildProjector();
         if (!projector.IsVisible(longitude, latitude)) return null;
         projector.ToMap(longitude, latitude, out var x, out var y);
-        return new LvcPoint(x, y);
+        return ApplyViewportTransform(new LvcPoint(x, y));
     }
 
     /// <summary>
@@ -266,9 +266,33 @@ public class GeoMapChart : Chart
     public (double Longitude, double Latitude)? Unproject(LvcPoint screenPoint)
     {
         var projector = GetOrBuildProjector();
-        return projector.ToCoordinates(screenPoint.X, screenPoint.Y, out var lon, out var lat)
+        var unzoomed = InverseViewportTransform(screenPoint);
+        return projector.ToCoordinates(unzoomed.X, unzoomed.Y, out var lon, out var lat)
             ? (lon, lat)
             : null;
+    }
+
+    // The map applies a viewport transform on top of the projector's raw
+    // output to support pan/zoom (see ComputeLandScreenCenter /
+    // ComputeLandScreenBounds and MapFactory's _viewportTransform). Overlays
+    // need the same transform applied / inverted or they won't track pan/zoom.
+    private LvcPoint ApplyViewportTransform(LvcPoint baseCoord)
+    {
+        var ctrlCx = MapView.ControlSize.Width * 0.5f;
+        var ctrlCy = MapView.ControlSize.Height * 0.5f;
+        var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+        var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+        return new LvcPoint(baseCoord.X * _zoomLevel + tx, baseCoord.Y * _zoomLevel + ty);
+    }
+
+    private LvcPoint InverseViewportTransform(LvcPoint screenCoord)
+    {
+        var ctrlCx = MapView.ControlSize.Width * 0.5f;
+        var ctrlCy = MapView.ControlSize.Height * 0.5f;
+        var tx = ctrlCx * (1 - _zoomLevel) + _panOffset.X;
+        var ty = ctrlCy * (1 - _zoomLevel) + _panOffset.Y;
+        var zoom = _zoomLevel == 0f ? 1f : _zoomLevel;
+        return new LvcPoint((screenCoord.X - tx) / zoom, (screenCoord.Y - ty) / zoom);
     }
 
     private void OnCanvasValidatedForRotation(CoreMotionCanvas _)
@@ -594,13 +618,13 @@ public class GeoMapChart : Chart
         }
 
         // VisualElements on the geo map (GeoVisualElement for lat/lon-anchored
-        // overlays, plain VisualElement for pixel-positioned ones). Each one
-        // goes through AddVisual which removes the element from the
-        // to-delete set (set up at the top of Measure by
+        // overlays, plain VisualElement for pixel-positioned ones). Each
+        // visible one goes through AddVisual which removes the element from
+        // the to-delete set (set up at the top of Measure by
         // InitializeVisualsCollector). CollectVisuals at the end drops any
         // elements still in the to-delete set — i.e. ones removed from
-        // VisualElements between frames.
-        foreach (var visual in MapView.VisualElements ?? [])
+        // VisualElements between frames OR hidden by IsVisible=false.
+        foreach (var visual in (MapView.VisualElements ?? []).Where(static x => x.IsVisible))
             AddVisual(visual);
         CollectVisuals();
 
