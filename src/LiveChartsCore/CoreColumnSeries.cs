@@ -40,7 +40,7 @@ namespace LiveChartsCore;
 /// <typeparam name="TLabel">the type of the label.</typeparam>
 /// <typeparam name="TErrorGeometry">The type of the error geometry.</typeparam>
 public abstract class CoreColumnSeries<TModel, TVisual, TLabel, TErrorGeometry>
-    : BarSeries<TModel, TVisual, TLabel>
+    : VerticalBarSeries<TModel, TVisual, TLabel, TErrorGeometry>
         where TVisual : BoundedDrawnGeometry, new()
         where TLabel : BaseLabelGeometry, new()
         where TErrorGeometry : BaseLineGeometry, new()
@@ -49,9 +49,8 @@ public abstract class CoreColumnSeries<TModel, TVisual, TLabel, TErrorGeometry>
     /// Initializes a new instance of the <see cref="CoreColumnSeries{TModel, TVisual, TLabel, TErrorGeometry}"/> class.
     /// </summary>
     protected CoreColumnSeries(IReadOnlyCollection<TModel>? values, bool isStacked = false)
-        : base(GetProperties(isStacked), values)
+        : base(values, isStacked)
     {
-        DataPadding = new LvcPoint(0, 1);
     }
 
     /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
@@ -341,68 +340,4 @@ public abstract class CoreColumnSeries<TModel, TVisual, TLabel, TErrorGeometry>
         _geometrySvgChanged = false;
     }
 
-    /// <inheritdoc cref="CartesianSeries{TModel, TVisual, TLabel}.GetRequestedSecondaryOffset"/>
-    protected override double GetRequestedSecondaryOffset() => 0.5f;
-
-    /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.SetDefaultPointTransitions(ChartPoint)"/>
-    protected override void SetDefaultPointTransitions(ChartPoint chartPoint)
-    {
-        var chart = chartPoint.Context.Chart;
-        if (chartPoint.Context.Visual is not TVisual visual) throw new Exception("Unable to initialize the point instance.");
-
-        var animation = GetAnimation(chart.CoreChart);
-
-        visual.Animate(animation);
-
-        if (chartPoint.Context.AdditionalVisuals is not null)
-        {
-            var e = (ErrorVisual<TErrorGeometry>)chartPoint.Context.AdditionalVisuals;
-            e.YError.Animate(animation);
-            e.XError.Animate(animation);
-        }
-    }
-
-    /// <inheritdoc cref="CartesianSeries{TModel, TVisual, TLabel}.SoftDeleteOrDisposePoint(ChartPoint, Scaler, Scaler)"/>
-    protected internal override void SoftDeleteOrDisposePoint(ChartPoint point, Scaler primaryScale, Scaler secondaryScale)
-    {
-        var visual = (TVisual?)point.Context.Visual;
-        if (visual is null) return;
-        if (DataFactory is null) throw new Exception("Data provider not found");
-
-        var p = primaryScale.ToPixels(pivot);
-        var secondary = secondaryScale.ToPixels(point.Coordinate.SecondaryValue);
-
-        visual.X = secondary - visual.Width * 0.5f;
-        visual.Y = p;
-        visual.Height = 0;
-        visual.RemoveOnCompleted = true;
-
-        if (point.Context.AdditionalVisuals is not null)
-        {
-            var e = (ErrorVisual<TErrorGeometry>)point.Context.AdditionalVisuals;
-
-            e.YError.Y = p;
-            e.YError.Y1 = p;
-            e.YError.RemoveOnCompleted = true;
-
-            e.XError.X = secondary - visual.Width * 0.5f;
-            e.XError.X1 = secondary - visual.Width * 0.5f;
-            e.XError.RemoveOnCompleted = true;
-        }
-
-        DataFactory.DisposePoint(point);
-
-        var label = (TLabel?)point.Context.Label;
-        if (label is null) return;
-
-        label.TextSize = 1;
-        label.RemoveOnCompleted = true;
-    }
-
-    private static SeriesProperties GetProperties(bool isStacked)
-    {
-        return SeriesProperties.Bar | SeriesProperties.PrimaryAxisVerticalOrientation |
-            SeriesProperties.Solid | SeriesProperties.PrefersXStrategyTooltips |
-            (isStacked ? SeriesProperties.Stacked : 0);
-    }
 }

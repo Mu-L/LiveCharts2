@@ -42,7 +42,7 @@ namespace LiveChartsCore;
 /// <seealso cref="BarSeries{TModel, TVisual, TLabel}" />
 /// <typeparam name="TErrorGeometry">The type of the error geometry.</typeparam>
 public abstract class CoreRowSeries<TModel, TVisual, TLabel, TErrorGeometry>
-    : BarSeries<TModel, TVisual, TLabel>
+    : HorizontalBarSeries<TModel, TVisual, TLabel, TErrorGeometry>
         where TVisual : BoundedDrawnGeometry, new()
         where TLabel : BaseLabelGeometry, new()
         where TErrorGeometry : BaseLineGeometry, new()
@@ -53,9 +53,8 @@ public abstract class CoreRowSeries<TModel, TVisual, TLabel, TErrorGeometry>
     /// <param name="isStacked">if set to <c>true</c> [is stacked].</param>
     /// <param name="values">The values.</param>
     public CoreRowSeries(IReadOnlyCollection<TModel>? values, bool isStacked = false)
-        : base(GetProperties(isStacked), values)
+        : base(values, isStacked)
     {
-        DataPadding = new LvcPoint(1, 0);
     }
 
     /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
@@ -347,123 +346,4 @@ public abstract class CoreRowSeries<TModel, TVisual, TLabel, TErrorGeometry>
         _geometrySvgChanged = false;
     }
 
-    /// <inheritdoc cref="CartesianSeries{TModel, TVisual, TLabel}.GetRequestedSecondaryOffset"/>
-    protected override double GetRequestedSecondaryOffset() => 0.5f;
-
-    /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.SetDefaultPointTransitions(ChartPoint)"/>
-    protected override void SetDefaultPointTransitions(ChartPoint chartPoint)
-    {
-        var chart = chartPoint.Context.Chart;
-        if (chartPoint.Context.Visual is not TVisual visual) throw new Exception("Unable to initialize the point instance.");
-
-        var animation = GetAnimation(chart.CoreChart);
-
-        visual.Animate(animation);
-
-        if (chartPoint.Context.AdditionalVisuals is not null)
-        {
-            var e = (ErrorVisual<TErrorGeometry>)chartPoint.Context.AdditionalVisuals;
-            e.YError.Animate(animation);
-            e.XError.Animate(animation);
-        }
-    }
-
-    /// <inheritdoc cref="CartesianSeries{TModel, TVisual, TLabel}.SoftDeleteOrDisposePoint(ChartPoint, Scaler, Scaler)"/>
-    protected internal override void SoftDeleteOrDisposePoint(ChartPoint point, Scaler primaryScale, Scaler secondaryScale)
-    {
-        var visual = (TVisual?)point.Context.Visual;
-        if (visual is null) return;
-        if (DataFactory is null) throw new Exception("Data provider not found");
-
-        var p = primaryScale.ToPixels(pivot);
-        var secondary = secondaryScale.ToPixels(point.Coordinate.SecondaryValue);
-
-        visual.X = p;
-        visual.Y = secondary - visual.Height * 0.5f;
-        visual.Width = 0;
-        visual.RemoveOnCompleted = true;
-
-        if (point.Context.AdditionalVisuals is not null)
-        {
-            var e = (ErrorVisual<TErrorGeometry>)point.Context.AdditionalVisuals;
-
-            e.YError.Y = secondary - visual.Height * 0.5f;
-            e.YError.Y1 = secondary - visual.Height * 0.5f;
-            e.YError.RemoveOnCompleted = true;
-
-            e.XError.X = p;
-            e.XError.X1 = p;
-            e.XError.RemoveOnCompleted = true;
-        }
-
-        DataFactory.DisposePoint(point);
-
-        var label = (TLabel?)point.Context.Label;
-        if (label is null) return;
-
-        label.TextSize = 1;
-        label.RemoveOnCompleted = true;
-    }
-
-    /// <inheritdoc cref="CartesianSeries{TModel, TVisual, TLabel}.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>
-    public override SeriesBounds GetBounds(Chart chart, ICartesianAxis secondaryAxis, ICartesianAxis primaryAxis)
-    {
-        var rawBounds = DataFactory.GetCartesianBounds(chart, this, primaryAxis, secondaryAxis);
-        if (rawBounds.HasData) return rawBounds;
-
-        var rawBaseBounds = rawBounds.Bounds;
-
-        var tickPrimary = primaryAxis.GetTick(chart.ControlSize, rawBaseBounds.VisibleSecondaryBounds);
-        var tickSecondary = secondaryAxis.GetTick(chart.ControlSize, rawBaseBounds.VisiblePrimaryBounds);
-
-        var ts = tickSecondary.Value * DataPadding.X;
-        var tp = tickPrimary.Value * DataPadding.Y;
-
-        var rgs = GetRequestedGeometrySize();
-        var rso = GetRequestedSecondaryOffset();
-        var rpo = GetRequestedPrimaryOffset();
-
-        var dimensionalBounds = new DimensionalBounds
-        {
-            SecondaryBounds = new Bounds
-            {
-                Max = rawBaseBounds.PrimaryBounds.Max + rpo * secondaryAxis.UnitWidth,
-                Min = rawBaseBounds.PrimaryBounds.Min - rpo * secondaryAxis.UnitWidth,
-                MinDelta = rawBaseBounds.PrimaryBounds.MinDelta,
-                PaddingMax = ts,
-                PaddingMin = ts,
-                RequestedGeometrySize = rgs
-            },
-            PrimaryBounds = new Bounds
-            {
-                Max = rawBaseBounds.SecondaryBounds.Max + rso * primaryAxis.UnitWidth,
-                Min = rawBaseBounds.SecondaryBounds.Min - rso * primaryAxis.UnitWidth,
-                MinDelta = rawBaseBounds.SecondaryBounds.MinDelta,
-                PaddingMax = tp,
-                PaddingMin = tp,
-                RequestedGeometrySize = rgs
-            },
-            VisibleSecondaryBounds = new Bounds
-            {
-                Max = rawBaseBounds.VisiblePrimaryBounds.Max + rpo * secondaryAxis.UnitWidth,
-                Min = rawBaseBounds.VisiblePrimaryBounds.Min - rpo * secondaryAxis.UnitWidth
-            },
-            VisiblePrimaryBounds = new Bounds
-            {
-                Max = rawBaseBounds.VisibleSecondaryBounds.Max + rso * primaryAxis.UnitWidth,
-                Min = rawBaseBounds.VisibleSecondaryBounds.Min - rso * primaryAxis.UnitWidth,
-            },
-            TertiaryBounds = rawBaseBounds.TertiaryBounds,
-            VisibleTertiaryBounds = rawBaseBounds.VisibleTertiaryBounds
-        };
-
-        return new SeriesBounds(dimensionalBounds, false);
-    }
-
-    private static SeriesProperties GetProperties(bool isStacked)
-    {
-        return SeriesProperties.Bar | SeriesProperties.PrimaryAxisHorizontalOrientation |
-              SeriesProperties.Solid | SeriesProperties.PrefersYStrategyTooltips |
-              (isStacked ? SeriesProperties.Stacked : 0);
-    }
 }
