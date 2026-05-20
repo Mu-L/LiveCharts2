@@ -170,6 +170,93 @@ public abstract class BarSeries<TModel, TVisual, TLabel>(
     /// </summary>
     protected abstract void CollapseEmptyVisual(ChartPoint point, in BarMeasureContext ctx);
 
+    /// <summary>
+    /// Sets the per-Z-index ordering on each non-default paint and registers it as a
+    /// drawable task on the chart's canvas (within the DrawMargin zone). Run once at
+    /// the top of <see cref="Invalidate"/>.
+    /// </summary>
+    private void InitializePaints(CartesianChartEngine chart)
+    {
+        var actualZIndex = ZIndex == 0 ? ((ISeries)this).SeriesId : ZIndex;
+        if (Fill is not null && Fill != Paint.Default)
+        {
+            Fill.ZIndex = actualZIndex + PaintConstants.SeriesFillZIndexOffset;
+            chart.Canvas.AddDrawableTask(Fill, zone: CanvasZone.DrawMargin);
+        }
+        if (Stroke is not null && Stroke != Paint.Default)
+        {
+            Stroke.ZIndex = actualZIndex + PaintConstants.SeriesStrokeZIndexOffset;
+            chart.Canvas.AddDrawableTask(Stroke, zone: CanvasZone.DrawMargin);
+        }
+        if (ShowError && ErrorPaint is not null && ErrorPaint != Paint.Default)
+        {
+            ErrorPaint.ZIndex = actualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
+            chart.Canvas.AddDrawableTask(ErrorPaint, zone: CanvasZone.DrawMargin);
+        }
+        if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
+        {
+            DataLabelsPaint.ZIndex = actualZIndex + PaintConstants.SeriesGeometryStrokeZIndexOffset;
+            chart.Canvas.AddDrawableTask(DataLabelsPaint, zone: CanvasZone.DrawMargin);
+        }
+    }
+
+    /// <summary>
+    /// Creates the data label visual if it doesn't exist yet (animation-sourced from
+    /// the visual's entry position), updates its text + style, and positions it via
+    /// <c>GetLabelPosition</c> with the bar's rect and the point's "above pivot" hint.
+    /// No-op when the series has no data-label paint configured.
+    /// </summary>
+    private void MeasureDataLabel(ChartPoint point, TVisual visual, in BarLayout layout, in BarMeasureContext ctx)
+    {
+        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default) return;
+
+        var chart = ctx.Chart;
+        var label = (TLabel?)point.Context.Label;
+
+        if (label is null)
+        {
+            var l = new TLabel
+            {
+                X = visual.X,
+                Y = visual.Y,
+                RotateTransform = (float)DataLabelsRotation,
+                MaxWidth = (float)DataLabelsMaxWidth
+            };
+            l.Animate(
+                GetAnimation(chart),
+                BaseLabelGeometry.XProperty,
+                BaseLabelGeometry.YProperty);
+            label = l;
+            point.Context.Label = l;
+        }
+
+        DataLabelsPaint.AddGeometryToPaintTask(chart.Canvas, label);
+
+        label.Text = DataLabelsFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
+        label.TextSize = ctx.DataLabelsSize;
+        label.Padding = DataLabelsPadding;
+        label.Paint = DataLabelsPaint;
+
+        if (ctx.IsFirstDraw)
+            label.CompleteTransition(
+                BaseLabelGeometry.TextSizeProperty,
+                BaseLabelGeometry.XProperty,
+                BaseLabelGeometry.YProperty,
+                BaseLabelGeometry.RotateTransformProperty);
+
+        var m = label.Measure();
+        var labelPosition = GetLabelPosition(
+            layout.X, layout.Y, layout.Width, layout.Height, m,
+            DataLabelsPosition, SeriesProperties,
+            point.Coordinate.PrimaryValue > Pivot, ctx.DrawLocation, ctx.DrawMarginSize);
+        if (DataLabelsTranslate is not null)
+            label.TranslateTransform = new LvcPoint(
+                m.Width * DataLabelsTranslate.Value.X, m.Height * DataLabelsTranslate.Value.Y);
+
+        label.X = labelPosition.X;
+        label.Y = labelPosition.Y;
+    }
+
     /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
     public sealed override void Invalidate(Chart chart)
     {
@@ -180,31 +267,10 @@ public abstract class BarSeries<TModel, TVisual, TLabel>(
         var ctx = BeginMeasure(cartesianChart, isStacked);
         var pointsCleanup = ChartPointCleanupContext.For(everFetched);
 
-        var actualZIndex = ZIndex == 0 ? ((ISeries)this).SeriesId : ZIndex;
-        if (Fill is not null && Fill != Paint.Default)
-        {
-            Fill.ZIndex = actualZIndex + PaintConstants.SeriesFillZIndexOffset;
-            cartesianChart.Canvas.AddDrawableTask(Fill, zone: CanvasZone.DrawMargin);
-        }
-        if (Stroke is not null && Stroke != Paint.Default)
-        {
-            Stroke.ZIndex = actualZIndex + PaintConstants.SeriesStrokeZIndexOffset;
-            cartesianChart.Canvas.AddDrawableTask(Stroke, zone: CanvasZone.DrawMargin);
-        }
-        if (ShowError && ErrorPaint is not null && ErrorPaint != Paint.Default)
-        {
-            ErrorPaint.ZIndex = actualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
-            cartesianChart.Canvas.AddDrawableTask(ErrorPaint, zone: CanvasZone.DrawMargin);
-        }
-        if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
-        {
-            DataLabelsPaint.ZIndex = actualZIndex + PaintConstants.SeriesGeometryStrokeZIndexOffset;
-            cartesianChart.Canvas.AddDrawableTask(DataLabelsPaint, zone: CanvasZone.DrawMargin);
-        }
+        InitializePaints(cartesianChart);
 
         var rx = ctx.Rx;
         var ry = ctx.Ry;
-        var dls = ctx.DataLabelsSize;
 
         foreach (var point in Fetch(cartesianChart))
         {
@@ -263,52 +329,7 @@ public abstract class BarSeries<TModel, TVisual, TLabel>(
 
             pointsCleanup.Clean(point);
 
-            if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
-            {
-                var label = (TLabel?)point.Context.Label;
-
-                if (label is null)
-                {
-                    var l = new TLabel
-                    {
-                        X = visual.X,
-                        Y = visual.Y,
-                        RotateTransform = (float)DataLabelsRotation,
-                        MaxWidth = (float)DataLabelsMaxWidth
-                    };
-                    l.Animate(
-                        GetAnimation(cartesianChart),
-                        BaseLabelGeometry.XProperty,
-                        BaseLabelGeometry.YProperty);
-                    label = l;
-                    point.Context.Label = l;
-                }
-
-                DataLabelsPaint.AddGeometryToPaintTask(cartesianChart.Canvas, label);
-
-                label.Text = DataLabelsFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
-                label.TextSize = dls;
-                label.Padding = DataLabelsPadding;
-                label.Paint = DataLabelsPaint;
-
-                if (ctx.IsFirstDraw)
-                    label.CompleteTransition(
-                        BaseLabelGeometry.TextSizeProperty,
-                        BaseLabelGeometry.XProperty,
-                        BaseLabelGeometry.YProperty,
-                        BaseLabelGeometry.RotateTransformProperty);
-
-                var m = label.Measure();
-                var labelPosition = GetLabelPosition(
-                    layout.X, layout.Y, layout.Width, layout.Height, m,
-                    DataLabelsPosition, SeriesProperties,
-                    point.Coordinate.PrimaryValue > Pivot, ctx.DrawLocation, ctx.DrawMarginSize);
-                if (DataLabelsTranslate is not null) label.TranslateTransform =
-                        new LvcPoint(m.Width * DataLabelsTranslate.Value.X, m.Height * DataLabelsTranslate.Value.Y);
-
-                label.X = labelPosition.X;
-                label.Y = labelPosition.Y;
-            }
+            MeasureDataLabel(point, visual, in layout, in ctx);
 
             OnPointMeasured(point);
         }
