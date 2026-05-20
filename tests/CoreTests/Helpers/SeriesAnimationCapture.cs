@@ -121,6 +121,26 @@ internal static class SeriesAnimationCapture
         public float A { get; }
     }
 
+    public readonly struct MapLandFrame
+    {
+        // GeoMap land shapes don't have meaningful X/Y/W/H — they're path-based
+        // BaseVectorGeometry instances. What animates is each land's Fill paint,
+        // specifically the R/G/B/A of the SolidColorPaint that HeatLandSeries
+        // assigns based on the land's value. Bytes stored as floats so the
+        // reflection-based serializer handles them uniformly.
+        public MapLandFrame(long timeMs, float r, float g, float b, float a)
+        {
+            TimeMs = timeMs;
+            R = r; G = g; B = b; A = a;
+        }
+
+        public long TimeMs { get; }
+        public float R { get; }
+        public float G { get; }
+        public float B { get; }
+        public float A { get; }
+    }
+
     public readonly struct PieFrame
     {
         public PieFrame(long timeMs, float x, float y, float width, float height,
