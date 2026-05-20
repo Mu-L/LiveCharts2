@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using LiveChartsCore.Drawing;
@@ -12,10 +15,18 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace CoreTests.Helpers;
 
 // Drives an SK chart's CoreChart.Measure() in a controlled-time loop and captures every
-// visible point's BoundedDrawnGeometry rect at each sample timestamp. Pattern modeled on
+// visible point's geometry state at each sample timestamp. Pattern modeled on
 // CoreObjectsTests.TransitionsTesting (which exercises raw RectangleGeometry) and
 // OtherTests.AnimationsSpeedPropagationTests.RuntimeAnimationsSpeedChange_Interpolates_AtNewSpeed
 // (which exercises a single visual property across a single transition).
+//
+// Two flavors of capture:
+//   - The default Frame captures X/Y/W/H from any BoundedDrawnGeometry (covers
+//     Bar/Line/StepLine/Scatter/Area/StepArea/Polar/Heat series — anything whose
+//     visual is a bounded rect or marker)
+//   - Specialized frames (CandlestickFrame, BoxFrame, PieFrame) capture additional
+//     motion properties unique to each visual: OHLC values for candlesticks, quartile
+//     values for boxes, arc parameters for pie slices
 //
 // Caller responsibility:
 //   - Build a chart with EasingFunctions.Lineal so interpolation is predictable
@@ -41,34 +52,115 @@ internal static class SeriesAnimationCapture
         public float Height { get; }
     }
 
+    public readonly struct CandlestickFrame
+    {
+        // BaseCandlestickGeometry extends DrawnGeometry (no Height) — the vertical
+        // extent is implicit between Y (high) and Low. Width is the body width.
+        public CandlestickFrame(long timeMs, float x, float y, float width,
+            float open, float close, float low)
+        {
+            TimeMs = timeMs;
+            X = x; Y = y; Width = width;
+            Open = open; Close = close; Low = low;
+        }
+
+        public long TimeMs { get; }
+        public float X { get; }
+        public float Y { get; }            // high (top of the candle)
+        public float Width { get; }
+        public float Open { get; }
+        public float Close { get; }
+        public float Low { get; }          // bottom wick
+    }
+
+    public readonly struct BoxFrame
+    {
+        // BaseBoxGeometry extends DrawnGeometry (no Height) — vertical extent is
+        // implicit between Y (max) and Min.
+        public BoxFrame(long timeMs, float x, float y, float width,
+            float third, float first, float min, float median)
+        {
+            TimeMs = timeMs;
+            X = x; Y = y; Width = width;
+            Third = third; First = first; Min = min; Median = median;
+        }
+
+        public long TimeMs { get; }
+        public float X { get; }
+        public float Y { get; }            // max (top whisker)
+        public float Width { get; }
+        public float Third { get; }        // third quartile
+        public float First { get; }        // first quartile
+        public float Min { get; }          // min (bottom whisker)
+        public float Median { get; }
+    }
+
+    public readonly struct PieFrame
+    {
+        public PieFrame(long timeMs, float x, float y, float width, float height,
+            float centerX, float centerY, float startAngle, float sweepAngle,
+            float pushOut, float innerRadius)
+        {
+            TimeMs = timeMs;
+            X = x; Y = y; Width = width; Height = height;
+            CenterX = centerX; CenterY = centerY;
+            StartAngle = startAngle; SweepAngle = sweepAngle;
+            PushOut = pushOut; InnerRadius = innerRadius;
+        }
+
+        public long TimeMs { get; }
+        public float X { get; }
+        public float Y { get; }
+        public float Width { get; }
+        public float Height { get; }
+        public float CenterX { get; }
+        public float CenterY { get; }
+        public float StartAngle { get; }
+        public float SweepAngle { get; }
+        public float PushOut { get; }
+        public float InnerRadius { get; }
+    }
+
+    // ---- capture -----------------------------------------------------------
+
     public static List<Frame[]> CaptureTrajectory(
         IEnumerable<ChartPoint> points,
         long startMs,
         long endMs,
         long stepMs)
     {
-        var pointList = points.ToList();
-        var trajectory = new List<Frame[]>();
+        return CaptureTrajectory(points, (t, p) =>
+        {
+            var v = (BoundedDrawnGeometry)p.Context.Visual!;
+            return new Frame(t, v.X, v.Y, v.Width, v.Height);
+        }, startMs, endMs, stepMs);
+    }
+
+    public static List<TFrame[]> CaptureTrajectory<TFrame>(
+        IEnumerable<ChartPoint> points,
+        Func<long, ChartPoint, TFrame> selector,
+        long startMs,
+        long endMs,
+        long stepMs)
+        where TFrame : struct
+    {
+        // Caller's selector picks the concrete geometry; we just filter null visuals.
+        var pointList = points.Where(p => p.Context.Visual is not null).ToList();
+        var trajectory = new List<TFrame[]>();
 
         for (var t = startMs; t <= endMs; t += stepMs)
         {
             CoreMotionCanvas.DebugElapsedMilliseconds = t;
 
-            var frame = pointList
-                .Where(p => p.Context.Visual is BoundedDrawnGeometry)
-                .Select(p =>
-                {
-                    var v = (BoundedDrawnGeometry)p.Context.Visual!;
-                    // Property getters interpolate to DebugElapsedMilliseconds when read.
-                    return new Frame(t, v.X, v.Y, v.Width, v.Height);
-                })
-                .ToArray();
-
+            // Property getters interpolate to DebugElapsedMilliseconds when read.
+            var frame = pointList.Select(p => selector(t, p)).ToArray();
             trajectory.Add(frame);
         }
 
         return trajectory;
     }
+
+    // ---- assertion ---------------------------------------------------------
 
     // Snapshot-style assertion: compares the captured trajectory against a JSON baseline
     // committed at tests/CoreTests/AnimationBaselines/{baselineName}.json. Mirrors the
@@ -76,15 +168,20 @@ internal static class SeriesAnimationCapture
     //   - First run with no baseline: writes the new trajectory to AnimationBaselinesNew/
     //     and fails with a "review and commit" message
     //   - Subsequent runs: deserializes the baseline and compares frame-by-frame within
-    //     `tolerance` pixels per dimension. On mismatch writes both [EXPECTED] and [RESULT]
-    //     to AnimationBaselinesDiff/ for inspection
+    //     `tolerance` per float dimension. On mismatch writes both [EXPECTED] and
+    //     [RESULT] to AnimationBaselinesDiff/ for inspection
     //
     // Re-baseline workflow: delete tests/CoreTests/AnimationBaselines/{baselineName}.json,
     // re-run the test, move the regenerated file from AnimationBaselinesNew/ back into place.
-    public static void AssertTrajectoryMatches(
-        List<Frame[]> trajectory,
+    //
+    // TFrame must be a struct with a `long TimeMs` property and any number of `float`
+    // properties — all float properties are serialized (lowercased + first-letter shortened
+    // to a JSON-friendly key) and compared with tolerance.
+    public static void AssertTrajectoryMatches<TFrame>(
+        List<TFrame[]> trajectory,
         string baselineName,
         float tolerance = 0.5f)
+        where TFrame : struct
     {
         var baseDir = AppContext.BaseDirectory;
         var baselineDir = Path.Combine(baseDir, "AnimationBaselines");
@@ -107,7 +204,7 @@ internal static class SeriesAnimationCapture
             return;
         }
 
-        var expected = Deserialize(File.ReadAllText(baselinePath));
+        var expected = Deserialize<TFrame>(File.ReadAllText(baselinePath));
 
         var mismatch = Compare(expected, trajectory, tolerance);
         if (mismatch is null) return;
@@ -121,9 +218,81 @@ internal static class SeriesAnimationCapture
             $"See AnimationBaselinesDiff/{baselineName}[EXPECTED|RESULT].json.");
     }
 
-    private static string Serialize(List<Frame[]> trajectory)
+    // ---- reflection-based ser/de/compare ----------------------------------
+
+    private readonly struct FrameSchema
     {
-        // Compact one-line-per-frame layout — easy to diff in PRs.
+        public FrameSchema(PropertyInfo timeMs, (string JsonKey, PropertyInfo Prop)[] floats, ConstructorInfo ctor, int[] ctorOrder)
+        {
+            TimeMs = timeMs;
+            Floats = floats;
+            Ctor = ctor;
+            CtorOrder = ctorOrder;
+        }
+
+        public PropertyInfo TimeMs { get; }
+        public (string JsonKey, PropertyInfo Prop)[] Floats { get; }
+        public ConstructorInfo Ctor { get; }
+        // CtorOrder[i] = index into Floats array for the i-th constructor parameter
+        // (after the leading TimeMs parameter). Allows reading JSON dimensions and
+        // passing them to the ctor in the right order.
+        public int[] CtorOrder { get; }
+    }
+
+    private static readonly ConcurrentDictionary<Type, FrameSchema> s_schemaCache = new();
+
+    private static FrameSchema GetSchema<TFrame>() where TFrame : struct
+    {
+        return s_schemaCache.GetOrAdd(typeof(TFrame), static t =>
+        {
+            var props = t.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+            var timeMs = props.FirstOrDefault(p => p.PropertyType == typeof(long) && p.Name == "TimeMs")
+                ?? throw new InvalidOperationException($"{t.Name} must have a 'long TimeMs' property");
+
+            var floatProps = props.Where(p => p.PropertyType == typeof(float)).ToArray();
+            // JSON key: PascalCase -> camelCase, with common abbreviations:
+            //   Width -> w, Height -> h, otherwise first letter lowercase.
+            var floats = floatProps
+                .Select(p => (JsonKey: AbbreviateKey(p.Name), Prop: p))
+                .ToArray();
+
+            // Match the constructor: TimeMs is param 0; remaining float params follow.
+            var ctor = t.GetConstructors().Single();
+            var ctorParams = ctor.GetParameters();
+            if (ctorParams.Length != 1 + floats.Length)
+                throw new InvalidOperationException(
+                    $"{t.Name} constructor must take (long timeMs, [float ...]) — got {ctorParams.Length} params");
+
+            var order = new int[floats.Length];
+            for (var i = 0; i < floats.Length; i++)
+            {
+                var paramName = ctorParams[i + 1].Name!;
+                var match = Array.FindIndex(floats, f => string.Equals(f.Prop.Name, paramName, StringComparison.OrdinalIgnoreCase));
+                if (match < 0)
+                    throw new InvalidOperationException(
+                        $"{t.Name}: constructor param '{paramName}' has no matching public property");
+                order[i] = match;
+            }
+
+            return new FrameSchema(timeMs, floats, ctor, order);
+        });
+    }
+
+    private static string AbbreviateKey(string propName)
+    {
+        return propName switch
+        {
+            "Width" => "w",
+            "Height" => "h",
+            "X" => "x",
+            "Y" => "y",
+            _ => char.ToLowerInvariant(propName[0]) + propName.Substring(1),
+        };
+    }
+
+    private static string Serialize<TFrame>(List<TFrame[]> trajectory) where TFrame : struct
+    {
+        var schema = GetSchema<TFrame>();
         var sb = new StringBuilder();
         _ = sb.Append('[');
         _ = sb.Append('\n');
@@ -135,13 +304,12 @@ internal static class SeriesAnimationCapture
             {
                 if (j > 0) _ = sb.Append(',');
                 var f = frame[j];
-                _ = sb.Append(
-                    "{\"t\":").Append(f.TimeMs)
-                    .Append(",\"x\":").Append(F(f.X))
-                    .Append(",\"y\":").Append(F(f.Y))
-                    .Append(",\"w\":").Append(F(f.Width))
-                    .Append(",\"h\":").Append(F(f.Height))
-                    .Append('}');
+                _ = sb.Append("{\"t\":").Append(schema.TimeMs.GetValue(f));
+                foreach (var (jsonKey, prop) in schema.Floats)
+                {
+                    _ = sb.Append(",\"").Append(jsonKey).Append("\":").Append(F((float)prop.GetValue(f)!));
+                }
+                _ = sb.Append('}');
             }
             _ = sb.Append(']');
             if (i < trajectory.Count - 1) _ = sb.Append(',');
@@ -151,32 +319,39 @@ internal static class SeriesAnimationCapture
         _ = sb.Append('\n');
         return sb.ToString();
 
-        static string F(float v) => v.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        static string F(float v) => v.ToString("0.00", CultureInfo.InvariantCulture);
     }
 
-    private static List<Frame[]> Deserialize(string json)
+    private static List<TFrame[]> Deserialize<TFrame>(string json) where TFrame : struct
     {
+        var schema = GetSchema<TFrame>();
         using var doc = JsonDocument.Parse(json);
-        var trajectory = new List<Frame[]>();
+        var trajectory = new List<TFrame[]>();
         foreach (var frameElement in doc.RootElement.EnumerateArray())
         {
-            var frame = new List<Frame>();
+            var frame = new List<TFrame>();
             foreach (var pointElement in frameElement.EnumerateArray())
             {
-                frame.Add(new Frame(
-                    pointElement.GetProperty("t").GetInt64(),
-                    pointElement.GetProperty("x").GetSingle(),
-                    pointElement.GetProperty("y").GetSingle(),
-                    pointElement.GetProperty("w").GetSingle(),
-                    pointElement.GetProperty("h").GetSingle()));
+                var timeMs = pointElement.GetProperty("t").GetInt64();
+                var values = new object?[1 + schema.Floats.Length];
+                values[0] = timeMs;
+                for (var i = 0; i < schema.Floats.Length; i++)
+                {
+                    var floatIdx = schema.CtorOrder[i];
+                    var jsonKey = schema.Floats[floatIdx].JsonKey;
+                    values[i + 1] = pointElement.GetProperty(jsonKey).GetSingle();
+                }
+                frame.Add((TFrame)schema.Ctor.Invoke(values));
             }
             trajectory.Add([.. frame]);
         }
         return trajectory;
     }
 
-    private static string? Compare(List<Frame[]> expected, List<Frame[]> actual, float tolerance)
+    private static string? Compare<TFrame>(List<TFrame[]> expected, List<TFrame[]> actual, float tolerance) where TFrame : struct
     {
+        var schema = GetSchema<TFrame>();
+
         if (expected.Count != actual.Count)
             return $"frame count {expected.Count} expected, got {actual.Count}";
 
@@ -189,17 +364,18 @@ internal static class SeriesAnimationCapture
 
             for (var j = 0; j < e.Length; j++)
             {
-                if (e[j].TimeMs != a[j].TimeMs)
-                    return $"frame {i} point {j}: TimeMs {e[j].TimeMs} expected, got {a[j].TimeMs}";
+                var eTime = (long)schema.TimeMs.GetValue(e[j])!;
+                var aTime = (long)schema.TimeMs.GetValue(a[j])!;
+                if (eTime != aTime)
+                    return $"frame {i} point {j}: TimeMs {eTime} expected, got {aTime}";
 
-                if (Math.Abs(e[j].X - a[j].X) > tolerance)
-                    return $"frame {i} (t={a[j].TimeMs}) point {j}: X expected {e[j].X}, got {a[j].X}";
-                if (Math.Abs(e[j].Y - a[j].Y) > tolerance)
-                    return $"frame {i} (t={a[j].TimeMs}) point {j}: Y expected {e[j].Y}, got {a[j].Y}";
-                if (Math.Abs(e[j].Width - a[j].Width) > tolerance)
-                    return $"frame {i} (t={a[j].TimeMs}) point {j}: Width expected {e[j].Width}, got {a[j].Width}";
-                if (Math.Abs(e[j].Height - a[j].Height) > tolerance)
-                    return $"frame {i} (t={a[j].TimeMs}) point {j}: Height expected {e[j].Height}, got {a[j].Height}";
+                foreach (var (jsonKey, prop) in schema.Floats)
+                {
+                    var ev = (float)prop.GetValue(e[j])!;
+                    var av = (float)prop.GetValue(a[j])!;
+                    if (Math.Abs(ev - av) > tolerance)
+                        return $"frame {i} (t={aTime}) point {j}: {prop.Name} expected {ev}, got {av}";
+                }
             }
         }
         return null;
