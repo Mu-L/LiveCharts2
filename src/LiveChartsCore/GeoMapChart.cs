@@ -435,6 +435,13 @@ public class GeoMapChart : Chart
     /// <inheritdoc/>
     protected internal override void Measure()
     {
+        // Snapshot last frame's measured elements into _toDeleteElements; each
+        // AddVisual call below pulls its element out of the set. Anything
+        // still there at the bottom (CollectVisuals) gets removed from the
+        // canvas. Must run BEFORE AddTitleToChart / AddVisual so the title
+        // doesn't get marked for deletion every frame.
+        InitializeVisualsCollector();
+
         // GetTheme has the side effect of wiring Canvas._virtualBackgroundColor,
         // which platform views fall back to in IChartView.BackColor when no
         // native control Background is set. Without it, GPU mode (SKGLView on
@@ -587,11 +594,12 @@ public class GeoMapChart : Chart
         }
 
         // VisualElements on the geo map (GeoVisualElement for lat/lon-anchored
-        // overlays, plain VisualElement for pixel-positioned ones). Mirrors
-        // the cartesian engine's pattern: snapshot the previous set at the
-        // top, mark each visible element as re-measured, then drop anything
-        // still in the to-delete set at the end.
-        InitializeVisualsCollector();
+        // overlays, plain VisualElement for pixel-positioned ones). Each one
+        // goes through AddVisual which removes the element from the
+        // to-delete set (set up at the top of Measure by
+        // InitializeVisualsCollector). CollectVisuals at the end drops any
+        // elements still in the to-delete set — i.e. ones removed from
+        // VisualElements between frames.
         foreach (var visual in MapView.VisualElements ?? [])
             AddVisual(visual);
         CollectVisuals();
