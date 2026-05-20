@@ -16,7 +16,8 @@ Crimea, Taiwan, Western Sahara, Kashmir, and other regions, and no
 single GeoJSON satisfies every audience. LiveCharts2 doesn't take a
 position; it just renders the GeoJSON you give it. If the borders
 shown don't match what you need, load a different GeoJSON — see the
-[Custom maps](custommaps) article for the recipe.
+[CustomMap sample]({{ website_url }}/docs/{{ platform }}/{{ version }}/samples.maps.customMap)
+for the loader recipe.
 :::
 
 {{~ if xaml ~}}
