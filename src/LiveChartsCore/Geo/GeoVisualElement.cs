@@ -79,14 +79,20 @@ public class GeoVisualElement : ChartElement
         Visual.X = pixel.Value.X;
         Visual.Y = pixel.Value.Y;
         Visual.Invalidate(chart);
+
+        // Chart.AddVisual normally calls RemoveOldPaints after Invalidate to
+        // drop paint tasks the visual no longer references (e.g. user swapped
+        // Fill from green to red — green paint stays on the canvas otherwise).
+        // The wrapped visual goes through our Invalidate, not AddVisual, so
+        // mirror that step explicitly.
+        Visual.RemoveOldPaints(chart.View);
     }
 
     /// <inheritdoc cref="ChartElement.RemoveFromUI(Chart)"/>
-    public override void RemoveFromUI(Chart chart)
-    {
-        Visual.RemoveFromUI(chart);
-        base.RemoveFromUI(chart);
-    }
+    // base.RemoveFromUI iterates GetPaintTasks() (which delegates to Visual),
+    // so calling Visual.RemoveFromUI is enough; the base call would double-
+    // remove the same paint tasks.
+    public override void RemoveFromUI(Chart chart) => Visual.RemoveFromUI(chart);
 
     /// <inheritdoc cref="ChartElement.GetPaintTasks"/>
     protected internal override Paint?[] GetPaintTasks() => Visual.GetPaintTasks();
