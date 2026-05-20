@@ -22,6 +22,12 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- Map asset for the CustomMap sample. Embedded so every platform
+       sample picks it up automatically without per-platform asset wiring. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Maps\CustomMap\mexico-states.geojson" />
+  </ItemGroup>
+
   <!--
   The next examples are not included in net462 because they use features not available in .Nfet framework
   -->
