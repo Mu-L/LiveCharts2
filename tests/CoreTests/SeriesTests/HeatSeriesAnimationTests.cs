@@ -1,27 +1,29 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Linq;
 using CoreTests.Helpers;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Kernel;
 using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoreTests.SeriesTests;
 
-// HeatSeries cell animation. Each WeightedPoint becomes a colored rectangle. The
-// rectangle position/size is what this harness captures — color interpolation is a
-// separate channel (not captured by BoundedDrawnGeometry X/Y/W/H) and is covered by
-// snapshot tests at the final frame.
+// HeatSeries animation. Per-cell rect dimensions are static — set once when the
+// visual is created and never animated. The animated quantity is each cell's
+// COLOR, which interpolates between two colors in the heat gradient based on the
+// point's weight. HeatFrame captures the R/G/B/A byte components (as floats) so
+// the JSON baseline pins the color trajectory.
 [TestClass]
 public class HeatSeriesAnimationTests
 {
     private const long AnimationMs = 1000;
     private const long StepMs = 100;
-    private const float Tolerance = 0.5f;
+    private const float ColorTolerance = 2f;
 
     private static void TriggerFirstMeasure(CartesianChartEngine core)
     {
@@ -31,8 +33,17 @@ public class HeatSeriesAnimationTests
         core.Measure();
     }
 
+    private static SeriesAnimationCapture.HeatFrame ReadHeatFrame(long t, ChartPoint p)
+    {
+        var v = (ColoredRectangleGeometry)p.Context.Visual!;
+        var c = v.Color;
+        return new SeriesAnimationCapture.HeatFrame(
+            t, v.X, v.Y, v.Width, v.Height,
+            c.R, c.G, c.B, c.A);
+    }
+
     [TestMethod]
-    public void HeatSeries_FirstDraw_CellsAppearAtMappedGridPositions()
+    public void HeatSeries_FirstDraw_CellColorsInterpolateAcrossGradient()
     {
         var series = new HeatSeries<WeightedPoint>
         {
@@ -61,20 +72,33 @@ public class HeatSeriesAnimationTests
         {
             TriggerFirstMeasure(core);
 
-            var traj = SeriesAnimationCapture.CaptureTrajectory(
-                series.everFetched, startMs: 0, endMs: AnimationMs, stepMs: StepMs);
+            var traj = SeriesAnimationCapture.CaptureTrajectory<SeriesAnimationCapture.HeatFrame>(
+                series.everFetched, ReadHeatFrame,
+                startMs: 0, endMs: AnimationMs, stepMs: StepMs);
 
+            Assert.AreEqual(11, traj.Count);
             Assert.AreEqual(4, traj[0].Length, "expected 4 heat cells");
 
-            // Final-frame cells fill their grid squares (W, H > 0).
-            var finalFrame = traj[traj.Count - 1];
-            foreach (var f in finalFrame)
+            // Rect dimensions are static across all frames (heat doesn't animate position).
+            for (var i = 0; i < traj[0].Length; i++)
             {
-                Assert.IsTrue(f.Width > 0, "cell has non-zero width at final frame");
-                Assert.IsTrue(f.Height > 0, "cell has non-zero height at final frame");
+                Assert.AreEqual(traj[0][i].X, traj[traj.Count - 1][i].X, 0.5f, $"cell {i} X must be static");
+                Assert.AreEqual(traj[0][i].Width, traj[traj.Count - 1][i].Width, 0.5f, $"cell {i} W must be static");
             }
 
-            SeriesAnimationCapture.AssertTrajectoryMatches(traj, "HeatSeries_FirstDraw");
+            // Color DOES animate — cells with different weights have different final colors.
+            // Cell 0 (weight=1, lowest) vs cell 3 (weight=9, highest) must end at distinct
+            // points in the gradient — at least one of R/G/B differs by more than tolerance.
+            var c0 = traj[traj.Count - 1][0];
+            var c3 = traj[traj.Count - 1][3];
+            var distinct =
+                Math.Abs(c0.R - c3.R) > ColorTolerance ||
+                Math.Abs(c0.G - c3.G) > ColorTolerance ||
+                Math.Abs(c0.B - c3.B) > ColorTolerance;
+            Assert.IsTrue(distinct,
+                $"weight=1 and weight=9 cells must end at distinct gradient colors (got {c0.R},{c0.G},{c0.B} vs {c3.R},{c3.G},{c3.B})");
+
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj, "HeatSeries_FirstDraw", tolerance: ColorTolerance);
         }
         finally
         {

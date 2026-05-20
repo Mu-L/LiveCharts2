@@ -95,6 +95,32 @@ internal static class SeriesAnimationCapture
         public float Median { get; }
     }
 
+    public readonly struct HeatFrame
+    {
+        // Heat cells: their rect dimensions are static (set once on creation, never
+        // animated). What DOES animate is the cell color via ColorMotionProperty —
+        // each byte of R/G/B/A interpolates between two colors in the heat gradient.
+        // Bytes are stored as floats so the same reflection-based serializer pipeline
+        // handles them.
+        public HeatFrame(long timeMs, float x, float y, float width, float height,
+            float r, float g, float b, float a)
+        {
+            TimeMs = timeMs;
+            X = x; Y = y; Width = width; Height = height;
+            R = r; G = g; B = b; A = a;
+        }
+
+        public long TimeMs { get; }
+        public float X { get; }
+        public float Y { get; }
+        public float Width { get; }
+        public float Height { get; }
+        public float R { get; }
+        public float G { get; }
+        public float B { get; }
+        public float A { get; }
+    }
+
     public readonly struct PieFrame
     {
         public PieFrame(long timeMs, float x, float y, float width, float height,

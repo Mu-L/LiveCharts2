@@ -283,6 +283,14 @@ public class BarSeriesAnimationTests
         }
     }
 
+    // The stacked-row baseline encodes negative Width values at intermediate and final
+    // frames (e.g. w=-123 in StackedRowSeries_FirstDraw_Layer1.json). That's intentional:
+    // CoreRowSeries' stacker branch stores the bar's RIGHT edge as X and grows backward
+    // via a negative Width — the rendered span is x..(x + width) where width < 0. Issue
+    // #2165 fixed the corresponding hover-area normalization (RectangleHoverArea now
+    // uses min/max); the geometry layer itself was left as-is. A refactor that
+    // "normalizes" to positive Width here will trip this baseline AND must also touch
+    // any downstream code that relies on the current convention.
     [TestMethod]
     public void StackedRowSeries_FirstDraw_StackedBarsGrowFromPivot()
     {
