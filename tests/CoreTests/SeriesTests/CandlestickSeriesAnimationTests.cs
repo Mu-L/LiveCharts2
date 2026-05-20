@@ -44,13 +44,18 @@ public class CandlestickSeriesAnimationTests
     [TestMethod]
     public void CandlestickSeries_FirstDraw_CandlesAppearWithOHLC()
     {
-        var series = new CandlesticksSeries<FinancialPoint>
+        // FinancialPointI uses the index as X (0, 1, 2). FinancialPoint uses
+        // DateTime.Ticks, which makes secondaryAxis.UnitWidth = 1 tick in chart
+        // coordinates — at ~600 chart-units across the data range, the per-candle
+        // pixel width rounds to 0.00 in the baseline and loses width-regression
+        // coverage. Index-based X keeps Width meaningful and stable.
+        var series = new CandlesticksSeries<FinancialPointI>
         {
             Values =
             [
-                new FinancialPoint(DateTime.Today.AddDays(0), high: 35, open: 25, close: 20, low: 15),
-                new FinancialPoint(DateTime.Today.AddDays(1), high: 30, open: 22, close: 28, low: 18),
-                new FinancialPoint(DateTime.Today.AddDays(2), high: 32, open: 27, close: 24, low: 19),
+                new FinancialPointI(high: 35, open: 25, close: 20, low: 15),
+                new FinancialPointI(high: 30, open: 22, close: 28, low: 18),
+                new FinancialPointI(high: 32, open: 27, close: 24, low: 19),
             ],
         };
         var chart = new SKCartesianChart
@@ -89,13 +94,13 @@ public class CandlestickSeriesAnimationTests
     [TestMethod]
     public void CandlestickSeries_DataChange_CandlesAnimateOHLCToNewValues()
     {
-        var values = new ObservableCollection<FinancialPoint>
+        var values = new ObservableCollection<FinancialPointI>
         {
-            new(DateTime.Today.AddDays(0), high: 35, open: 25, close: 20, low: 15),
-            new(DateTime.Today.AddDays(1), high: 30, open: 22, close: 28, low: 18),
-            new(DateTime.Today.AddDays(2), high: 32, open: 27, close: 24, low: 19),
+            new(high: 35, open: 25, close: 20, low: 15),
+            new(high: 30, open: 22, close: 28, low: 18),
+            new(high: 32, open: 27, close: 24, low: 19),
         };
-        var series = new CandlesticksSeries<FinancialPoint> { Values = values };
+        var series = new CandlesticksSeries<FinancialPointI> { Values = values };
         var chart = new SKCartesianChart
         {
             Width = 400,
@@ -116,9 +121,9 @@ public class CandlestickSeriesAnimationTests
             core.Measure();
 
             // Mutate every candle's OHLC.
-            values[0] = new FinancialPoint(DateTime.Today.AddDays(0), high: 38, open: 30, close: 36, low: 28);
-            values[1] = new FinancialPoint(DateTime.Today.AddDays(1), high: 25, open: 23, close: 18, low: 15);
-            values[2] = new FinancialPoint(DateTime.Today.AddDays(2), high: 33, open: 29, close: 31, low: 25);
+            values[0] = new FinancialPointI(high: 38, open: 30, close: 36, low: 28);
+            values[1] = new FinancialPointI(high: 25, open: 23, close: 18, low: 15);
+            values[2] = new FinancialPointI(high: 33, open: 29, close: 31, low: 25);
             var measureT = CoreMotionCanvas.DebugElapsedMilliseconds;
             core.Measure();
 
