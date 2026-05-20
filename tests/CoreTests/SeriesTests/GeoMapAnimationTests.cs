@@ -96,7 +96,7 @@ public class GeoMapAnimationTests
     }
 
     [TestMethod]
-    public void GeoMap_DataChange_LandColorsAnimateToNewGradientPositions()
+    public void GeoMap_DataChange_LandColorsJumpToNewGradientPositions()
     {
         // Initial values span the gradient so [Min,Max] is non-degenerate. The new
         // values keep the SAME [Min,Max] range so the gradient is identical, but every
