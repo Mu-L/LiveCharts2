@@ -243,4 +243,38 @@ public sealed class MapsTests
             Latitude = latitude,
         };
     }
+
+    // Two-frame snapshot pinning the VisualElements lifecycle. Frame 0
+    // shows two markers; frame 1 (after setting VisualElements = empty)
+    // must NOT show them — this exercises GeoMapChart.Measure's
+    // InitializeVisualsCollector → CollectVisuals path that drops elements
+    // removed from the collection between frames.
+    [TestMethod]
+    public void MarkersOnMap_RemovedBetweenFrames()
+    {
+        var chart = new SKGeoMap
+        {
+            Series = CreateHeatSeries(),
+            MapProjection = MapProjection.Mercator,
+            Width = 800,
+            Height = 600,
+            VisualElements = new IChartElement[]
+            {
+                CityMarker(-74.00,  40.71),  // New York
+                CityMarker(139.69,  35.69),  // Tokyo
+            },
+        };
+        // ExplicitDisposing keeps the chart alive between AssertSnapshotMatches
+        // calls — simulates a real app mutating VisualElements on the same
+        // chart instance (and exercises the CollectVisuals cleanup path on
+        // the second Measure).
+        chart.ExplicitDisposing = true;
+
+        // Frame 0: both markers present.
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(MarkersOnMap_RemovedBetweenFrames)}_0");
+
+        // Frame 1: removed from the collection — the canvas must drop them.
+        chart.VisualElements = [];
+        chart.AssertSnapshotMatches($"{nameof(MapsTests)}_{nameof(MarkersOnMap_RemovedBetweenFrames)}_1");
+    }
 }

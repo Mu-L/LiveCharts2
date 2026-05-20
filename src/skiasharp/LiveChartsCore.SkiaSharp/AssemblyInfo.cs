@@ -34,6 +34,7 @@ using System.Reflection;
 #else
 
 [assembly: InternalsVisibleTo("CoreTests")]
+[assembly: InternalsVisibleTo("SnapshotTests")]
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView")]
 [assembly: InternalsVisibleTo("LiveChartsCore.Behaviours")]
 [assembly: InternalsVisibleTo("LiveChartsCore.SkiaSharpView.WinForms")]
