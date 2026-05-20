@@ -37,32 +37,6 @@ public class BarSeriesAnimationTests
         core.Measure();
     }
 
-    private static void AssertLinearInterpolation(
-        System.Collections.Generic.List<SeriesAnimationCapture.Frame[]> traj,
-        System.Func<SeriesAnimationCapture.Frame, float> dimension,
-        string label)
-    {
-        var firstFrame = traj[0];
-        var finalFrame = traj[^1];
-        var trajectoryStart = firstFrame[0].TimeMs;
-
-        for (var frameIdx = 1; frameIdx < traj.Count - 1; frameIdx++)
-        {
-            var frame = traj[frameIdx];
-            var progress = (float)(frame[0].TimeMs - trajectoryStart) / AnimationMs;
-
-            for (var pointIdx = 0; pointIdx < frame.Length; pointIdx++)
-            {
-                var startValue = dimension(firstFrame[pointIdx]);
-                var endValue = dimension(finalFrame[pointIdx]);
-                var expected = startValue + progress * (endValue - startValue);
-                Assert.AreEqual(expected, dimension(frame[pointIdx]), Tolerance,
-                    $"{label}: at t={frame[pointIdx].TimeMs} (p={progress:F2}), point {pointIdx} " +
-                    $"expected≈{expected}, got {dimension(frame[pointIdx])}");
-            }
-        }
-    }
-
     [TestMethod]
     public void ColumnSeries_FirstDraw_BarsGrowFromPivotToFinalHeight()
     {
@@ -99,8 +73,7 @@ public class BarSeriesAnimationTests
             Assert.IsTrue(finalFrame[0].Height < finalFrame[1].Height);
             Assert.IsTrue(finalFrame[1].Height < finalFrame[2].Height);
 
-            AssertLinearInterpolation(traj, f => f.Height, "column-first-draw-height");
-            AssertLinearInterpolation(traj, f => f.Y, "column-first-draw-Y");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj, "ColumnSeries_FirstDraw");
         }
         finally
         {
@@ -159,8 +132,7 @@ public class BarSeriesAnimationTests
             Assert.IsTrue(finalFrame[1].Height < stableHeights[1], "value 20→5 should shrink bar");
             Assert.IsTrue(finalFrame[2].Height < stableHeights[2], "value 30→15 should shrink bar");
 
-            AssertLinearInterpolation(traj, f => f.Height, "column-data-change-height");
-            AssertLinearInterpolation(traj, f => f.Y, "column-data-change-Y");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj, "ColumnSeries_DataChange");
         }
         finally
         {
@@ -204,8 +176,7 @@ public class BarSeriesAnimationTests
             Assert.IsTrue(finalFrame[0].Width < finalFrame[1].Width);
             Assert.IsTrue(finalFrame[1].Width < finalFrame[2].Width);
 
-            AssertLinearInterpolation(traj, f => f.Width, "row-first-draw-width");
-            AssertLinearInterpolation(traj, f => f.X, "row-first-draw-X");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj, "RowSeries_FirstDraw");
         }
         finally
         {
@@ -259,8 +230,7 @@ public class BarSeriesAnimationTests
             Assert.IsTrue(finalFrame[1].Width < stableWidths[1]);
             Assert.IsTrue(finalFrame[2].Width < stableWidths[2]);
 
-            AssertLinearInterpolation(traj, f => f.Width, "row-data-change-width");
-            AssertLinearInterpolation(traj, f => f.X, "row-data-change-X");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj, "RowSeries_DataChange");
         }
         finally
         {
@@ -304,8 +274,8 @@ public class BarSeriesAnimationTests
                 Assert.IsTrue(s2Final[i].Y < s1Final[i].Y,
                     $"stacked: s2 must sit above s1 at column {i}");
 
-            AssertLinearInterpolation(traj1, f => f.Height, "stacked-col-s1-height");
-            AssertLinearInterpolation(traj2, f => f.Height, "stacked-col-s2-height");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj1, "StackedColumnSeries_FirstDraw_Layer1");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj2, "StackedColumnSeries_FirstDraw_Layer2");
         }
         finally
         {
@@ -349,8 +319,8 @@ public class BarSeriesAnimationTests
                 Assert.IsTrue(s2Final[i].X > s1Final[i].X,
                     $"stacked: s2 must sit right-of s1 at row {i}");
 
-            AssertLinearInterpolation(traj1, f => f.Width, "stacked-row-s1-width");
-            AssertLinearInterpolation(traj2, f => f.Width, "stacked-row-s2-width");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj1, "StackedRowSeries_FirstDraw_Layer1");
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj2, "StackedRowSeries_FirstDraw_Layer2");
         }
         finally
         {
