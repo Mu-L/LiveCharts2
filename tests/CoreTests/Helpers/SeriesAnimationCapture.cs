@@ -141,6 +141,33 @@ internal static class SeriesAnimationCapture
         public float A { get; }
     }
 
+    public readonly struct AxisFrame
+    {
+        // Captures the per-separator state of an axis: the separator line endpoints
+        // (X..X1, Y..Y1 all animatable) and the label's position + text size. A "missing"
+        // visual (e.g. SeparatorsPaint=null on the axis) is encoded with zeros; the
+        // baseline pins the actual configured visuals — change the axis to add/remove a
+        // paint and you've changed the contract, so re-baseline deliberately.
+        public AxisFrame(long timeMs,
+            float separatorX, float separatorY, float separatorX1, float separatorY1,
+            float labelX, float labelY, float labelTextSize)
+        {
+            TimeMs = timeMs;
+            SeparatorX = separatorX; SeparatorY = separatorY;
+            SeparatorX1 = separatorX1; SeparatorY1 = separatorY1;
+            LabelX = labelX; LabelY = labelY; LabelTextSize = labelTextSize;
+        }
+
+        public long TimeMs { get; }
+        public float SeparatorX { get; }
+        public float SeparatorY { get; }
+        public float SeparatorX1 { get; }
+        public float SeparatorY1 { get; }
+        public float LabelX { get; }
+        public float LabelY { get; }
+        public float LabelTextSize { get; }
+    }
+
     public readonly struct PieFrame
     {
         public PieFrame(long timeMs, float x, float y, float width, float height,
@@ -200,6 +227,55 @@ internal static class SeriesAnimationCapture
 
             // Property getters interpolate to DebugElapsedMilliseconds when read.
             var frame = pointList.Select(p => selector(t, p)).ToArray();
+            trajectory.Add(frame);
+        }
+
+        return trajectory;
+    }
+
+    // Walks the axis's per-chart active-separator dictionary at each timestamp and
+    // captures separator line endpoints + label position. The separator dictionary is
+    // keyed by the formatted value (e.g. "10", "20"); we iterate in insertion order so
+    // the per-frame array shape is stable across timestamps. Caller is responsible for
+    // fixing MinLimit/MaxLimit so the active-separator set doesn't churn between
+    // measures.
+    public static List<AxisFrame[]> CaptureAxisTrajectory(
+        LiveChartsCore.SkiaSharpView.Axis axis,
+        LiveChartsCore.Chart chart,
+        long startMs,
+        long endMs,
+        long stepMs)
+    {
+        if (!axis.activeSeparators.TryGetValue(chart, out var separators))
+            throw new InvalidOperationException(
+                "Axis has no active separators for this chart — has the chart been measured at least once?");
+
+        // Snapshot key order so per-frame arrays line up.
+        var keys = separators.Keys.ToArray();
+
+        var trajectory = new List<AxisFrame[]>();
+
+        for (var t = startMs; t <= endMs; t += stepMs)
+        {
+            CoreMotionCanvas.DebugElapsedMilliseconds = t;
+
+            var frame = new AxisFrame[keys.Length];
+            for (var i = 0; i < keys.Length; i++)
+            {
+                var sep = separators[keys[i]];
+                var s = sep.Separator;
+                var l = sep.Label;
+
+                frame[i] = new AxisFrame(
+                    timeMs: t,
+                    separatorX: s?.X ?? 0f,
+                    separatorY: s?.Y ?? 0f,
+                    separatorX1: s?.X1 ?? 0f,
+                    separatorY1: s?.Y1 ?? 0f,
+                    labelX: l?.X ?? 0f,
+                    labelY: l?.Y ?? 0f,
+                    labelTextSize: l?.TextSize ?? 0f);
+            }
             trajectory.Add(frame);
         }
 
