@@ -67,7 +67,13 @@ public partial class SourceGenSKMapChart : InMemorySkiaSharpChart, IGeoMapView
         CoreCanvas.DisableAnimations = true;
         CoreChart.Measure();
         CoreCanvas.DrawFrame(new SkiaSharpDrawingContext(CoreCanvas, canvas, Background));
-        CoreChart.Unload();
+        // Match InMemorySkiaSharpChart.DrawOnCanvas: callers managing the
+        // chart lifecycle themselves (ExplicitDisposing = true) take over
+        // disposal. Without this guard, every snapshot/render of an SKGeoMap
+        // would null out _heatPaint via Unload, breaking any multi-frame
+        // scenario on the same chart instance.
+        if (!ExplicitDisposing)
+            CoreChart.Unload();
     }
 
     void IChartView.InvokeOnUIThread(Action action) =>
