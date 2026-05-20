@@ -229,12 +229,18 @@ internal static class SeriesAnimationCapture
         float tolerance = 0.5f)
         where TFrame : struct
     {
+        // Sanitize the caller-supplied stem so it can only contribute a file-name
+        // segment to subsequent Path.Combine calls — guards against the (test-only)
+        // case of a rooted/path-shaped baselineName silently dropping the diff/new
+        // directory prefix. Path.GetFileName strips any directory parts.
+        var safeStem = Path.GetFileName(baselineName);
+
         var baseDir = AppContext.BaseDirectory;
         var baselineDir = Path.Combine(baseDir, "AnimationBaselines");
         var newDir = Path.Combine(baseDir, "AnimationBaselinesNew");
         var diffDir = Path.Combine(baseDir, "AnimationBaselinesDiff");
-        var baselinePath = Path.Combine(baselineDir, $"{baselineName}.json");
-        var newPath = Path.Combine(newDir, $"{baselineName}.json");
+        var baselinePath = Path.Combine(baselineDir, $"{safeStem}.json");
+        var newPath = Path.Combine(newDir, $"{safeStem}.json");
 
         _ = Directory.CreateDirectory(newDir);
 
@@ -256,8 +262,8 @@ internal static class SeriesAnimationCapture
         if (mismatch is null) return;
 
         _ = Directory.CreateDirectory(diffDir);
-        File.Copy(baselinePath, Path.Combine(diffDir, $"{baselineName}[EXPECTED].json"), overwrite: true);
-        File.Copy(newPath, Path.Combine(diffDir, $"{baselineName}[RESULT].json"), overwrite: true);
+        File.Copy(baselinePath, Path.Combine(diffDir, $"{safeStem}[EXPECTED].json"), overwrite: true);
+        File.Copy(newPath, Path.Combine(diffDir, $"{safeStem}[RESULT].json"), overwrite: true);
 
         Assert.Fail(
             $"Trajectory '{baselineName}' diverges from baseline: {mismatch}. " +
