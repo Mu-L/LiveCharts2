@@ -130,6 +130,7 @@ public static class Index
 
         "Maps/World",
         "Maps/OrthographicWorld",
+        "Maps/RotatingOrthographic",
         "Maps/CustomMap",
         "Maps/MarkersOnMap"
     ];
