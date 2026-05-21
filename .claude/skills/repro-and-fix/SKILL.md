@@ -256,6 +256,26 @@ Test choice depends on the bug nature:
   assert. Gate by `#if <PLATFORM>_UI_TESTING` if platform-specific (most
   XAML-platform-quirk bugs are).
 - **Pixel-perfect rendering**: snapshot test in `tests/SnapshotTests/`.
+- **Animation trajectory** (the bug is in per-frame interpolation, not the
+  final value — a bar pops to target instead of growing, a slice doesn't
+  sweep, a transition runs at the wrong speed, a refactor risks changing the
+  motion shape of an existing series): JSON animation baseline under
+  `tests/CoreTests/AnimationBaselines/` driven by
+  `tests/CoreTests/Helpers/SeriesAnimationCapture.cs`. The helper steps
+  `CoreMotionCanvas.DebugElapsedMilliseconds`, captures the visual's geometry
+  at each sample timestamp, and `AssertTrajectoryMatches` compares the
+  trajectory to a committed `.json`. First run writes the new trajectory to
+  `AnimationBaselinesNew/` and fails with a "review and commit" message —
+  inspect the file, then move it into `AnimationBaselines/`. Re-baseline the
+  same way: delete the JSON, re-run, move from `New/` back. On mismatch the
+  helper also drops `[EXPECTED]`/`[RESULT]` files into
+  `AnimationBaselinesDiff/` so you can diff them directly. Caller must use
+  `EasingFunctions.Lineal` + fixed `MinLimit`/`MaxLimit` so interpolation is
+  deterministic; the existing `tests/CoreTests/SeriesTests/*AnimationTests.cs`
+  files are the templates. Prefer this over a plain MSTest whenever the
+  observable is "how the value changes between two states" — a single
+  before/after assertion can't catch a regression that only mis-paints the
+  intermediate frames.
 - **Pure C# logic** (chart engine, motion, math): MSTest in
   `tests/CoreTests/`.
 
