@@ -188,16 +188,20 @@ public abstract class HorizontalBarSeries<TModel, TVisual, TLabel, TErrorGeometr
         var previousPrimaryScale = primaryAxis.GetActualScaler(chart);
         var previousSecondaryScale = secondaryAxis.GetActualScaler(chart);
 
-        // Helper.axis is passed primaryAxis (value axis) to preserve the original
-        // CoreRowSeries behavior bit-for-bit — the axis parameter only contributes
-        // its UnitWidth (default 1), so this matters only when the value axis
-        // carries a non-default UnitWidth.
+        // BarMeasureHelper computes the bar's row height as
+        //   scaler.MeasureInPixels(axis.UnitWidth)
+        // so the (scaler, axis) pair must be the SAME axis — the category axis,
+        // which for horizontal bars is secondaryAxis (Y). The original CoreRowSeries
+        // passed primaryAxis here, which appeared to work only because the typical
+        // value axis ships with UnitWidth = 1 — RangeRowSeries with a DateTimeAxis
+        // (UnitWidth = unit.Ticks) immediately exposes the bug as a sky-high helper.uw
+        // value that wrecks bar geometry, hover areas, and tooltip positioning.
         var helper = new BarMeasureHelper(
-            secondaryScale, chart, this, primaryAxis, primaryScale.ToPixels(pivot),
+            secondaryScale, chart, this, secondaryAxis, primaryScale.ToPixels(pivot),
             chart.DrawMarginLocation.X,
             chart.DrawMarginLocation.X + chart.DrawMarginSize.Width, isStacked, isRow: true);
         var pHelper = new BarMeasureHelper(
-            previousSecondaryScale, chart, this, primaryAxis, previousPrimaryScale.ToPixels(pivot),
+            previousSecondaryScale, chart, this, secondaryAxis, previousPrimaryScale.ToPixels(pivot),
             chart.DrawMarginLocation.X,
             chart.DrawMarginLocation.X + chart.DrawMarginSize.Width, isStacked, isRow: true);
 
