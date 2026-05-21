@@ -454,6 +454,59 @@ public class SeriesHitTests
         Assert.IsTrue(ha.IsPointerOver(new LvcPoint(20, 30), FindingStrategy.CompareAll), "interior");
     }
 
+    // --- SemicircleHoverArea distance contract ---------------------------
+    // Pins that DistanceTo measures from the slice midpoint anchored at
+    // (CenterX, CenterY) — pre-fix it ignored center and computed against
+    // a phantom point around the origin, breaking TakeClosest ordering.
+
+    [TestMethod]
+    public void SemicircleHoverArea_DistanceTo_AtSliceMidpoint_IsNearZero()
+    {
+        // First quadrant slice (0° to 90°), inner=0, outer=Radius/2.
+        // Mid-radius = (0 + 100/2) / 2 = 25. Mid-angle = 45°.
+        var ha = new SemicircleHoverArea
+        {
+            CenterX = 500,
+            CenterY = 500,
+            StartAngle = 0,
+            EndAngle = 90,
+            InnerRadius = 0,
+            Radius = 100,
+        };
+
+        var rad = 45 * Math.PI / 180;
+        var midX = (float)(500 + 25 * Math.Cos(rad));
+        var midY = (float)(500 + 25 * Math.Sin(rad));
+
+        var d = ha.DistanceTo(new LvcPoint(midX, midY), FindingStrategy.CompareAllTakeClosest);
+
+        Assert.IsTrue(d < 0.001,
+            $"DistanceTo must be ~0 at the slice midpoint; got {d}. " +
+            "If this asserts again, DistanceTo dropped the CenterX/CenterY translation.");
+    }
+
+    [TestMethod]
+    public void SemicircleHoverArea_DistanceTo_AtPieCenter_EqualsMidRadius()
+    {
+        // A probe at the pie center must be exactly mid-radius away from any
+        // slice's midpoint (regardless of which slice — they all share the
+        // same mid-radius for a given InnerRadius/Radius pair).
+        var ha = new SemicircleHoverArea
+        {
+            CenterX = 500,
+            CenterY = 500,
+            StartAngle = 30,
+            EndAngle = 70,
+            InnerRadius = 20,
+            Radius = 200,
+        };
+
+        var d = ha.DistanceTo(new LvcPoint(500, 500), FindingStrategy.CompareAllTakeClosest);
+
+        var midRadius = (20 + 200 * 0.5f) * 0.5; // 60
+        Assert.AreEqual(midRadius, d, 0.001);
+    }
+
     // --- helpers ---------------------------------------------------------
 
     private static SKCartesianChart NewCartesianChart(ISeries series) =>
