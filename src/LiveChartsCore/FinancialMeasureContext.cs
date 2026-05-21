@@ -45,6 +45,7 @@ public readonly ref struct FinancialMeasureContext
         float candleWidth,
         float previousCandleWidth,
         float halfCandleWidth,
+        float categoryWidth,
         TooltipPosition tooltipPosition,
         bool isFirstDraw,
         LvcPoint drawLocation,
@@ -61,6 +62,7 @@ public readonly ref struct FinancialMeasureContext
         CandleWidth = candleWidth;
         PreviousCandleWidth = previousCandleWidth;
         HalfCandleWidth = halfCandleWidth;
+        CategoryWidth = categoryWidth;
         TooltipPosition = tooltipPosition;
         IsFirstDraw = isFirstDraw;
         DrawLocation = drawLocation;
@@ -88,6 +90,8 @@ public readonly ref struct FinancialMeasureContext
     public float PreviousCandleWidth { get; }
     /// <summary>Half the candle width (precomputed centering offset).</summary>
     public float HalfCandleWidth { get; }
+    /// <summary>Axis-unit slot width in pixels (unclamped by MaxBarWidth). Used for the category-wide hover area.</summary>
+    public float CategoryWidth { get; }
     /// <summary>Tooltip anchor position resolved from the chart at the start of measure.</summary>
     public TooltipPosition TooltipPosition { get; }
     /// <summary>True if this is the first draw of the series.</summary>

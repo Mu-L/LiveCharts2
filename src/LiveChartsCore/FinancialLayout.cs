@@ -42,7 +42,12 @@ public readonly struct FinancialLayout
     /// space — where lower Y means higher value — this is <c>open > close</c>.
     /// Drives which paint pair (Up* vs Down*) the visual attaches to.
     /// </param>
-    public FinancialLayout(float x, float y, float width, float open, float close, float low, bool isBullish)
+    /// <param name="categoryHoverX">Category-wide hover rect X (centered on the category, ignores MaxBarWidth clamp).</param>
+    /// <param name="categoryHoverWidth">Category-wide hover rect width (axis unit-width, not clamped to MaxBarWidth).</param>
+    public FinancialLayout(
+        float x, float y, float width,
+        float open, float close, float low, bool isBullish,
+        float categoryHoverX, float categoryHoverWidth)
     {
         X = x;
         Y = y;
@@ -51,6 +56,8 @@ public readonly struct FinancialLayout
         Close = close;
         Low = low;
         IsBullish = isBullish;
+        CategoryHoverX = categoryHoverX;
+        CategoryHoverWidth = categoryHoverWidth;
     }
 
     /// <summary>Body left edge.</summary>
@@ -67,6 +74,10 @@ public readonly struct FinancialLayout
     public float Low { get; }
     /// <summary>True when the close value is greater than the open value.</summary>
     public bool IsBullish { get; }
+    /// <summary>Category-wide hover-area top-left X (centered on the category, ignores MaxBarWidth clamp).</summary>
+    public float CategoryHoverX { get; }
+    /// <summary>Category-wide hover-area width (axis unit-width, used when FindingStrategy != ExactMatch).</summary>
+    public float CategoryHoverWidth { get; }
 
     /// <summary>Total vertical extent in pixels (Low - Y, since Y axis grows down).</summary>
     public float Height => Low - Y;
