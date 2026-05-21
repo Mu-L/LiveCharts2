@@ -50,6 +50,18 @@ public partial class XamlRowSeries<TModel, TVisual, TLabel> : XamlSeries, IBarSe
     where TLabel : BaseLabelGeometry, new()
 { }
 
+[XamlClass(typeof(RangeColumnSeries<,,>), TVisual = typeof(RoundedRectangleGeometry))]
+public partial class XamlRangeColumnSeries<TModel, TVisual, TLabel> : XamlSeries, IBarSeries, IInternalSeries
+    where TVisual : BoundedDrawnGeometry, new()
+    where TLabel : BaseLabelGeometry, new()
+{ }
+
+[XamlClass(typeof(RangeRowSeries<,,>), TVisual = typeof(RoundedRectangleGeometry))]
+public partial class XamlRangeRowSeries<TModel, TVisual, TLabel> : XamlSeries, IBarSeries, IInternalSeries
+    where TVisual : BoundedDrawnGeometry, new()
+    where TLabel : BaseLabelGeometry, new()
+{ }
+
 [XamlClass(typeof(LineSeries<,,>), TVisual = typeof(CircleGeometry))]
 public partial class XamlLineSeries<TModel, TVisual, TLabel> : XamlSeries, ILineSeries, IInternalSeries
     where TVisual : BoundedDrawnGeometry, new()
