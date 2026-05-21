@@ -1,6 +1,4 @@
 using System;
-using System.Collections.ObjectModel;
-using System.Linq;
 using CoreTests.Helpers;
 using LiveChartsCore;
 using LiveChartsCore.Motion;
