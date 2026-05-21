@@ -1,55 +1,12 @@
 @page "/Bars/Gantt"
 @using LiveChartsCore.SkiaSharpView.Blazor
-@using LiveChartsCore;
-@using LiveChartsCore.SkiaSharpView;
-@using LiveChartsCore.Defaults;
 
 <CartesianChart
-    Series="@series"
-    XAxes="@xAxes"
-    YAxes="@yAxes">
+    Series="@vm.Series"
+    XAxes="@vm.XAxes"
+    YAxes="@vm.YAxes">
 </CartesianChart>
 
 @code {
-    // Each RangeValue is one task spanning [start day, end day]; the Y axis
-    // Labels array supplies the task names. Both arrays must have the same
-    // length so each bar lines up with its label.
-    private static RangeValue[] tasks =
-    [
-        new(0,  5),   // Design
-        new(3,  8),   // Backend API
-        new(5, 12),   // Frontend
-        new(7, 14),   // Integration
-        new(10, 18),  // Testing
-        new(14, 20),  // Deploy
-    ];
-
-    private static string[] taskNames =
-    [
-        "Design",
-        "Backend API",
-        "Frontend",
-        "Integration",
-        "Testing",
-        "Deploy",
-    ];
-
-    private ISeries[] series =
-    [
-        new RangeRowSeries<RangeValue>
-        {
-            Name = "Project",
-            Values = tasks,
-        },
-    ];
-
-    private Axis[] xAxes =
-    [
-        new Axis { Name = "Day", MinLimit = 0 },
-    ];
-
-    private Axis[] yAxes =
-    [
-        new Axis { Labels = taskNames },
-    ];
+    private readonly ViewModelsSamples.Bars.Gantt.ViewModel vm = new();
 }

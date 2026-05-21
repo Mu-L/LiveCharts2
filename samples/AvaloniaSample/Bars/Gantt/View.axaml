@@ -10,19 +10,8 @@
         <vms:ViewModel/>
     </UserControl.DataContext>
 
-    <lvc:CartesianChart>
-        <lvc:CartesianChart.Series>
-            <lvc:XamlRangeRowSeries
-                Values="{Binding Tasks}"
-                SeriesName="Project"/>
-        </lvc:CartesianChart.Series>
-
-        <lvc:CartesianChart.XAxes>
-            <lvc:XamlAxis AxisName="Day" MinLimit="0"/>
-        </lvc:CartesianChart.XAxes>
-
-        <lvc:CartesianChart.YAxes>
-            <lvc:XamlAxis Labels="{Binding TaskNames}"/>
-        </lvc:CartesianChart.YAxes>
-    </lvc:CartesianChart>
+    <lvc:CartesianChart
+        Series="{Binding Series}"
+        XAxes="{Binding XAxes}"
+        YAxes="{Binding YAxes}"/>
 </UserControl>
