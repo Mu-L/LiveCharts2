@@ -522,22 +522,27 @@ public abstract class CoreStepLineSeries<TModel, TVisual, TLabel, TPathGeometry,
     protected override IEnumerable<ChartPoint> FindPointsInPosition(
         Chart chart, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor)
     {
+        bool VisualContains(ChartPoint point)
+        {
+            var v = (TVisual?)point.Context.Visual;
+            if (v is null) return false;
+
+            var x = v.X + v.TranslateTransform.X;
+            var y = v.Y + v.TranslateTransform.Y;
+
+            return
+                pointerPosition.X > x && pointerPosition.X < x + v.Width &&
+                pointerPosition.Y > y && pointerPosition.Y < y + v.Height;
+        }
+
         return strategy switch
         {
-            FindingStrategy.ExactMatch => Fetch(chart)
-                .Where(point =>
-                {
-                    var v = (TVisual?)point.Context.Visual;
-                    if (v is null) return false;
-
-                    var x = v.X + v.TranslateTransform.X;
-                    var y = v.Y + v.TranslateTransform.Y;
-
-                    return
-                        pointerPosition.X > x && pointerPosition.X < x + v.Width &&
-                        pointerPosition.Y > y && pointerPosition.Y < y + v.Height;
-                }),
+            FindingStrategy.ExactMatch => Fetch(chart).Where(VisualContains),
+            // TakeClosest must still respect ExactMatch's visual-containment
+            // filter — otherwise a probe in empty space returns the marker
+            // nearest to the pointer, which is the wrong contract for "exact".
             FindingStrategy.ExactMatchTakeClosest => Fetch(chart)
+                .Where(VisualContains)
                 .Select(x => new { distance = x.DistanceTo(pointerPosition, strategy), point = x })
                 .OrderBy(x => x.distance)
                 .SelectFirst(x => x.point),
@@ -548,7 +553,6 @@ public abstract class CoreStepLineSeries<TModel, TVisual, TLabel, TPathGeometry,
             FindingStrategy.CompareAllTakeClosest or
             FindingStrategy.CompareOnlyXTakeClosest or
             FindingStrategy.CompareOnlyYTakeClosest or
-            FindingStrategy.ExactMatchTakeClosest or
                 _ => base.FindPointsInPosition(chart, pointerPosition, strategy, findPointFor)
         };
     }

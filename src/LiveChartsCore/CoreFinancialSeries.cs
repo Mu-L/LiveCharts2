@@ -120,7 +120,13 @@ public abstract class CoreFinancialSeries<TModel, TVisual, TLabel, TMiniatureGeo
         var previousPrimaryScale = primaryAxis.GetActualScaler(chart);
         var previousSecondaryScale = secondaryAxis.GetActualScaler(chart);
 
-        var uw = secondaryScale.MeasureInPixels(secondaryAxis.UnitWidth);
+        // categoryWidth is the full axis-unit slot in pixels; candleWidth is
+        // the same value clamped by MaxBarWidth (defaults to 25 px). Keeping
+        // them apart lets the hover area cover the whole category column
+        // while the visual still respects MaxBarWidth — mirroring the
+        // actualUw / uw split BoxMeasureHelper and BarMeasureHelper use.
+        var categoryWidth = secondaryScale.MeasureInPixels(secondaryAxis.UnitWidth);
+        var uw = categoryWidth;
         var puw = previousSecondaryScale is null ? 0 : previousSecondaryScale.MeasureInPixels(secondaryAxis.UnitWidth);
         var uwm = 0.5f * uw;
 
@@ -140,6 +146,7 @@ public abstract class CoreFinancialSeries<TModel, TVisual, TLabel, TMiniatureGeo
             candleWidth: uw,
             previousCandleWidth: puw,
             halfCandleWidth: uwm,
+            categoryWidth: categoryWidth,
             tooltipPosition: chart.TooltipPosition,
             isFirstDraw: isFirstDraw,
             drawLocation: drawLocation,
@@ -169,7 +176,9 @@ public abstract class CoreFinancialSeries<TModel, TVisual, TLabel, TMiniatureGeo
             open: open,
             close: close,
             low: low,
-            isBullish: open > close);
+            isBullish: open > close,
+            categoryHoverX: secondary - ctx.CategoryWidth * 0.5f,
+            categoryHoverWidth: ctx.CategoryWidth);
     }
 
     /// <summary>
@@ -430,7 +439,12 @@ public abstract class CoreFinancialSeries<TModel, TVisual, TLabel, TMiniatureGeo
             if (point.Context.HoverArea is not RectangleHoverArea ha)
                 point.Context.HoverArea = ha = new RectangleHoverArea();
 
-            _ = ha.SetDimensions(layout.X, layout.Y, layout.Width, layout.Height);
+            // Hover area uses the full category width so candles spaced by
+            // MaxBarWidth (default 25 px) remain hoverable across the whole
+            // axis slot — matches the BoxSeries / BarSeries gap-padding UX.
+            // The visual (layout.X / layout.Width) stays at the clamped
+            // candle width.
+            _ = ha.SetDimensions(layout.CategoryHoverX, layout.Y, layout.CategoryHoverWidth, layout.Height);
 
             ConfigureHoverAnchor(ha, ctx.TooltipPosition);
 
