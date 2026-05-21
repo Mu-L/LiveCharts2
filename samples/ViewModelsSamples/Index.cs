@@ -31,6 +31,7 @@ public static class Index
         "Bars/RowsWithLabels",
         "Bars/Layered",
         "Bars/Gantt",
+        "Bars/Waterfall",
 
         "Pies/Basic",
         "Pies/AutoUpdate",

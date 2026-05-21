@@ -1,0 +1,12 @@
+@page "/Bars/Waterfall"
+@using LiveChartsCore.SkiaSharpView.Blazor
+
+<CartesianChart
+    Series="@vm.Series"
+    XAxes="@vm.XAxes"
+    YAxes="@vm.YAxes">
+</CartesianChart>
+
+@code {
+    private readonly ViewModelsSamples.Bars.Waterfall.ViewModel vm = new();
+}
