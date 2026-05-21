@@ -279,6 +279,32 @@ public class SeriesHitTests
         Assert.AreEqual(1, hits.Length);
     }
 
+    [TestMethod]
+    public void Candlestick_CompareOnlyX_GapAroundVisualStillHits()
+    {
+        // MaxBarWidth (default 25) clamps the visual candle to a thin column
+        // inside its axis-unit slot. The hover area must cover the whole
+        // slot so a probe in the "gap" between visuals (still inside the
+        // category column) still hits — matching BoxSeries / BarSeries.
+        // Pre-fix the hover area was the visual width and this probe missed.
+        var series = new CandlesticksSeries<FinancialPointI>
+        {
+            Values = [new(10, 8, 5, 3), new(20, 18, 15, 13)],
+        };
+        var chart = NewCartesianChart(series);
+        var v = ReadVisual<CandlestickGeometry>(series, chart, 0);
+
+        // 5 px past the right edge of the (narrow) candle body — clearly
+        // outside the visual but well inside the axis-unit slot on a
+        // 1000 px wide 2-candle chart.
+        var probeX = v.X + v.Width + 5;
+        var probeY = v.Y + 1;
+
+        var hits = chart.GetPointsAt(new(probeX, probeY), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(1, hits.Length,
+            "Candlestick hover area should span the full category slot, not just the clamped visual");
+    }
+
     // --- LineSeries ------------------------------------------------------
     // Default = CompareOnlyXTakeClosest. HoverArea is a uwx × geometrySize
     // rectangle around the marker. ExactMatch goes through the override and
