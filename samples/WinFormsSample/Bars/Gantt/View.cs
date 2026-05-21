@@ -24,7 +24,7 @@ public partial class View : UserControl
             {
                 Name = "Project",
                 Values = vm.Tasks,
-                XToolTipLabelFormatter = vm.TaskTooltipFormatter,
+                YToolTipLabelFormatter = vm.TaskTooltipFormatter,
             },
         };
 

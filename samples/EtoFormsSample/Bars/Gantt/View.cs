@@ -23,7 +23,7 @@ public class View : Panel
             {
                 Name = "Project",
                 Values = vm.Tasks,
-                XToolTipLabelFormatter = vm.TaskTooltipFormatter,
+                YToolTipLabelFormatter = vm.TaskTooltipFormatter,
             },
         };
 

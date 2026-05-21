@@ -15,7 +15,7 @@
             <lvc:XamlRangeRowSeries
                 Values="{Binding Tasks}"
                 SeriesName="Project"
-                XToolTipLabelFormatter="{Binding TaskTooltipFormatter}"/>
+                YToolTipLabelFormatter="{Binding TaskTooltipFormatter}"/>
         </lvc:CartesianChart.Series>
 
         <lvc:CartesianChart.XAxes>
