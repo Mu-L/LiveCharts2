@@ -30,6 +30,7 @@ public static class Index
         "Bars/Race",
         "Bars/RowsWithLabels",
         "Bars/Layered",
+        "Bars/Gantt",
 
         "Pies/Basic",
         "Pies/AutoUpdate",
