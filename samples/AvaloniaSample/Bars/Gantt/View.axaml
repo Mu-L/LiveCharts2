@@ -10,8 +10,23 @@
         <vms:ViewModel/>
     </UserControl.DataContext>
 
-    <lvc:CartesianChart
-        Series="{Binding Series}"
-        XAxes="{Binding XAxes}"
-        YAxes="{Binding YAxes}"/>
+    <lvc:CartesianChart>
+        <lvc:CartesianChart.Series>
+            <lvc:XamlRangeRowSeries
+                Values="{Binding Tasks}"
+                SeriesName="Project"
+                XToolTipLabelFormatter="{Binding TaskTooltipFormatter}"/>
+        </lvc:CartesianChart.Series>
+
+        <lvc:CartesianChart.XAxes>
+            <lvc:XamlDateTimeAxis
+                AxisName="Date"
+                Interval="2.00:00:00"
+                DateFormatter="{Binding DateFormatter}"/>
+        </lvc:CartesianChart.XAxes>
+
+        <lvc:CartesianChart.YAxes>
+            <lvc:XamlAxis Labels="{Binding TaskNames}"/>
+        </lvc:CartesianChart.YAxes>
+    </lvc:CartesianChart>
 </UserControl>
