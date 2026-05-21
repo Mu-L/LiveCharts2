@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Drawing.Segments;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
 
@@ -142,9 +143,29 @@ public abstract class CoreRangeRowSeries<TModel, TVisual, TLabel, TErrorGeometry
     }
 
     /// <summary>
-    /// Range row hover/tooltip uses both endpoints — defaults to "L: low  H: high".
+    /// Range row tooltip lists both endpoints — defaults to "{low} → {high}" using
+    /// the X axis labeler (the value axis for horizontal bars), so a
+    /// <see cref="SkiaSharpView.DateTimeAxis"/> renders dates and a numeric axis renders
+    /// numbers. Users can override the whole format via
+    /// <see cref="CartesianSeries{TModel, TVisual, TLabel}.XToolTipLabelFormatter"/>.
     /// </summary>
     /// <inheritdoc cref="ISeries.GetPrimaryToolTipText(ChartPoint)"/>
-    public override string? GetPrimaryToolTipText(ChartPoint point) =>
-        $"L: {point.Coordinate.TertiaryValue}, H: {point.Coordinate.PrimaryValue}";
+    public override string? GetPrimaryToolTipText(ChartPoint point)
+    {
+        if (XToolTipLabelFormatter is not null)
+            return XToolTipLabelFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
+
+        var chart = (CartesianChartEngine)point.Context.Chart.CoreChart;
+        var series = (ICartesianSeries)point.Context.Series;
+        var valueAxis = chart.XAxes[series.ScalesXAt];
+
+        var low = valueAxis.Labels is not null
+            ? Labelers.BuildNamedLabeler(valueAxis.Labels)(point.Coordinate.TertiaryValue)
+            : valueAxis.Labeler(point.Coordinate.TertiaryValue);
+        var high = valueAxis.Labels is not null
+            ? Labelers.BuildNamedLabeler(valueAxis.Labels)(point.Coordinate.PrimaryValue)
+            : valueAxis.Labeler(point.Coordinate.PrimaryValue);
+
+        return $"{low} → {high}";
+    }
 }
