@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -33,7 +33,7 @@ using LiveChartsCore.Painting;
 namespace LiveChartsCore;
 
 /// <summary>
-/// Defines a column series.
+/// Defines a heat series.
 /// </summary>
 /// <typeparam name="TModel">The type of the model.</typeparam>
 /// <typeparam name="TVisual">The type of the visual.</typeparam>
@@ -99,27 +99,23 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
     /// <inheritdoc cref="IHeatSeries.MaxValue"/>
     public double? MaxValue { get; set => SetProperty(ref field, value); }
 
-    /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
-    public override void Invalidate(Chart chart)
+    // ---- template method ----------------------------------------------------
+
+    /// <summary>
+    /// Builds a per-frame measure context from the chart. Subclasses may
+    /// override to refine context construction.
+    /// </summary>
+    protected virtual HeatMeasureContext BeginMeasure(CartesianChartEngine chart)
     {
-        if (_paintTaks is null)
-        {
-            _paintTaks = LiveCharts.DefaultSettings.GetProvider().GetSolidColorPaint();
-            _paintTaks.PaintStyle = PaintStyle.Fill;
-        }
+        var primaryAxis = chart.GetYAxis(this);
+        var secondaryAxis = chart.GetXAxis(this);
 
-        var cartesianChart = (CartesianChartEngine)chart;
-        _ = GetAnimation(cartesianChart);
-
-        var primaryAxis = cartesianChart.GetYAxis(this);
-        var secondaryAxis = cartesianChart.GetXAxis(this);
-
-        var drawLocation = cartesianChart.DrawMarginLocation;
-        var drawMarginSize = cartesianChart.DrawMarginSize;
-        var secondaryScale = secondaryAxis.GetNextScaler(cartesianChart);
-        var primaryScale = primaryAxis.GetNextScaler(cartesianChart);
-        var previousPrimaryScale = primaryAxis.GetActualScaler(cartesianChart);
-        var previousSecondaryScale = secondaryAxis.GetActualScaler(cartesianChart);
+        var drawLocation = chart.DrawMarginLocation;
+        var drawMarginSize = chart.DrawMarginSize;
+        var secondaryScale = secondaryAxis.GetNextScaler(chart);
+        var primaryScale = primaryAxis.GetNextScaler(chart);
+        var previousPrimaryScale = primaryAxis.GetActualScaler(chart);
+        var previousSecondaryScale = secondaryAxis.GetActualScaler(chart);
 
         // Cell size is driven by the actual data spacing (computed once per measure
         // cycle in GetBounds) rather than Axis.UnitWidth, which defaults to 1 and is
@@ -129,24 +125,6 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
         var uws = secondaryScale.MeasureInPixels(xStep);
         var uwp = primaryScale.MeasureInPixels(yStep);
 
-        var actualZIndex = ZIndex == 0 ? ((ISeries)this).SeriesId : ZIndex;
-
-        if (_paintTaks is not null)
-        {
-            _paintTaks.ZIndex = actualZIndex + PaintConstants.SeriesStrokeZIndexOffset;
-            cartesianChart.Canvas.AddDrawableTask(_paintTaks, zone: CanvasZone.DrawMargin);
-        }
-        if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
-        {
-            DataLabelsPaint.ZIndex = actualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
-            cartesianChart.Canvas.AddDrawableTask(DataLabelsPaint, zone: CanvasZone.DrawMargin);
-        }
-
-        var dls = (float)DataLabelsSize;
-        var pointsCleanup = ChartPointCleanupContext.For(everFetched);
-
-        var p = PointPadding;
-
         if (_heatKnownLength != HeatMap.Length)
         {
             _heatStops = HeatFunctions.BuildColorStops(HeatMap, ColorStops);
@@ -154,84 +132,238 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
         }
 
         var hasSvg = this.HasVariableSvgGeometry();
+        var isFirstDraw = !((Chart)chart).IsDrawn(((ISeries)this).SeriesId);
 
-        var isFirstDraw = !chart.IsDrawn(((ISeries)this).SeriesId);
+        return new HeatMeasureContext(
+            chart, primaryAxis, secondaryAxis,
+            primaryScale, secondaryScale,
+            previousPrimaryScale, previousSecondaryScale,
+            cellWidth: uws,
+            cellHeight: uwp,
+            pointPadding: PointPadding,
+            weightBounds: WeightBounds,
+            heatMap: HeatMap,
+            heatStops: _heatStops,
+            isFirstDraw: isFirstDraw,
+            hasSvg: hasSvg,
+            drawLocation: drawLocation,
+            drawMarginSize: drawMarginSize,
+            dataLabelsSize: (float)DataLabelsSize);
+    }
 
-        var provider = LiveCharts.DefaultSettings.GetProvider();
+    /// <summary>
+    /// Computes the final-frame cell rect + interpolated color for a single
+    /// heat cell.
+    /// </summary>
+    protected virtual HeatLayout MeasureHeatLayout(ChartPoint point, in HeatMeasureContext ctx)
+    {
+        var coordinate = point.Coordinate;
+        var primary = ctx.PrimaryScale.ToPixels(coordinate.PrimaryValue);
+        var secondary = ctx.SecondaryScale.ToPixels(coordinate.SecondaryValue);
+        var tertiary = (float)coordinate.TertiaryValue;
+
+        var color = HeatFunctions.InterpolateColor(tertiary, ctx.WeightBounds, ctx.HeatMap, ctx.HeatStops);
+
+        var uws = ctx.CellWidth;
+        var uwp = ctx.CellHeight;
+        var p = ctx.PointPadding;
+
+        return new HeatLayout(
+            x: secondary - uws * 0.5f + p.Left,
+            y: primary - uwp * 0.5f + p.Top,
+            width: uws - p.Left - p.Right,
+            height: uwp - p.Top - p.Bottom,
+            hoverX: secondary - uws * 0.5f,
+            hoverY: primary - uwp * 0.5f,
+            hoverWidth: uws,
+            hoverHeight: uwp,
+            color: color);
+    }
+
+    /// <summary>
+    /// Ensures the cell visual exists. On first creation initializes it with
+    /// transparent color so the heat color animates in via alpha. Mid-life
+    /// entries (the previous-scale-available branch) source the initial X/Y
+    /// from where the cell would have been in the previous frame's scaling.
+    /// </summary>
+    protected virtual TVisual EnsureVisualForPoint(ChartPoint point, in HeatMeasureContext ctx)
+    {
+        var visual = point.Context.Visual as TVisual;
+        if (visual is not null) return visual;
+
+        var coordinate = point.Coordinate;
+        var uws = ctx.CellWidth;
+        var uwp = ctx.CellHeight;
+        var p = ctx.PointPadding;
+
+        var secondary = ctx.SecondaryScale.ToPixels(coordinate.SecondaryValue);
+        var primary = ctx.PrimaryScale.ToPixels(coordinate.PrimaryValue);
+
+        var xi = secondary - uws * 0.5f;
+        var yi = primary - uwp * 0.5f;
+
+        if (ctx.PreviousSecondaryScale is not null && ctx.PreviousPrimaryScale is not null)
+        {
+            xi = ctx.PreviousSecondaryScale.ToPixels(coordinate.SecondaryValue) - uws * 0.5f;
+            yi = ctx.PreviousPrimaryScale.ToPixels(coordinate.PrimaryValue) - uwp * 0.5f;
+        }
+
+        var baseColor = HeatFunctions.InterpolateColor(
+            (float)coordinate.TertiaryValue, ctx.WeightBounds, ctx.HeatMap, ctx.HeatStops);
+
+        var r = new TVisual
+        {
+            X = xi + p.Left,
+            Y = yi + p.Top,
+            Width = uws - p.Left - p.Right,
+            Height = uwp - p.Top - p.Bottom,
+            Color = LvcColor.FromArgb(0, baseColor.R, baseColor.G, baseColor.B),
+        };
+
+        point.Context.Visual = r;
+        OnPointCreated(point);
+
+        _ = everFetched.Add(point);
+
+        return r;
+    }
+
+    /// <summary>
+    /// Collapses the cell to its current grid position with alpha=0 + remove-on-completed.
+    /// </summary>
+    protected virtual void CollapseEmptyVisual(ChartPoint point, in HeatMeasureContext ctx)
+    {
+        var coordinate = point.Coordinate;
+        var uws = ctx.CellWidth;
+        var uwp = ctx.CellHeight;
+        var secondary = ctx.SecondaryScale.ToPixels(coordinate.SecondaryValue);
+        var primary = ctx.PrimaryScale.ToPixels(coordinate.PrimaryValue);
+
+        if (point.Context.Visual is TVisual visual)
+        {
+            visual.X = secondary - uws * 0.5f;
+            visual.Y = primary - uwp * 0.5f;
+            visual.Width = uws;
+            visual.Height = uwp;
+            visual.RemoveOnCompleted = true;
+            visual.Color = LvcColor.FromArgb(0, visual.Color);
+            point.Context.Visual = null;
+        }
+
+        if (point.Context.Label is TLabel label)
+        {
+            label.X = secondary - uws * 0.5f;
+            label.Y = primary - uwp * 0.5f;
+            label.Opacity = 0;
+            label.RemoveOnCompleted = true;
+            point.Context.Label = null;
+        }
+    }
+
+    /// <summary>
+    /// Sets per-Z-index ordering on the heat-fill paint + data-labels paint and
+    /// registers them as drawable tasks. Heat has no Fill / Stroke / ErrorPaint;
+    /// the shared <c>_paintTaks</c> SolidColorPaint carries every cell's color
+    /// via the per-visual <c>Color</c> property.
+    /// </summary>
+    private void InitializePaints(CartesianChartEngine chart)
+    {
+        if (_paintTaks is null)
+        {
+            _paintTaks = LiveCharts.DefaultSettings.GetProvider().GetSolidColorPaint();
+            _paintTaks.PaintStyle = PaintStyle.Fill;
+        }
+
+        var actualZIndex = ZIndex == 0 ? ((ISeries)this).SeriesId : ZIndex;
+
+        _paintTaks.ZIndex = actualZIndex + PaintConstants.SeriesStrokeZIndexOffset;
+        chart.Canvas.AddDrawableTask(_paintTaks, zone: CanvasZone.DrawMargin);
+
+        if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
+        {
+            DataLabelsPaint.ZIndex = actualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
+            chart.Canvas.AddDrawableTask(DataLabelsPaint, zone: CanvasZone.DrawMargin);
+        }
+    }
+
+    /// <summary>
+    /// Creates the data label visual if it doesn't exist yet, updates its text
+    /// + style, and positions it via <c>GetLabelPosition</c> with the cell rect.
+    /// </summary>
+    private void MeasureDataLabel(ChartPoint point, in HeatLayout layout, in HeatMeasureContext ctx)
+    {
+        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default) return;
+
+        var chart = ctx.Chart;
+        var label = (TLabel?)point.Context.Label;
+
+        if (label is null)
+        {
+            // Preserves the original CoreHeatSeries quirk: initial label Y used
+            // `uws` (the X step) instead of `uwp` (the Y step). The label is
+            // animation-sourced so the position only matters for the first frame;
+            // snapshot baselines pin this behavior.
+            var primary = ctx.PrimaryScale.ToPixels(point.Coordinate.PrimaryValue);
+            var l = new TLabel
+            {
+                X = layout.HoverX,
+                Y = primary - ctx.CellWidth * 0.5f,
+                RotateTransform = (float)DataLabelsRotation,
+                MaxWidth = (float)DataLabelsMaxWidth,
+            };
+            l.Animate(
+                GetAnimation(chart),
+                BaseLabelGeometry.XProperty,
+                BaseLabelGeometry.YProperty);
+            label = l;
+            point.Context.Label = l;
+        }
+
+        DataLabelsPaint.AddGeometryToPaintTask(chart.Canvas, label);
+
+        label.Text = DataLabelsFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
+        label.TextSize = ctx.DataLabelsSize;
+        label.Padding = DataLabelsPadding;
+        label.Paint = DataLabelsPaint;
+
+        if (ctx.IsFirstDraw)
+            label.CompleteTransition(
+                BaseLabelGeometry.TextSizeProperty,
+                BaseLabelGeometry.XProperty,
+                BaseLabelGeometry.YProperty,
+                BaseLabelGeometry.RotateTransformProperty);
+
+        var labelPosition = GetLabelPosition(
+            layout.X, layout.Y, layout.Width, layout.Height,
+            label.Measure(), DataLabelsPosition, SeriesProperties,
+            point.Coordinate.PrimaryValue > Pivot, ctx.DrawLocation, ctx.DrawMarginSize);
+        label.X = labelPosition.X;
+        label.Y = labelPosition.Y;
+    }
+
+    /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
+    public sealed override void Invalidate(Chart chart)
+    {
+        var cartesianChart = (CartesianChartEngine)chart;
+        _ = GetAnimation(cartesianChart);
+
+        var ctx = BeginMeasure(cartesianChart);
+        var pointsCleanup = ChartPointCleanupContext.For(everFetched);
+
+        InitializePaints(cartesianChart);
 
         foreach (var point in Fetch(cartesianChart))
         {
-            var coordinate = point.Coordinate;
-            var visual = point.Context.Visual as TVisual;
-            var primary = primaryScale.ToPixels(coordinate.PrimaryValue);
-            var secondary = secondaryScale.ToPixels(coordinate.SecondaryValue);
-            var tertiary = (float)coordinate.TertiaryValue;
-
-            var baseColor = HeatFunctions.InterpolateColor(tertiary, WeightBounds, HeatMap, _heatStops);
-
             if (point.IsEmpty || !IsVisible)
             {
-                if (visual is not null)
-                {
-                    visual.X = secondary - uws * 0.5f;
-                    visual.Y = primary - uwp * 0.5f;
-                    visual.Width = uws;
-                    visual.Height = uwp;
-                    visual.RemoveOnCompleted = true;
-                    visual.Color = LvcColor.FromArgb(0, visual.Color);
-                    point.Context.Visual = null;
-                }
-
-                if (point.Context.Label is not null)
-                {
-                    var label = (TLabel)point.Context.Label;
-
-                    label.X = secondary - uws * 0.5f;
-                    label.Y = primary - uwp * 0.5f;
-                    label.Opacity = 0;
-                    label.RemoveOnCompleted = true;
-
-                    point.Context.Label = null;
-                }
-
+                CollapseEmptyVisual(point, in ctx);
                 pointsCleanup.Clean(point);
-
                 continue;
             }
 
-            if (visual is null)
-            {
-                var xi = secondary - uws * 0.5f;
-                var yi = primary - uwp * 0.5f;
+            var visual = EnsureVisualForPoint(point, in ctx);
 
-                if (previousSecondaryScale is not null && previousPrimaryScale is not null)
-                {
-                    var previousP = previousPrimaryScale.ToPixels(pivot);
-                    var previousPrimary = previousPrimaryScale.ToPixels(coordinate.PrimaryValue);
-                    var bp = Math.Abs(previousPrimary - previousP);
-                    var cyp = coordinate.PrimaryValue > pivot ? previousPrimary : previousPrimary - bp;
-
-                    xi = previousSecondaryScale.ToPixels(coordinate.SecondaryValue) - uws * 0.5f;
-                    yi = previousPrimaryScale.ToPixels(coordinate.PrimaryValue) - uwp * 0.5f;
-                }
-
-                var r = new TVisual
-                {
-                    X = xi + p.Left,
-                    Y = yi + p.Top,
-                    Width = uws - p.Left - p.Right,
-                    Height = uwp - p.Top - p.Bottom,
-                    Color = LvcColor.FromArgb(0, baseColor.R, baseColor.G, baseColor.B)
-                };
-
-                visual = r;
-                point.Context.Visual = visual;
-                OnPointCreated(point);
-
-                _ = everFetched.Add(point);
-            }
-
-            if (hasSvg)
+            if (ctx.HasSvg)
             {
                 var svgVisual = (IVariableSvgPath)visual;
                 if (_geometrySvgChanged || svgVisual.SVGPath is null)
@@ -240,63 +372,31 @@ public abstract class CoreHeatSeries<TModel, TVisual, TLabel>
 
             _paintTaks?.AddGeometryToPaintTask(cartesianChart.Canvas, visual);
 
-            visual.X = secondary - uws * 0.5f + p.Left;
-            visual.Y = primary - uwp * 0.5f + p.Top;
-            visual.Width = uws - p.Left - p.Right;
-            visual.Height = uwp - p.Top - p.Bottom;
-            visual.Color = LvcColor.FromArgb(baseColor.A, baseColor.R, baseColor.G, baseColor.B);
+            var layout = MeasureHeatLayout(point, in ctx);
+
+            visual.X = layout.X;
+            visual.Y = layout.Y;
+            visual.Width = layout.Width;
+            visual.Height = layout.Height;
+            visual.Color = layout.Color;
             visual.RemoveOnCompleted = false;
 
             if (point.Context.HoverArea is not RectangleHoverArea ha)
                 point.Context.HoverArea = ha = new RectangleHoverArea();
             _ = ha
-                .SetDimensions(secondary - uws * 0.5f, primary - uwp * 0.5f, uws, uwp)
+                .SetDimensions(layout.HoverX, layout.HoverY, layout.HoverWidth, layout.HoverHeight)
                 .CenterXToolTip()
                 .CenterYToolTip();
 
             pointsCleanup.Clean(point);
 
-            if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
-            {
-                var label = (TLabel?)point.Context.Label;
-
-                if (label is null)
-                {
-                    var l = new TLabel { X = secondary - uws * 0.5f, Y = primary - uws * 0.5f, RotateTransform = (float)DataLabelsRotation, MaxWidth = (float)DataLabelsMaxWidth };
-                    l.Animate(
-                        GetAnimation(cartesianChart),
-                        BaseLabelGeometry.XProperty,
-                        BaseLabelGeometry.YProperty);
-                    label = l;
-                    point.Context.Label = l;
-                }
-
-                DataLabelsPaint.AddGeometryToPaintTask(cartesianChart.Canvas, label);
-
-                label.Text = DataLabelsFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
-                label.TextSize = dls;
-                label.Padding = DataLabelsPadding;
-                label.Paint = DataLabelsPaint;
-
-                if (isFirstDraw)
-                    label.CompleteTransition(
-                        BaseLabelGeometry.TextSizeProperty,
-                        BaseLabelGeometry.XProperty,
-                        BaseLabelGeometry.YProperty,
-                        BaseLabelGeometry.RotateTransformProperty);
-
-                var labelPosition = GetLabelPosition(
-                     secondary - uws * 0.5f + p.Left, primary - uwp * 0.5f + p.Top, uws - p.Left - p.Right, uwp - p.Top - p.Bottom,
-                     label.Measure(), DataLabelsPosition, SeriesProperties, coordinate.PrimaryValue > Pivot, drawLocation, drawMarginSize);
-                label.X = labelPosition.X;
-                label.Y = labelPosition.Y;
-            }
+            MeasureDataLabel(point, in layout, in ctx);
 
             OnPointMeasured(point);
         }
 
         pointsCleanup.CollectPoints(
-            everFetched, cartesianChart.View, primaryScale, secondaryScale, SoftDeleteOrDisposePoint);
+            everFetched, cartesianChart.View, ctx.PrimaryScale, ctx.SecondaryScale, SoftDeleteOrDisposePoint);
         _geometrySvgChanged = false;
     }
 

@@ -30,6 +30,7 @@ using System.Linq;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Geo;
 using LiveChartsCore.Kernel.Observers;
+using LiveChartsCore.Kernel.Providers;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
@@ -158,27 +159,18 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
     {
         _ = _subscribedTo.Add(context.CoreMap);
 
-        if (_heatPaint is null) throw new Exception("Default paint not found");
-
-        if (!_isHeatInCanvas)
-        {
-            // DrawMargin zone so heat fills clip to the projection's rendering
-            // rectangle (matches the base GeoMapChart paints — see Measure()).
-            context.View.CoreCanvas.AddDrawableTask(_heatPaint, zone: CanvasZone.DrawMargin);
-            _isHeatInCanvas = true;
-        }
-
-        var i = context.View.Fill?.ZIndex ?? 0;
-        _heatPaint.ZIndex = i + 1;
+        InitializeHeatPaint(context);
 
         // Pull bounds via the computed property so the heat ramp and the
         // legend agree on the gradient endpoints (both honor Min/MaxValue).
         var bounds = WeightBounds;
-
         var heatStops = HeatFunctions.BuildColorStops(HeatMap, ColorStops);
-        _ = new MapShapeContext(context.View, _heatPaint, heatStops, bounds);
-        var toRemove = new HashSet<LandDefinition>(_everUsed);
 
+        // MapShapeContext registers the gradient on context.View so the legend
+        // can read it back without re-deriving — fire-and-forget constructor.
+        _ = new MapShapeContext(context.View, _heatPaint!, heatStops, bounds);
+
+        var toRemove = new HashSet<LandDefinition>(_everUsed);
         var provider = LiveCharts.DefaultSettings.GetProvider();
 
         foreach (var land in Lands ?? [])
@@ -191,19 +183,51 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
             var mapLand = context.View.ActiveMap.FindLand(land.Name);
             if (mapLand is null) continue;
 
-            foreach (var data in mapLand.Data)
-            {
-                var shape = data.Shape;
-                if (shape is null) continue;
-
-                shape.Fill = provider.GetSolidColorPaint(heat);
-            }
-
+            ApplyHeatToLand(mapLand, heat, provider);
             _ = _everUsed.Add(mapLand);
             _ = toRemove.Remove(mapLand);
         }
 
         ClearHeat(toRemove);
+    }
+
+    /// <summary>
+    /// Lazy-attaches the heat paint to the chart canvas (once per chart) and
+    /// updates its Z-index so heat fills sit just above the base land fill on
+    /// each pass. The paint itself is created by a derived class via
+    /// <see cref="IntitializeSeries(Paint)"/> in its constructor.
+    /// </summary>
+    private void InitializeHeatPaint(MapContext context)
+    {
+        if (_heatPaint is null) throw new Exception("Default paint not found");
+
+        if (!_isHeatInCanvas)
+        {
+            // DrawMargin zone so heat fills clip to the projection's rendering
+            // rectangle (matches the base GeoMapChart paints — see Measure()).
+            context.View.CoreCanvas.AddDrawableTask(_heatPaint, zone: CanvasZone.DrawMargin);
+            _isHeatInCanvas = true;
+        }
+
+        var baseZ = context.View.Fill?.ZIndex ?? 0;
+        _heatPaint.ZIndex = baseZ + 1;
+    }
+
+    /// <summary>
+    /// Replaces the Fill paint on every shape under the given land definition
+    /// with a fresh <c>SolidColorPaint</c> in the interpolated heat color. A
+    /// land may carry multiple shapes (e.g. island chains modeled as separate
+    /// polygons under the same name).
+    /// </summary>
+    private static void ApplyHeatToLand(LandDefinition mapLand, LvcColor heat, ChartEngine provider)
+    {
+        foreach (var data in mapLand.Data)
+        {
+            var shape = data.Shape;
+            if (shape is null) continue;
+
+            shape.Fill = provider.GetSolidColorPaint(heat);
+        }
     }
 
     /// <inheritdoc cref="IGeoSeries.TryGetValue(string, out double)"/>
