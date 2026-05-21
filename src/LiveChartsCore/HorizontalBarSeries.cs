@@ -333,7 +333,7 @@ public abstract class HorizontalBarSeries<TModel, TVisual, TLabel, TErrorGeometr
         // along the value axis), XError carries the VERTICAL caps. Preserved from
         // the original CoreRowSeries.Invalidate implementation.
         e.YError!.X = primary + ctx.PrimaryScale.MeasureInPixels(pe.Yi);
-        e.YError.X1 = primary - ctx.PrimaryScale.MeasureInPixels(pe.Yi);
+        e.YError.X1 = primary - ctx.PrimaryScale.MeasureInPixels(pe.Yj);
         e.YError.Y = ye;
         e.YError.Y1 = ye;
         e.YError.RemoveOnCompleted = false;
