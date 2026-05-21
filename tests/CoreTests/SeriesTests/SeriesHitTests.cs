@@ -314,6 +314,35 @@ public class SeriesHitTests
         Assert.AreEqual(0, hits.Length);
     }
 
+    [TestMethod]
+    public void Line_ExactMatchTakeClosest_EmptyProbeReturnsNothing()
+    {
+        // ExactMatchTakeClosest must still respect the visual-containment
+        // filter: a probe far from any marker returns empty, not the
+        // nearest marker. Pre-fix the override skipped the filter and
+        // unconditionally returned one point.
+        var series = new LineSeries<int> { Values = [10, 20, 30], GeometrySize = 12 };
+        var chart = NewCartesianChart(series);
+        _ = chart.GetImage();
+
+        var hits = chart.GetPointsAt(new(0, 0), FindingStrategy.ExactMatchTakeClosest).ToArray();
+        Assert.AreEqual(0, hits.Length);
+    }
+
+    [TestMethod]
+    public void Line_ExactMatchTakeClosest_OnMarker_ReturnsOne()
+    {
+        // A probe at the marker center DOES hit (one closest point).
+        var series = new LineSeries<int> { Values = [10, 20, 30], GeometrySize = 12 };
+        var chart = NewCartesianChart(series);
+        var v = ReadVisual<CircleGeometry>(series, chart, 1);
+        var cx = v.X + v.TranslateTransform.X + v.Width * 0.5f;
+        var cy = v.Y + v.TranslateTransform.Y + v.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(cx, cy), FindingStrategy.ExactMatchTakeClosest).ToArray();
+        Assert.AreEqual(1, hits.Length);
+    }
+
     // --- StepLineSeries --------------------------------------------------
     // Mirrors LineSeries with the same override pattern.
 
@@ -328,6 +357,17 @@ public class SeriesHitTests
 
         var hits = chart.GetPointsAt(new(midX, probeY), FindingStrategy.CompareOnlyX).ToArray();
         Assert.AreEqual(1, hits.Length);
+    }
+
+    [TestMethod]
+    public void StepLine_ExactMatchTakeClosest_EmptyProbeReturnsNothing()
+    {
+        var series = new StepLineSeries<int> { Values = [10, 20, 30], GeometrySize = 12 };
+        var chart = NewCartesianChart(series);
+        _ = chart.GetImage();
+
+        var hits = chart.GetPointsAt(new(0, 0), FindingStrategy.ExactMatchTakeClosest).ToArray();
+        Assert.AreEqual(0, hits.Length);
     }
 
     // --- HeatSeries ------------------------------------------------------
