@@ -3,6 +3,7 @@ using System.Linq;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Drawing.Segments;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Drawing;
 using LiveChartsCore.Measure;
@@ -396,6 +397,108 @@ public class SeriesHitTests
         Assert.AreEqual(0, hits.Length);
     }
 
+    // --- RangeLineSeries -------------------------------------------------
+    // Default = CompareOnlyXTakeClosest (PrefersXStrategyTooltips). HoverArea
+    // is uwx × bandHeight, covering the full band column at each X — any Y
+    // strategy lands inside the band. ExactMatch goes through the override
+    // and hits EITHER the high marker OR the low marker (VisualContains OR).
+
+    [TestMethod]
+    public void RangeLine_CompareOnlyX_HitsAnywhereInBand()
+    {
+        var series = new RangeLineSeries<RangeValue>
+        {
+            Values = [new(10, 30), new(15, 35), new(5, 25)],
+            GeometrySize = 12,
+        };
+        var chart = NewCartesianChart(series);
+        var area = ReadHoverArea(series, chart, 1);
+        var midX = area.X + area.Width * 0.5f;
+        var midY = area.Y + area.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(midX, midY), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(1, hits.Length);
+        Assert.AreEqual(35d, hits[0].Coordinate.PrimaryValue);
+    }
+
+    [TestMethod]
+    public void RangeLine_ExactMatchTakeClosest_OnHighMarker_Hits()
+    {
+        var series = new RangeLineSeries<RangeValue>
+        {
+            Values = [new(10, 30), new(15, 35), new(5, 25)],
+            GeometrySize = 16,
+        };
+        var chart = NewCartesianChart(series);
+        var hi = ReadHighMarker(series, chart, 1);
+        var cx = hi.X + hi.TranslateTransform.X + hi.Width * 0.5f;
+        var cy = hi.Y + hi.TranslateTransform.Y + hi.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(cx, cy), FindingStrategy.ExactMatchTakeClosest).ToArray();
+        Assert.AreEqual(1, hits.Length, "ExactMatch must hit a probe at the high marker center");
+        Assert.AreEqual(35d, hits[0].Coordinate.PrimaryValue);
+    }
+
+    [TestMethod]
+    public void RangeLine_ExactMatchTakeClosest_OnLowMarker_Hits()
+    {
+        // Mirror of the high-marker case — pins that ExactMatch's
+        // VisualContains OR's both markers, not just point.Context.Visual.
+        var series = new RangeLineSeries<RangeValue>
+        {
+            Values = [new(10, 30), new(15, 35), new(5, 25)],
+            GeometrySize = 16,
+        };
+        var chart = NewCartesianChart(series);
+        var lo = ReadLowMarker(series, chart, 1);
+        var cx = lo.X + lo.TranslateTransform.X + lo.Width * 0.5f;
+        var cy = lo.Y + lo.TranslateTransform.Y + lo.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(cx, cy), FindingStrategy.ExactMatchTakeClosest).ToArray();
+        Assert.AreEqual(1, hits.Length, "ExactMatch must hit a probe at the low marker center");
+        Assert.AreEqual(15d, hits[0].Coordinate.TertiaryValue);
+    }
+
+    [TestMethod]
+    public void RangeLine_ExactMatch_BetweenMarkers_Misses()
+    {
+        // ExactMatch is markers-only — a probe inside the band but vertically
+        // between the high and low markers must miss. CompareOnlyX would still
+        // hit via the band-column HoverArea; that's what
+        // RangeLine_CompareOnlyX_HitsAnywhereInBand covers.
+        var series = new RangeLineSeries<RangeValue>
+        {
+            Values = [new(10, 30), new(15, 35), new(5, 25)],
+            GeometrySize = 12,
+        };
+        var chart = NewCartesianChart(series);
+        var hi = ReadHighMarker(series, chart, 1);
+        var lo = ReadLowMarker(series, chart, 1);
+        var cx = hi.X + hi.TranslateTransform.X + hi.Width * 0.5f;
+        var midY = (hi.Y + lo.Y) * 0.5f;  // halfway between marker centers
+
+        var hits = chart.GetPointsAt(new(cx, midY), FindingStrategy.ExactMatch).ToArray();
+        Assert.AreEqual(0, hits.Length);
+    }
+
+    [TestMethod]
+    public void RangeLine_ExactMatchTakeClosest_EmptyProbeReturnsNothing()
+    {
+        // Mirror of Line_ExactMatchTakeClosest_EmptyProbeReturnsNothing:
+        // the visual-containment filter must still apply even with TakeClosest,
+        // so a probe far from any marker returns empty, not the nearest marker.
+        var series = new RangeLineSeries<RangeValue>
+        {
+            Values = [new(10, 30), new(15, 35), new(5, 25)],
+            GeometrySize = 12,
+        };
+        var chart = NewCartesianChart(series);
+        _ = chart.GetImage();
+
+        var hits = chart.GetPointsAt(new(0, 0), FindingStrategy.ExactMatchTakeClosest).ToArray();
+        Assert.AreEqual(0, hits.Length);
+    }
+
     // --- HeatSeries ------------------------------------------------------
     // Default = CompareAllTakeClosest (PrefersXYStrategyTooltips falls through).
     // Each cell carries a RectangleHoverArea covering exactly the cell rect.
@@ -605,5 +708,21 @@ public class SeriesHitTests
     {
         var area = ReadHoverArea(series, chart, index);
         return new LvcPoint(area.X + area.Width * 0.5f, area.Y + area.Height * 0.5f);
+    }
+
+    private static BoundedDrawnGeometry ReadHighMarker(ISeries series, SKCartesianChart chart, int index)
+    {
+        _ = chart.GetImage();
+        var point = series.Fetch(chart.CoreChart).ElementAt(index);
+        var v = (RangeCubicSegmentVisualPoint)point.Context.AdditionalVisuals!;
+        return v.HighGeometry;
+    }
+
+    private static BoundedDrawnGeometry ReadLowMarker(ISeries series, SKCartesianChart chart, int index)
+    {
+        _ = chart.GetImage();
+        var point = series.Fetch(chart.CoreChart).ElementAt(index);
+        var v = (RangeCubicSegmentVisualPoint)point.Context.AdditionalVisuals!;
+        return v.LowGeometry;
     }
 }
