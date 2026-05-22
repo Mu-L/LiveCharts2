@@ -186,4 +186,66 @@ public class RangeBarSeriesAnimationTests
             CoreMotionCanvas.DebugElapsedMilliseconds = -1;
         }
     }
+
+    [TestMethod]
+    public void RangeRowSeries_DataChange_BarsAnimateBetweenRanges()
+    {
+        // Horizontal mirror of RangeColumnSeries_DataChange — pins that the
+        // row visual starts the new transition at its previous stable width
+        // (NOT a snap to midpoint, which would only happen on a fresh entry).
+        var values = new ObservableCollection<RangeValue>
+        {
+            new(10, 30), new(20, 40), new(5, 25),
+        };
+        var series = new RangeRowSeries<RangeValue> { Values = values };
+        var chart = new SKCartesianChart
+        {
+            Width = 400,
+            Height = 400,
+            AnimationsSpeed = TimeSpan.FromMilliseconds(AnimationMs),
+            EasingFunction = EasingFunctions.Lineal,
+            Series = [series],
+            XAxes = [new Axis { MinLimit = 0, MaxLimit = 50 }],
+        };
+
+        var core = (CartesianChartEngine)chart.CoreChart;
+
+        try
+        {
+            TriggerFirstMeasure(core);
+
+            CoreMotionCanvas.DebugElapsedMilliseconds = AnimationMs + 50;
+            core.Measure();
+
+            var stableWidths = series.everFetched
+                .Select(p => ((BoundedDrawnGeometry)p.Context.Visual!).Width)
+                .ToArray();
+
+            // Mutate in-place via INotifyPropertyChanged so the existing
+            // visuals transition. Swapping references would dispose+recreate
+            // and the test would observe a fresh midpoint entry instead.
+            values[0].Low = 15; values[0].High = 25;  // shrink
+            values[1].Low = 10; values[1].High = 45;  // grow
+            values[2].Low = 20; values[2].High = 30;  // shift
+            var measureT = CoreMotionCanvas.DebugElapsedMilliseconds;
+            core.Measure();
+
+            var traj = SeriesAnimationCapture.CaptureTrajectory(
+                series.everFetched, startMs: measureT, endMs: measureT + AnimationMs, stepMs: StepMs);
+
+            for (var i = 0; i < traj[0].Length; i++)
+                Assert.AreEqual(stableWidths[i], traj[0][i].Width, Tolerance,
+                    $"data-change t=start: bar {i} must begin at previous stable width");
+
+            var finalFrame = traj[traj.Count - 1];
+            Assert.IsTrue(finalFrame[0].Width < stableWidths[0], "range [10,30]→[15,25] should shrink");
+            Assert.IsTrue(finalFrame[1].Width > stableWidths[1], "range [20,40]→[10,45] should grow");
+
+            SeriesAnimationCapture.AssertTrajectoryMatches(traj, "RangeRowSeries_DataChange");
+        }
+        finally
+        {
+            CoreMotionCanvas.DebugElapsedMilliseconds = -1;
+        }
+    }
 }
