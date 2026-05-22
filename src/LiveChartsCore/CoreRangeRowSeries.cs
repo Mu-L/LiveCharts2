@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Drawing.Segments;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
 
@@ -114,6 +115,23 @@ public abstract class CoreRangeRowSeries<TModel, TVisual, TLabel, TErrorGeometry
         return r;
     }
 
+    /// <inheritdoc cref="HorizontalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>
+    public override SeriesBounds GetBounds(Chart chart, ICartesianAxis secondaryAxis, ICartesianAxis primaryAxis)
+    {
+        var sb = base.GetBounds(chart, secondaryAxis, primaryAxis);
+        if (sb.HasData) return sb;
+
+        // base.GetBounds builds the value-axis bounds (SecondaryBounds in the
+        // HorizontalBar-swapped view) from PrimaryValue alone — that's High.
+        // For range bars the Low endpoint lives in TertiaryValue and is captured
+        // into TertiaryBounds; merge it back so the auto axis covers both ends.
+        var b = sb.Bounds;
+        b.SecondaryBounds.AppendValue(b.TertiaryBounds);
+        b.VisibleSecondaryBounds.AppendValue(b.VisibleTertiaryBounds);
+
+        return sb;
+    }
+
     /// <inheritdoc cref="HorizontalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.SoftDeleteOrDisposePoint(ChartPoint, Scaler, Scaler)"/>
     protected internal override void SoftDeleteOrDisposePoint(ChartPoint point, Scaler primaryScale, Scaler secondaryScale)
     {
@@ -142,9 +160,57 @@ public abstract class CoreRangeRowSeries<TModel, TVisual, TLabel, TErrorGeometry
     }
 
     /// <summary>
-    /// Range row hover/tooltip uses both endpoints — defaults to "L: low  H: high".
+    /// Range row tooltip lists both endpoints — defaults to "{low} → {high}" using
+    /// the X axis labeler (the value axis for horizontal bars), so a
+    /// <see cref="SkiaSharpView.DateTimeAxis"/> renders dates and a numeric axis renders
+    /// numbers. Following the column-series convention, the "primary value" formatter is
+    /// <see cref="CartesianSeries{TModel, TVisual, TLabel}.YToolTipLabelFormatter"/> —
+    /// even though the row's value axis is X, the formatter name reflects which tooltip
+    /// slot it fills (the body value, not the cross-axis header). Use
+    /// <see cref="CartesianSeries{TModel, TVisual, TLabel}.XToolTipLabelFormatter"/> for
+    /// the header text instead — see <see cref="GetSecondaryToolTipText"/>.
     /// </summary>
     /// <inheritdoc cref="ISeries.GetPrimaryToolTipText(ChartPoint)"/>
-    public override string? GetPrimaryToolTipText(ChartPoint point) =>
-        $"L: {point.Coordinate.TertiaryValue}, H: {point.Coordinate.PrimaryValue}";
+    public override string? GetPrimaryToolTipText(ChartPoint point)
+    {
+        if (YToolTipLabelFormatter is not null)
+            return YToolTipLabelFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
+
+        var chart = (CartesianChartEngine)point.Context.Chart.CoreChart;
+        var series = (ICartesianSeries)point.Context.Series;
+        var valueAxis = chart.XAxes[series.ScalesXAt];
+
+        var low = valueAxis.Labels is not null
+            ? Labelers.BuildNamedLabeler(valueAxis.Labels)(point.Coordinate.TertiaryValue)
+            : valueAxis.Labeler(point.Coordinate.TertiaryValue);
+        var high = valueAxis.Labels is not null
+            ? Labelers.BuildNamedLabeler(valueAxis.Labels)(point.Coordinate.PrimaryValue)
+            : valueAxis.Labeler(point.Coordinate.PrimaryValue);
+
+        return $"{low} → {high}";
+    }
+
+    /// <summary>
+    /// Range row tooltip header — defaults to the category label looked up from the
+    /// Y axis <c>Labels</c> array (the task name in a Gantt-style chart). The base
+    /// <see cref="CartesianSeries{TModel, TVisual, TLabel}.GetSecondaryToolTipText"/>
+    /// formats the SecondaryValue through the X axis labeler, which for a row series
+    /// produces a garbage interpretation of the entity index — e.g. with a
+    /// <see cref="SkiaSharpView.DateTimeAxis"/> on X every header would render as
+    /// "Jan 01" because index 0..N is interpreted as Ticks.
+    /// </summary>
+    /// <inheritdoc cref="ISeries.GetSecondaryToolTipText(ChartPoint)"/>
+    public override string? GetSecondaryToolTipText(ChartPoint point)
+    {
+        if (XToolTipLabelFormatter is not null)
+            return XToolTipLabelFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
+
+        var chart = (CartesianChartEngine)point.Context.Chart.CoreChart;
+        var series = (ICartesianSeries)point.Context.Series;
+        var categoryAxis = chart.YAxes[series.ScalesYAt];
+
+        return categoryAxis.Labels is not null
+            ? Labelers.BuildNamedLabeler(categoryAxis.Labels)(point.Coordinate.SecondaryValue)
+            : LiveCharts.IgnoreToolTipLabel;
+    }
 }

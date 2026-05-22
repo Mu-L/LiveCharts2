@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Drawing.Segments;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
 
@@ -118,6 +119,26 @@ public abstract class CoreRangeColumnSeries<TModel, TVisual, TLabel, TErrorGeome
         return r;
     }
 
+    /// <inheritdoc cref="VerticalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>
+    public override SeriesBounds GetBounds(Chart chart, ICartesianAxis secondaryAxis, ICartesianAxis primaryAxis)
+    {
+        var sb = base.GetBounds(chart, secondaryAxis, primaryAxis);
+        if (sb.HasData) return sb;
+
+        // base.GetBounds builds the value-axis bounds (PrimaryBounds = Y axis
+        // for a column series) from PrimaryValue alone — that's High. For range
+        // bars the Low endpoint lives in TertiaryValue and is captured into
+        // TertiaryBounds; merge it back so the auto axis covers both ends.
+        // Without this, a Waterfall step whose Low sits above min(High) gets
+        // clipped (a "Costs" 180->130 bar wouldn't be visible if min(High) is
+        // 110 elsewhere in the series and no MinLimit/MaxLimit is set).
+        var b = sb.Bounds;
+        b.PrimaryBounds.AppendValue(b.TertiaryBounds);
+        b.VisiblePrimaryBounds.AppendValue(b.VisibleTertiaryBounds);
+
+        return sb;
+    }
+
     /// <inheritdoc cref="VerticalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.SoftDeleteOrDisposePoint(ChartPoint, Scaler, Scaler)"/>
     protected internal override void SoftDeleteOrDisposePoint(ChartPoint point, Scaler primaryScale, Scaler secondaryScale)
     {
@@ -148,9 +169,28 @@ public abstract class CoreRangeColumnSeries<TModel, TVisual, TLabel, TErrorGeome
     }
 
     /// <summary>
-    /// Range column hover/tooltip uses both endpoints — defaults to "L: low  H: high".
+    /// Range column tooltip lists both endpoints — defaults to "{low} → {high}" using
+    /// the Y axis labeler for each value, so a <see cref="SkiaSharpView.DateTimeAxis"/>
+    /// renders dates and a numeric axis renders numbers. Users can override the whole
+    /// format via <see cref="CartesianSeries{TModel, TVisual, TLabel}.YToolTipLabelFormatter"/>.
     /// </summary>
     /// <inheritdoc cref="ISeries.GetPrimaryToolTipText(ChartPoint)"/>
-    public override string? GetPrimaryToolTipText(ChartPoint point) =>
-        $"L: {point.Coordinate.TertiaryValue}, H: {point.Coordinate.PrimaryValue}";
+    public override string? GetPrimaryToolTipText(ChartPoint point)
+    {
+        if (YToolTipLabelFormatter is not null)
+            return YToolTipLabelFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
+
+        var chart = (CartesianChartEngine)point.Context.Chart.CoreChart;
+        var series = (ICartesianSeries)point.Context.Series;
+        var valueAxis = chart.YAxes[series.ScalesYAt];
+
+        var low = valueAxis.Labels is not null
+            ? Labelers.BuildNamedLabeler(valueAxis.Labels)(point.Coordinate.TertiaryValue)
+            : valueAxis.Labeler(point.Coordinate.TertiaryValue);
+        var high = valueAxis.Labels is not null
+            ? Labelers.BuildNamedLabeler(valueAxis.Labels)(point.Coordinate.PrimaryValue)
+            : valueAxis.Labeler(point.Coordinate.PrimaryValue);
+
+        return $"{low} → {high}";
+    }
 }

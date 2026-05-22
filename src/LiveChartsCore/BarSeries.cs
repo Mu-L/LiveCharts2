@@ -323,9 +323,16 @@ public abstract class BarSeries<TModel, TVisual, TLabel>(
                     .SetDimensions(layout.X, layout.Y, layout.Width, layout.Height)
                     .CenterXToolTip();
 
-            _ = point.Coordinate.PrimaryValue >= pivot
-                ? ha.StartYToolTip()
-                : ha.EndYToolTip().IsLessThanPivot();
+            // Anchor the tooltip Y on the DRAWN rect, not the category-strip hover box.
+            // For VerticalBar/Column these coincide (categoryHoverY == layout.Y), so this
+            // is a no-op; for HorizontalBar/Row the strip is `actualUw` tall while the
+            // drawn bar is `uw` tall (centered), and reading from the strip would float
+            // the tooltip half-padding above the bar's top edge.
+            var anchorY = point.Coordinate.PrimaryValue >= pivot
+                ? layout.Y
+                : layout.Y + layout.Height;
+            ha.SuggestedTooltipLocation = new LvcPoint(ha.SuggestedTooltipLocation.X, anchorY);
+            if (point.Coordinate.PrimaryValue < pivot) _ = ha.IsLessThanPivot();
 
             pointsCleanup.Clean(point);
 

@@ -90,7 +90,7 @@ TestRecord[] toTest = [
     new($"{root}/{avaloniaDir}.Android",        "avalonia-android",     msBuildArgs),
     new($"{root}/{avaloniaDir}.Browser",        "avalonia-browser",     msBuildArgs,                            AppHost.HeadlessChrome),
     new($"{root}/{avaloniaDir}.Desktop",        "avalonia-desktop",     msBuildArgs),
-    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         iphoneBuild),
+    new($"{root}/{avaloniaDir}.iOS",            "avalonia-ios",         [..iphoneBuild, new("RuntimeIdentifier", "iossimulator-arm64")]),
 
     new($"{root}/BlazorSample",                 "blazor",               msBuildArgs,                            AppHost.HeadlessChrome),
 
