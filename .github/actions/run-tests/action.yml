@@ -130,29 +130,6 @@ runs:
         done
         # Extra 5s buffer for the 'installd' daemon to wake up
         sleep 5
-    - name: Prune extra iOS simulators
-      shell: bash
-      if: ${{ inputs.test-type == 'factos-ios' }}
-      run: |
-        # iOS SDK 26.2's `ComputeAvailableDevices` MSBuild target returns *every*
-        # simulator matching the build's RuntimeIdentifier (boot state is ignored),
-        # and macos-26 ships ~33 pre-created iPhone/iPad simulators. With multiple
-        # candidates, dotnet/sdk's RunCommandSelector refuses to auto-pick and
-        # demands `--device <UDID>` — which is a top-level `dotnet run` CLI flag,
-        # not an MSBuild property, so Factos can't pass it.
-        #
-        # Workaround: delete every simulator except the one futureware-tech just
-        # booted. devices.Count == 1 makes dotnet run auto-pick (see
-        # https://github.com/dotnet/sdk/blob/main/src/Cli/dotnet/Commands/Run/RunCommandSelector.cs).
-        KEEP="${{ steps.launch_ios_simulator.outputs.udid }}"
-        echo "Keeping only $KEEP; deleting all other simulators..."
-        xcrun simctl list devices -j \
-          | jq -r --arg keep "$KEEP" '.devices | to_entries[].value[] | select(.udid != $keep) | .udid' \
-          | while read -r udid; do
-            xcrun simctl delete "$udid" >/dev/null 2>&1 || true
-          done
-        echo "Remaining simulators:"
-        xcrun simctl list devices | grep -E '\([A-F0-9-]{36}\)' || true
     - name: Run UI tests
       uses: nick-fields/retry@v3.0.2
       if : ${{ inputs.test-type == 'factos-ios' }}
@@ -161,7 +138,7 @@ runs:
         max_attempts: 3
         shell: bash
         command: |
-          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ inputs.livecharts-suffix }}
+          dotnet run --project tests/UITests -c Release --report-trx --report-trx-filename results.trx --no-progress --select ${{ inputs.test-id }} --test-env tf=${{ inputs.target-framework }} lvcversionsuffix=-${{ inputs.livecharts-suffix }} device=:v2:udid=${{ steps.launch_ios_simulator.outputs.udid }}
 
     - name: Run core tests
       uses: nick-fields/retry@v3.0.2

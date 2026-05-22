@@ -68,11 +68,11 @@ MSBuildArg tf_n462 = new("TestBuildTargetFramework", "net462");
 MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
-    // No device selector here on purpose: in iOS SDK 26.2+ device selection is a
-    // top-level `dotnet run --device <UDID>` CLI flag, not an MSBuild property.
-    // Factos drives `dotnet run` from MSBuildArg pairs, so we can't inject `--device`
-    // here. The CI workflow instead prunes the runner's simulator pool to a single
-    // entry, which lets `dotnet run`'s RunCommandSelector auto-pick (devices.Count == 1).
+    // iOS SDK 26.2 renamed the device-selection MSBuild property from `_DeviceName`
+    // to `Device` (see Microsoft.Sdk.Mobile.targets: `DeviceName="$(Device)"`).
+    // Without it, mlaunch defaults to "iPhone 4s" (MT1207). With it, the
+    // `:v2:udid=<UDID>` mlaunch syntax still works and is required.
+    new("Device", "[device]"),
     new("MTouchUseLlvm", "false"),
     new("MtouchLink", "SdkOnly"),
     new("RunAOTCompilation", "false"),
