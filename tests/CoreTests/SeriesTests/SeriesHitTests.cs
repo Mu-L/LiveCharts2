@@ -306,6 +306,67 @@ public class SeriesHitTests
             "Candlestick hover area should span the full category slot, not just the clamped visual");
     }
 
+    // --- OhlcSeries (Financial, I-bar variant) ---------------------------
+    // Default = CompareOnlyXTakeClosest. Reuses CoreFinancialSeries hit-test —
+    // only the rendered geometry differs. Same probes as CandlesticksSeries
+    // pin financial-pipeline parity for the I-bar variant.
+
+    [TestMethod]
+    public void Ohlc_CompareOnlyX_HitsInBarColumn()
+    {
+        var series = new OhlcSeries<FinancialPointI>
+        {
+            Values =
+            [
+                new(10, 8, 5, 3),
+                new(20, 18, 15, 13),
+                new(30, 28, 25, 23),
+            ],
+        };
+        var chart = NewCartesianChart(series);
+        var center = HoverAreaCenter(series, chart, 1);
+
+        var hits = chart.GetPointsAt(new(center.X, center.Y), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(1, hits.Length);
+    }
+
+    [TestMethod]
+    public void Ohlc_OutsideChart_Misses()
+    {
+        var series = new OhlcSeries<FinancialPointI>
+        {
+            Values = [new(10, 8, 5, 3), new(20, 18, 15, 13)],
+        };
+        var chart = NewCartesianChart(series);
+        _ = chart.GetImage();
+
+        var hits = chart.GetPointsAt(new(0, 0), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(0, hits.Length);
+    }
+
+    [TestMethod]
+    public void Ohlc_CompareOnlyX_GapAroundVisualStillHits()
+    {
+        // Mirrors the candlestick gap-padding contract — the OHLC visual
+        // (BaseCandlestickGeometry) is clamped by MaxBarWidth the same way,
+        // so a probe in the inter-bar gap (inside the axis-unit slot) must
+        // still hit. Pins parity so a future financial-pipeline tweak can't
+        // silently diverge between the two variants.
+        var series = new OhlcSeries<FinancialPointI>
+        {
+            Values = [new(10, 8, 5, 3), new(20, 18, 15, 13)],
+        };
+        var chart = NewCartesianChart(series);
+        var v = ReadVisual<OhlcGeometry>(series, chart, 0);
+
+        var probeX = v.X + v.Width + 5;
+        var probeY = v.Y + 1;
+
+        var hits = chart.GetPointsAt(new(probeX, probeY), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(1, hits.Length,
+            "OHLC hover area should span the full category slot, matching CandlesticksSeries");
+    }
+
     // --- LineSeries ------------------------------------------------------
     // Default = CompareOnlyXTakeClosest. HoverArea is a uwx × geometrySize
     // rectangle around the marker. ExactMatch goes through the override and
