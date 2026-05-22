@@ -68,6 +68,12 @@ public partial class XamlLineSeries<TModel, TVisual, TLabel> : XamlSeries, ILine
     where TLabel : BaseLabelGeometry, new()
 { }
 
+[XamlClass(typeof(RangeLineSeries<,,>), TVisual = typeof(CircleGeometry))]
+public partial class XamlRangeLineSeries<TModel, TVisual, TLabel> : XamlSeries, ILineSeries, IInternalSeries
+    where TVisual : BoundedDrawnGeometry, new()
+    where TLabel : BaseLabelGeometry, new()
+{ }
+
 [XamlClass(typeof(StepLineSeries<,,>), TVisual = typeof(CircleGeometry))]
 public partial class XamlStepLineSeries<TModel, TVisual, TLabel> : XamlSeries, IStepLineSeries, IInternalSeries
     where TVisual : BoundedDrawnGeometry, new()
