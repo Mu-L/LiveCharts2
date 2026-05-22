@@ -115,6 +115,23 @@ public abstract class CoreRangeRowSeries<TModel, TVisual, TLabel, TErrorGeometry
         return r;
     }
 
+    /// <inheritdoc cref="HorizontalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>
+    public override SeriesBounds GetBounds(Chart chart, ICartesianAxis secondaryAxis, ICartesianAxis primaryAxis)
+    {
+        var sb = base.GetBounds(chart, secondaryAxis, primaryAxis);
+        if (sb.HasData) return sb;
+
+        // base.GetBounds builds the value-axis bounds (SecondaryBounds in the
+        // HorizontalBar-swapped view) from PrimaryValue alone — that's High.
+        // For range bars the Low endpoint lives in TertiaryValue and is captured
+        // into TertiaryBounds; merge it back so the auto axis covers both ends.
+        var b = sb.Bounds;
+        b.SecondaryBounds.AppendValue(b.TertiaryBounds);
+        b.VisibleSecondaryBounds.AppendValue(b.VisibleTertiaryBounds);
+
+        return sb;
+    }
+
     /// <inheritdoc cref="HorizontalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.SoftDeleteOrDisposePoint(ChartPoint, Scaler, Scaler)"/>
     protected internal override void SoftDeleteOrDisposePoint(ChartPoint point, Scaler primaryScale, Scaler secondaryScale)
     {

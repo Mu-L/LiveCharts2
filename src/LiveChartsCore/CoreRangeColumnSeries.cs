@@ -119,6 +119,26 @@ public abstract class CoreRangeColumnSeries<TModel, TVisual, TLabel, TErrorGeome
         return r;
     }
 
+    /// <inheritdoc cref="VerticalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>
+    public override SeriesBounds GetBounds(Chart chart, ICartesianAxis secondaryAxis, ICartesianAxis primaryAxis)
+    {
+        var sb = base.GetBounds(chart, secondaryAxis, primaryAxis);
+        if (sb.HasData) return sb;
+
+        // base.GetBounds builds the value-axis bounds (PrimaryBounds = Y axis
+        // for a column series) from PrimaryValue alone — that's High. For range
+        // bars the Low endpoint lives in TertiaryValue and is captured into
+        // TertiaryBounds; merge it back so the auto axis covers both ends.
+        // Without this, a Waterfall step whose Low sits above min(High) gets
+        // clipped (a "Costs" 180->130 bar wouldn't be visible if min(High) is
+        // 110 elsewhere in the series and no MinLimit/MaxLimit is set).
+        var b = sb.Bounds;
+        b.PrimaryBounds.AppendValue(b.TertiaryBounds);
+        b.VisiblePrimaryBounds.AppendValue(b.VisibleTertiaryBounds);
+
+        return sb;
+    }
+
     /// <inheritdoc cref="VerticalBarSeries{TModel, TVisual, TLabel, TErrorGeometry}.SoftDeleteOrDisposePoint(ChartPoint, Scaler, Scaler)"/>
     protected internal override void SoftDeleteOrDisposePoint(ChartPoint point, Scaler primaryScale, Scaler secondaryScale)
     {
