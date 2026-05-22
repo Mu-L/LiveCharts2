@@ -92,6 +92,12 @@ public partial class XamlCandlesticksSeries<TModel, TVisual, TLabel> : XamlSerie
     where TLabel : BaseLabelGeometry, new()
 { }
 
+[XamlClass(typeof(OhlcSeries<,,>), TVisual = typeof(OhlcGeometry))]
+public partial class XamlOhlcSeries<TModel, TVisual, TLabel> : XamlSeries, IFinancialSeries, IInternalSeries
+    where TVisual : BaseCandlestickGeometry, new()
+    where TLabel : BaseLabelGeometry, new()
+{ }
+
 [XamlClass(typeof(BoxSeries<,,>), TVisual = typeof(BoxGeometry))]
 public partial class XamlBoxSeries<TModel, TVisual, TLabel> : XamlSeries, IBoxSeries, IInternalSeries
     where TVisual : BaseBoxGeometry, new()
