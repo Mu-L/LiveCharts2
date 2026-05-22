@@ -764,18 +764,11 @@ public abstract class CoreLineSeries<TModel, TVisual, TLabel, TPathGeometry, TEr
         {
             if (item.IsFirst)
             {
-                var c = item.Current.Coordinate;
-
                 var sc = stacker?.GetStack(item.Current).CumulativeStart ?? 0;
 
                 data ??= new BezierData(item.Next);
                 data.TargetPoint = item.Next;
-                data.X0 = c.SecondaryValue;
-                data.Y0 = c.PrimaryValue + sc;
-                data.X1 = c.SecondaryValue;
-                data.Y1 = c.PrimaryValue + sc;
-                data.X2 = c.SecondaryValue;
-                data.Y2 = c.PrimaryValue + sc;
+                LineSplineMath.SeedFirstSegment(data, item.Current.Coordinate, sc);
                 data.IsNextEmpty = item.IsNextEmpty;
 
                 yield return data;
@@ -787,11 +780,6 @@ public abstract class CoreLineSeries<TModel, TVisual, TLabel, TPathGeometry, TEr
             var nys = 0d;
             var nnys = 0d;
 
-            var previous = item.Previous.Coordinate;
-            var current = item.Current.Coordinate;
-            var next = item.Next.Coordinate;
-            var afterNext = item.AfterNext.Coordinate;
-
             if (stacker is not null)
             {
                 pys = stacker.GetStack(item.Previous).CumulativeStart;
@@ -800,50 +788,15 @@ public abstract class CoreLineSeries<TModel, TVisual, TLabel, TPathGeometry, TEr
                 nnys = stacker.GetStack(item.AfterNext).CumulativeStart;
             }
 
-            var xc1 = (previous.SecondaryValue + current.SecondaryValue) / 2.0f;
-            var yc1 = (previous.PrimaryValue + pys + current.PrimaryValue + cys) / 2.0f;
-            var xc2 = (current.SecondaryValue + next.SecondaryValue) / 2.0f;
-            var yc2 = (current.PrimaryValue + cys + next.PrimaryValue + nys) / 2.0f;
-            var xc3 = (next.SecondaryValue + afterNext.SecondaryValue) / 2.0f;
-            var yc3 = (next.PrimaryValue + nys + afterNext.PrimaryValue + nnys) / 2.0f;
-
-            var len1 = (float)Math.Sqrt(
-                (current.SecondaryValue - previous.SecondaryValue) *
-                (current.SecondaryValue - previous.SecondaryValue) +
-                (current.PrimaryValue + cys - previous.PrimaryValue + pys) * (current.PrimaryValue + cys - previous.PrimaryValue + pys));
-            var len2 = (float)Math.Sqrt(
-                (next.SecondaryValue - current.SecondaryValue) *
-                (next.SecondaryValue - current.SecondaryValue) +
-                (next.PrimaryValue + nys - current.PrimaryValue + cys) * (next.PrimaryValue + nys - current.PrimaryValue + cys));
-            var len3 = (float)Math.Sqrt(
-                (afterNext.SecondaryValue - next.SecondaryValue) *
-                (afterNext.SecondaryValue - next.SecondaryValue) +
-                (afterNext.PrimaryValue + nnys - next.PrimaryValue + nys) * (afterNext.PrimaryValue + nnys - next.PrimaryValue + nys));
-
-            var k1 = len1 / (len1 + len2);
-            var k2 = len2 / (len2 + len3);
-
-            if (float.IsNaN(k1)) k1 = 0f;
-            if (float.IsNaN(k2)) k2 = 0f;
-
-            var xm1 = xc1 + (xc2 - xc1) * k1;
-            var ym1 = yc1 + (yc2 - yc1) * k1;
-            var xm2 = xc2 + (xc3 - xc2) * k2;
-            var ym2 = yc2 + (yc3 - yc2) * k2;
-
-            var c1X = xm1 + (xc2 - xm1) * _lineSmoothness + current.SecondaryValue - xm1;
-            var c1Y = ym1 + (yc2 - ym1) * _lineSmoothness + current.PrimaryValue + cys - ym1;
-            var c2X = xm2 + (xc2 - xm2) * _lineSmoothness + next.SecondaryValue - xm2;
-            var c2Y = ym2 + (yc2 - ym2) * _lineSmoothness + next.PrimaryValue + nys - ym2;
-
             data ??= new BezierData(item.Next);
             data.TargetPoint = item.Next;
-            data.X0 = c1X;
-            data.Y0 = c1Y;
-            data.X1 = c2X;
-            data.Y1 = c2Y;
-            data.X2 = next.SecondaryValue;
-            data.Y2 = next.PrimaryValue + nys;
+            LineSplineMath.ComputeSegment(
+                data,
+                item.Previous.Coordinate, pys,
+                item.Current.Coordinate, cys,
+                item.Next.Coordinate, nys,
+                item.AfterNext.Coordinate, nnys,
+                _lineSmoothness);
             data.IsNextEmpty = false;
 
             yield return data;

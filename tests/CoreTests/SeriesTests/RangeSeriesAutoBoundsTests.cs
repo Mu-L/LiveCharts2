@@ -126,6 +126,56 @@ public class RangeSeriesAutoBoundsTests
     }
 
     [TestMethod]
+    public void RangeLineSeries_AutoBounds_IncludeLowestLowEndpoint()
+    {
+        // RangeLine inherits the same GetBounds override as the bar variants:
+        // PrimaryValue (High) alone seeds the Y-axis bounds, so without folding
+        // TertiaryValue (Low) the auto axis would clip the low curve wherever
+        // min(Low) < min(High).
+        var series = new RangeLineSeries<RangeValue>
+        {
+            Values =
+            [
+                new(0,  100),
+                new(50, 150),
+                new(75, 130),
+            ],
+        };
+        var chart = new SKCartesianChart
+        {
+            Width = 400,
+            Height = 400,
+            Series = [series],
+            XAxes = [new Axis()],
+            YAxes = [new Axis()],
+        };
+
+        var core = (CartesianChartEngine)chart.CoreChart;
+        CoreMotionCanvas.DebugElapsedMilliseconds = 0;
+        core.IsLoaded = true;
+        core._isFirstDraw = true;
+        core.Measure();
+
+        try
+        {
+            var xAxis = core.XAxes[0];
+            var yAxis = core.YAxes[0];
+            var sb = series.GetBounds(core, xAxis, yAxis);
+
+            Assert.IsFalse(sb.HasData);
+
+            Assert.IsTrue(sb.Bounds.VisiblePrimaryBounds.Min <= 0,
+                $"Y auto-min {sb.Bounds.VisiblePrimaryBounds.Min} must include lowest Low (0).");
+            Assert.IsTrue(sb.Bounds.VisiblePrimaryBounds.Max >= 150,
+                $"Y auto-max {sb.Bounds.VisiblePrimaryBounds.Max} must include highest High (150).");
+        }
+        finally
+        {
+            CoreMotionCanvas.DebugElapsedMilliseconds = -1;
+        }
+    }
+
+    [TestMethod]
     public void RangeRowSeries_DateTimeAxis_AutoMinReachesEarliestStart()
     {
         // The actual Gantt repro: project starts Jun 1, first task spans

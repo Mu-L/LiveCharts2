@@ -20,6 +20,7 @@ public static class Index
         "Lines/Padding",
         "Lines/XY",
         "Lines/Zoom",
+        "Lines/Range",
 
         "Bars/Basic",
         "Bars/AutoUpdate",
