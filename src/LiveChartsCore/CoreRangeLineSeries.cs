@@ -99,24 +99,26 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
     bool IErrorSeries.ShowError { get => false; set { } }
     Paint? IErrorSeries.ErrorPaint { get => null; set { } }
 
-    /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
-    public override void Invalidate(Chart chart)
+    // ---- template method ----------------------------------------------------
+
+    /// <summary>
+    /// Builds a per-frame measure context from the chart. Subclasses may override
+    /// to refine context construction (e.g. additional pre-computed per-frame values).
+    /// </summary>
+    protected virtual RangeLineMeasureContext BeginMeasure(CartesianChartEngine chart)
     {
-        var cartesianChart = (CartesianChartEngine)chart;
-        _ = GetAnimation(cartesianChart);
+        var primaryAxis = chart.GetYAxis(this);
+        var secondaryAxis = chart.GetXAxis(this);
 
-        var primaryAxis = cartesianChart.GetYAxis(this);
-        var secondaryAxis = cartesianChart.GetXAxis(this);
+        var drawLocation = chart.DrawMarginLocation;
+        var drawMarginSize = chart.DrawMarginSize;
+        var secondaryScale = secondaryAxis.GetNextScaler(chart);
+        var primaryScale = primaryAxis.GetNextScaler(chart);
 
-        var drawLocation = cartesianChart.DrawMarginLocation;
-        var drawMarginSize = cartesianChart.DrawMarginSize;
-        var secondaryScale = secondaryAxis.GetNextScaler(cartesianChart);
-        var primaryScale = primaryAxis.GetNextScaler(cartesianChart);
-
-        // Side-effect call (matches CoreLineSeries): drops the registration into the
-        // axis scaler cache for this frame.
-        _ = secondaryAxis.GetActualScaler(cartesianChart);
-        _ = primaryAxis.GetActualScaler(cartesianChart);
+        // Side-effect call (matches CoreLineSeries.BeginMeasure): drops the registration
+        // into the axis scaler cache for this frame. Locals are unused.
+        _ = secondaryAxis.GetActualScaler(chart);
+        _ = primaryAxis.GetActualScaler(chart);
 
         var actualZIndex = ZIndex == 0 ? ((ISeries)this).SeriesId : ZIndex;
 
@@ -126,8 +128,143 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
         var uwx = secondaryScale.MeasureInPixels(secondaryAxis.UnitWidth);
         if (uwx < gs) uwx = gs;
 
-        var isFirstDraw = !cartesianChart.IsDrawn(((ISeries)this).SeriesId);
+        var isFirstDraw = !chart.IsDrawn(((ISeries)this).SeriesId);
+
+        return new RangeLineMeasureContext(
+            chart, primaryAxis, secondaryAxis,
+            primaryScale, secondaryScale,
+            drawLocation, drawMarginSize,
+            actualZIndex: actualZIndex,
+            unitWidthX: uwx,
+            geometrySize: gs,
+            halfGeometrySize: hgs,
+            dataLabelsSize: (float)DataLabelsSize,
+            isFirstDraw: isFirstDraw);
+    }
+
+    /// <summary>
+    /// Ensures the per-point visual (high marker, low marker, high segment, low
+    /// segment) exists, seeded at the band midpoint with zero size so first-draw
+    /// animates outward to the real endpoints.
+    /// </summary>
+    protected virtual RangeCubicSegmentVisualPoint EnsureVisualForPoint(
+        ChartPoint point, BezierData highData, BezierData lowData, in RangeLineMeasureContext ctx)
+    {
+        var coordinate = point.Coordinate;
+        var x = ctx.SecondaryScale.ToPixels(coordinate.SecondaryValue);
+        var highY = ctx.PrimaryScale.ToPixels(coordinate.PrimaryValue);
+        var lowY = ctx.PrimaryScale.ToPixels(coordinate.TertiaryValue);
+        var midY = (highY + lowY) * 0.5f;
+
+        var v = new RangeCubicSegmentVisualPoint(new TVisual(), new TVisual());
+
+        // Seed both markers at the band midpoint with zero size — symmetric to the
+        // range bar entry pattern (see CoreRangeColumnSeries.EnsureVisualForPoint).
+        // High marker animates outward to highY; low marker animates outward to lowY.
+        v.HighGeometry.X = x;
+        v.HighGeometry.Y = midY;
+        v.HighGeometry.Width = 0;
+        v.HighGeometry.Height = 0;
+
+        v.LowGeometry.X = x;
+        v.LowGeometry.Y = midY;
+        v.LowGeometry.Width = 0;
+        v.LowGeometry.Height = 0;
+
+        // Seed segments at the midpoint too: the spline starts as a degenerate line
+        // along the band midpoints, then morphs into the actual cubic curves as the
+        // setter below drives Xi/Ym/etc. toward their real target values.
+        v.HighSegment.Xi = ctx.SecondaryScale.ToPixels(highData.X0);
+        v.HighSegment.Xm = ctx.SecondaryScale.ToPixels(highData.X1);
+        v.HighSegment.Xj = ctx.SecondaryScale.ToPixels(highData.X2);
+        v.HighSegment.Yi = midY;
+        v.HighSegment.Ym = midY;
+        v.HighSegment.Yj = midY;
+
+        v.LowSegment.Xi = ctx.SecondaryScale.ToPixels(lowData.X0);
+        v.LowSegment.Xm = ctx.SecondaryScale.ToPixels(lowData.X1);
+        v.LowSegment.Xj = ctx.SecondaryScale.ToPixels(lowData.X2);
+        v.LowSegment.Yi = midY;
+        v.LowSegment.Ym = midY;
+        v.LowSegment.Yj = midY;
+
+        point.Context.Visual = v.HighGeometry;
+        point.Context.AdditionalVisuals = v;
+        OnPointCreated(point);
+
+        return v;
+    }
+
+    /// <summary>
+    /// Collapses both markers and segments to the band midpoint when the series
+    /// becomes invisible, and removes the visual / label from the point so future
+    /// paints don't redraw them.
+    /// </summary>
+    protected virtual void CollapseInvisibleLinePoint(
+        ChartPoint point, BezierData highData, BezierData lowData, in RangeLineMeasureContext ctx)
+    {
+        if (point.Context.AdditionalVisuals is RangeCubicSegmentVisualPoint visual)
+        {
+            var c = point.Coordinate;
+            var highY = ctx.PrimaryScale.ToPixels(c.PrimaryValue);
+            var lowY = ctx.PrimaryScale.ToPixels(c.TertiaryValue);
+            var midY = (highY + lowY) * 0.5f;
+            var x = ctx.SecondaryScale.ToPixels(c.SecondaryValue);
+
+            visual.HighGeometry.X = x;
+            visual.HighGeometry.Y = midY;
+            visual.HighGeometry.Opacity = 0;
+            visual.HighGeometry.RemoveOnCompleted = true;
+
+            visual.LowGeometry.X = x;
+            visual.LowGeometry.Y = midY;
+            visual.LowGeometry.Opacity = 0;
+            visual.LowGeometry.RemoveOnCompleted = true;
+
+            visual.HighSegment.Xi = ctx.SecondaryScale.ToPixels(highData.X0);
+            visual.HighSegment.Xm = ctx.SecondaryScale.ToPixels(highData.X1);
+            visual.HighSegment.Xj = ctx.SecondaryScale.ToPixels(highData.X2);
+            visual.HighSegment.Yi = midY;
+            visual.HighSegment.Ym = midY;
+            visual.HighSegment.Yj = midY;
+
+            visual.LowSegment.Xi = ctx.SecondaryScale.ToPixels(lowData.X0);
+            visual.LowSegment.Xm = ctx.SecondaryScale.ToPixels(lowData.X1);
+            visual.LowSegment.Xj = ctx.SecondaryScale.ToPixels(lowData.X2);
+            visual.LowSegment.Yi = midY;
+            visual.LowSegment.Ym = midY;
+            visual.LowSegment.Yj = midY;
+
+            point.Context.Visual = null;
+            point.Context.AdditionalVisuals = null;
+        }
+
+        if (point.Context.Label is BaseLabelGeometry label)
+        {
+            var c = point.Coordinate;
+            var highY = ctx.PrimaryScale.ToPixels(c.PrimaryValue);
+            var lowY = ctx.PrimaryScale.ToPixels(c.TertiaryValue);
+            label.X = ctx.SecondaryScale.ToPixels(c.SecondaryValue);
+            label.Y = (highY + lowY) * 0.5f;
+            label.Opacity = 0;
+            label.RemoveOnCompleted = true;
+            point.Context.Label = null;
+        }
+    }
+
+    /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
+    public sealed override void Invalidate(Chart chart)
+    {
+        var cartesianChart = (CartesianChartEngine)chart;
+        _ = GetAnimation(cartesianChart);
+
+        var ctx = BeginMeasure(cartesianChart);
         var pointsCleanup = ChartPointCleanupContext.For(everFetched);
+
+        // Lifted out of the ref-struct context so the lambda below can close over
+        // the scales — ref locals can't be captured by an anonymous method.
+        var secondaryScale = ctx.SecondaryScale;
+        var primaryScale = ctx.PrimaryScale;
 
         var segments = EnableNullSplitting
             ? Fetch(cartesianChart).SplitByNullGaps(p => DeleteNullPoint(p, secondaryScale, primaryScale))
@@ -168,8 +305,7 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
                 {
                     hasPaths = true;
                     AttachSegmentPaths(
-                        segmentI, highStrokeContainer, lowStrokeContainer, bandFillContainer,
-                        cartesianChart, actualZIndex,
+                        segmentI, highStrokeContainer, lowStrokeContainer, bandFillContainer, in ctx,
                         out highStrokeVm, out lowStrokeVm, out bandHighVm, out bandLowVm);
                 }
 
@@ -181,12 +317,12 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
 
                 if (!IsVisible)
                 {
-                    CollapseInvisibleLinePoint(point, highData, lowData, secondaryScale, primaryScale);
+                    CollapseInvisibleLinePoint(point, highData, lowData, in ctx);
                     pointsCleanup.Clean(point);
                     continue;
                 }
 
-                visual ??= EnsureVisualForPoint(point, highData, lowData, secondaryScale, primaryScale);
+                visual ??= EnsureVisualForPoint(point, highData, lowData, in ctx);
                 visual.HighGeometry.Opacity = 1;
                 visual.LowGeometry.Opacity = 1;
 
@@ -207,7 +343,7 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
                 visual.HighSegment.Id = segmentId;
                 visual.LowSegment.Id = segmentId;
 
-                var animatedAsNew = isVisualNew && !isFirstDraw;
+                var animatedAsNew = isVisualNew && !ctx.IsFirstDraw;
 
                 if (Stroke is not null)
                 {
@@ -220,19 +356,19 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
                     bandLowVm!.AddConsecutiveSegment(visual.LowSegment, animatedAsNew);
                 }
 
-                visual.HighSegment.Xi = secondaryScale.ToPixels(highData.X0);
-                visual.HighSegment.Xm = secondaryScale.ToPixels(highData.X1);
-                visual.HighSegment.Xj = secondaryScale.ToPixels(highData.X2);
-                visual.HighSegment.Yi = primaryScale.ToPixels(highData.Y0);
-                visual.HighSegment.Ym = primaryScale.ToPixels(highData.Y1);
-                visual.HighSegment.Yj = primaryScale.ToPixels(highData.Y2);
+                visual.HighSegment.Xi = ctx.SecondaryScale.ToPixels(highData.X0);
+                visual.HighSegment.Xm = ctx.SecondaryScale.ToPixels(highData.X1);
+                visual.HighSegment.Xj = ctx.SecondaryScale.ToPixels(highData.X2);
+                visual.HighSegment.Yi = ctx.PrimaryScale.ToPixels(highData.Y0);
+                visual.HighSegment.Ym = ctx.PrimaryScale.ToPixels(highData.Y1);
+                visual.HighSegment.Yj = ctx.PrimaryScale.ToPixels(highData.Y2);
 
-                visual.LowSegment.Xi = secondaryScale.ToPixels(lowData.X0);
-                visual.LowSegment.Xm = secondaryScale.ToPixels(lowData.X1);
-                visual.LowSegment.Xj = secondaryScale.ToPixels(lowData.X2);
-                visual.LowSegment.Yi = primaryScale.ToPixels(lowData.Y0);
-                visual.LowSegment.Ym = primaryScale.ToPixels(lowData.Y1);
-                visual.LowSegment.Yj = primaryScale.ToPixels(lowData.Y2);
+                visual.LowSegment.Xi = ctx.SecondaryScale.ToPixels(lowData.X0);
+                visual.LowSegment.Xm = ctx.SecondaryScale.ToPixels(lowData.X1);
+                visual.LowSegment.Xj = ctx.SecondaryScale.ToPixels(lowData.X2);
+                visual.LowSegment.Yi = ctx.PrimaryScale.ToPixels(lowData.Y0);
+                visual.LowSegment.Ym = ctx.PrimaryScale.ToPixels(lowData.Y1);
+                visual.LowSegment.Yj = ctx.PrimaryScale.ToPixels(lowData.Y2);
 
                 // Markers track their respective segment endpoints so they slide along
                 // the curve as the underlying spline animates.
@@ -245,31 +381,31 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
                 DrawnGeometry.YProperty.GetMotion(visual.LowGeometry)!
                     .CopyFrom(Segment.YjProperty.GetMotion(visual.LowSegment)!);
 
-                visual.HighGeometry.TranslateTransform = new LvcPoint(-hgs, -hgs);
-                visual.HighGeometry.Width = gs;
-                visual.HighGeometry.Height = gs;
+                visual.HighGeometry.TranslateTransform = new LvcPoint(-ctx.HalfGeometrySize, -ctx.HalfGeometrySize);
+                visual.HighGeometry.Width = ctx.GeometrySize;
+                visual.HighGeometry.Height = ctx.GeometrySize;
                 visual.HighGeometry.RemoveOnCompleted = false;
 
-                visual.LowGeometry.TranslateTransform = new LvcPoint(-hgs, -hgs);
-                visual.LowGeometry.Width = gs;
-                visual.LowGeometry.Height = gs;
+                visual.LowGeometry.TranslateTransform = new LvcPoint(-ctx.HalfGeometrySize, -ctx.HalfGeometrySize);
+                visual.LowGeometry.Width = ctx.GeometrySize;
+                visual.LowGeometry.Height = ctx.GeometrySize;
                 visual.LowGeometry.RemoveOnCompleted = false;
 
-                var x = secondaryScale.ToPixels(coordinate.SecondaryValue);
-                var highY = primaryScale.ToPixels(coordinate.PrimaryValue);
-                var lowY = primaryScale.ToPixels(coordinate.TertiaryValue);
+                var x = ctx.SecondaryScale.ToPixels(coordinate.SecondaryValue);
+                var highY = ctx.PrimaryScale.ToPixels(coordinate.PrimaryValue);
+                var lowY = ctx.PrimaryScale.ToPixels(coordinate.TertiaryValue);
                 var minY = Math.Min(highY, lowY);
                 var bandH = Math.Abs(highY - lowY);
 
                 if (point.Context.HoverArea is not RectangleHoverArea ha)
                     point.Context.HoverArea = ha = new RectangleHoverArea();
                 _ = ha
-                    .SetDimensions(x - uwx * 0.5f, minY, uwx, bandH)
+                    .SetDimensions(x - ctx.UnitWidthX * 0.5f, minY, ctx.UnitWidthX, bandH)
                     .CenterXToolTip()
                     .StartYToolTip();
 
                 pointsCleanup.Clean(point);
-                MeasureDataLabel(point, x, (highY + lowY) * 0.5f, gs, hgs, drawLocation, drawMarginSize, isFirstDraw, cartesianChart, actualZIndex);
+                MeasureDataLabel(point, x, (highY + lowY) * 0.5f, in ctx);
 
                 OnPointMeasured(point);
             }
@@ -277,12 +413,12 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
             if (GeometryFill is not null && GeometryFill != Paint.Default)
             {
                 cartesianChart.Canvas.AddDrawableTask(GeometryFill, zone: CanvasZone.DrawMargin);
-                GeometryFill.ZIndex = actualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
+                GeometryFill.ZIndex = ctx.ActualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
             }
             if (GeometryStroke is not null && GeometryStroke != Paint.Default)
             {
                 cartesianChart.Canvas.AddDrawableTask(GeometryStroke, zone: CanvasZone.DrawMargin);
-                GeometryStroke.ZIndex = actualZIndex + PaintConstants.SeriesGeometryStrokeZIndexOffset;
+                GeometryStroke.ZIndex = ctx.ActualZIndex + PaintConstants.SeriesGeometryStrokeZIndexOffset;
             }
 
             if (!isSegmentEmpty) segmentI++;
@@ -298,11 +434,11 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
         if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
         {
             cartesianChart.Canvas.AddDrawableTask(DataLabelsPaint, zone: CanvasZone.DrawMargin);
-            DataLabelsPaint.ZIndex = actualZIndex + PaintConstants.SeriesDataLabelsZIndexOffset;
+            DataLabelsPaint.ZIndex = ctx.ActualZIndex + PaintConstants.SeriesDataLabelsZIndexOffset;
         }
 
         pointsCleanup.CollectPoints(
-            everFetched, cartesianChart.View, primaryScale, secondaryScale, SoftDeleteOrDisposePoint);
+            everFetched, cartesianChart.View, ctx.PrimaryScale, ctx.SecondaryScale, SoftDeleteOrDisposePoint);
     }
 
     /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.GetMiniatureGeometry(ChartPoint?)"/>
@@ -501,110 +637,6 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
         label.RemoveOnCompleted = true;
     }
 
-    private RangeCubicSegmentVisualPoint EnsureVisualForPoint(
-        ChartPoint point,
-        BezierData highData, BezierData lowData,
-        Scaler secondaryScale, Scaler primaryScale)
-    {
-        var coordinate = point.Coordinate;
-        var x = secondaryScale.ToPixels(coordinate.SecondaryValue);
-        var highY = primaryScale.ToPixels(coordinate.PrimaryValue);
-        var lowY = primaryScale.ToPixels(coordinate.TertiaryValue);
-        var midY = (highY + lowY) * 0.5f;
-
-        var v = new RangeCubicSegmentVisualPoint(new TVisual(), new TVisual());
-
-        // Seed both markers at the band midpoint with zero size — symmetric to the
-        // range bar entry pattern (see CoreRangeColumnSeries.EnsureVisualForPoint).
-        // High marker animates outward to highY; low marker animates outward to lowY.
-        v.HighGeometry.X = x;
-        v.HighGeometry.Y = midY;
-        v.HighGeometry.Width = 0;
-        v.HighGeometry.Height = 0;
-
-        v.LowGeometry.X = x;
-        v.LowGeometry.Y = midY;
-        v.LowGeometry.Width = 0;
-        v.LowGeometry.Height = 0;
-
-        // Seed segments at the midpoint too: the spline starts as a degenerate line
-        // along the band midpoints, then morphs into the actual cubic curves as the
-        // setter below drives Xi/Ym/etc. toward their real target values.
-        v.HighSegment.Xi = secondaryScale.ToPixels(highData.X0);
-        v.HighSegment.Xm = secondaryScale.ToPixels(highData.X1);
-        v.HighSegment.Xj = secondaryScale.ToPixels(highData.X2);
-        v.HighSegment.Yi = midY;
-        v.HighSegment.Ym = midY;
-        v.HighSegment.Yj = midY;
-
-        v.LowSegment.Xi = secondaryScale.ToPixels(lowData.X0);
-        v.LowSegment.Xm = secondaryScale.ToPixels(lowData.X1);
-        v.LowSegment.Xj = secondaryScale.ToPixels(lowData.X2);
-        v.LowSegment.Yi = midY;
-        v.LowSegment.Ym = midY;
-        v.LowSegment.Yj = midY;
-
-        point.Context.Visual = v.HighGeometry;
-        point.Context.AdditionalVisuals = v;
-        OnPointCreated(point);
-
-        return v;
-    }
-
-    private static void CollapseInvisibleLinePoint(
-        ChartPoint point,
-        BezierData highData, BezierData lowData,
-        Scaler secondaryScale, Scaler primaryScale)
-    {
-        if (point.Context.AdditionalVisuals is RangeCubicSegmentVisualPoint visual)
-        {
-            var c = point.Coordinate;
-            var highY = primaryScale.ToPixels(c.PrimaryValue);
-            var lowY = primaryScale.ToPixels(c.TertiaryValue);
-            var midY = (highY + lowY) * 0.5f;
-            var x = secondaryScale.ToPixels(c.SecondaryValue);
-
-            visual.HighGeometry.X = x;
-            visual.HighGeometry.Y = midY;
-            visual.HighGeometry.Opacity = 0;
-            visual.HighGeometry.RemoveOnCompleted = true;
-
-            visual.LowGeometry.X = x;
-            visual.LowGeometry.Y = midY;
-            visual.LowGeometry.Opacity = 0;
-            visual.LowGeometry.RemoveOnCompleted = true;
-
-            visual.HighSegment.Xi = secondaryScale.ToPixels(highData.X0);
-            visual.HighSegment.Xm = secondaryScale.ToPixels(highData.X1);
-            visual.HighSegment.Xj = secondaryScale.ToPixels(highData.X2);
-            visual.HighSegment.Yi = midY;
-            visual.HighSegment.Ym = midY;
-            visual.HighSegment.Yj = midY;
-
-            visual.LowSegment.Xi = secondaryScale.ToPixels(lowData.X0);
-            visual.LowSegment.Xm = secondaryScale.ToPixels(lowData.X1);
-            visual.LowSegment.Xj = secondaryScale.ToPixels(lowData.X2);
-            visual.LowSegment.Yi = midY;
-            visual.LowSegment.Ym = midY;
-            visual.LowSegment.Yj = midY;
-
-            point.Context.Visual = null;
-            point.Context.AdditionalVisuals = null;
-        }
-
-        if (point.Context.Label is BaseLabelGeometry label)
-        {
-            var c = point.Coordinate;
-            var highY = primaryScale.ToPixels(c.PrimaryValue);
-            var lowY = primaryScale.ToPixels(c.TertiaryValue);
-            label.X = secondaryScale.ToPixels(c.SecondaryValue);
-            label.Y = (highY + lowY) * 0.5f;
-            label.Opacity = 0;
-            label.RemoveOnCompleted = true;
-            point.Context.Label = null;
-        }
-    }
-
     private void DeleteNullPoint(ChartPoint point, Scaler xScale, Scaler yScale)
     {
         if (point.Context.AdditionalVisuals is not RangeCubicSegmentVisualPoint visual) return;
@@ -638,8 +670,7 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
         List<TStrokePathGeometry> highStrokeContainer,
         List<TStrokePathGeometry> lowStrokeContainer,
         List<TBandPathGeometry> bandFillContainer,
-        CartesianChartEngine chart,
-        int actualZIndex,
+        in RangeLineMeasureContext ctx,
         out VectorManager highStrokeVm,
         out VectorManager lowStrokeVm,
         out VectorManager bandHighVm,
@@ -656,11 +687,13 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
         bandHighVm = new VectorManager(bandFill.Path.Commands);
         bandLowVm = new VectorManager(bandFill.Path.LowCommands);
 
+        var chart = ctx.Chart;
+
         if (Fill is not null && Fill != Paint.Default)
         {
             Fill.AddGeometryToPaintTask(chart.Canvas, bandFill.Path);
             chart.Canvas.AddDrawableTask(Fill, zone: CanvasZone.DrawMargin);
-            Fill.ZIndex = actualZIndex + PaintConstants.SeriesFillZIndexOffset;
+            Fill.ZIndex = ctx.ActualZIndex + PaintConstants.SeriesFillZIndexOffset;
             if (isNew) bandFill.Path.Animate(GetAnimation(chart));
         }
 
@@ -669,7 +702,7 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
             Stroke.AddGeometryToPaintTask(chart.Canvas, highStroke.Path);
             Stroke.AddGeometryToPaintTask(chart.Canvas, lowStroke.Path);
             chart.Canvas.AddDrawableTask(Stroke, zone: CanvasZone.DrawMargin);
-            Stroke.ZIndex = actualZIndex + PaintConstants.SeriesStrokeZIndexOffset;
+            Stroke.ZIndex = ctx.ActualZIndex + PaintConstants.SeriesStrokeZIndexOffset;
             if (isNew)
             {
                 var animation = GetAnimation(chart);
@@ -721,14 +754,14 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
         }
     }
 
-    private void MeasureDataLabel(
-        ChartPoint point, float x, float y, float gs, float hgs,
-        LvcPoint drawLocation, LvcSize drawMarginSize, bool isFirstDraw,
-        CartesianChartEngine chart, int actualZIndex)
+    private void MeasureDataLabel(ChartPoint point, float x, float y, in RangeLineMeasureContext ctx)
     {
         if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default) return;
 
         var coordinate = point.Coordinate;
+        var hgs = ctx.HalfGeometrySize;
+        var gs = ctx.GeometrySize;
+        var chart = ctx.Chart;
         var label = (TLabel?)point.Context.Label;
 
         if (label is null)
@@ -750,11 +783,11 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
 
         DataLabelsPaint.AddGeometryToPaintTask(chart.Canvas, label);
         label.Text = DataLabelsFormatter(new ChartPoint<TModel, TVisual, TLabel>(point));
-        label.TextSize = (float)DataLabelsSize;
+        label.TextSize = ctx.DataLabelsSize;
         label.Padding = DataLabelsPadding;
         label.Paint = DataLabelsPaint;
 
-        if (isFirstDraw)
+        if (ctx.IsFirstDraw)
             label.CompleteTransition(
                 BaseLabelGeometry.TextSizeProperty,
                 BaseLabelGeometry.XProperty,
@@ -764,7 +797,7 @@ public abstract class CoreRangeLineSeries<TModel, TVisual, TLabel, TStrokePathGe
         var m = label.Measure();
         var labelPosition = GetLabelPosition(
             x - hgs, y - hgs, gs, gs, m, DataLabelsPosition,
-            SeriesProperties, coordinate.PrimaryValue > Pivot, drawLocation, drawMarginSize);
+            SeriesProperties, coordinate.PrimaryValue > Pivot, ctx.DrawLocation, ctx.DrawMarginSize);
         if (DataLabelsTranslate is not null)
             label.TranslateTransform = new LvcPoint(
                 m.Width * DataLabelsTranslate.Value.X, m.Height * DataLabelsTranslate.Value.Y);
