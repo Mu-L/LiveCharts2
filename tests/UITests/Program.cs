@@ -68,11 +68,11 @@ MSBuildArg tf_n462 = new("TestBuildTargetFramework", "net462");
 MSBuildArg isTest = new("IsTestBuild", "true");
 MSBuildArg[] iphoneBuild = [
     ..msBuildArgs,
-    // iOS SDK 26.2 (.NET 10 / Xcode 26.2) replaced the legacy `_DeviceName=:v2:udid=<UDID>`
-    // selector with a top-level `DeviceName=<UDID>` (bare UDID) honored by `dotnet run`'s
-    // ComputeAvailableDevices target — see dotnet/macios#24279. The legacy property is no
-    // longer authoritative when multiple simulators of the same model exist on the runner.
-    new("DeviceName", "[device]"),
+    // No device selector here on purpose: in iOS SDK 26.2+ device selection is a
+    // top-level `dotnet run --device <UDID>` CLI flag, not an MSBuild property.
+    // Factos drives `dotnet run` from MSBuildArg pairs, so we can't inject `--device`
+    // here. The CI workflow instead prunes the runner's simulator pool to a single
+    // entry, which lets `dotnet run`'s RunCommandSelector auto-pick (devices.Count == 1).
     new("MTouchUseLlvm", "false"),
     new("MtouchLink", "SdkOnly"),
     new("RunAOTCompilation", "false"),
