@@ -214,6 +214,120 @@ public class SeriesHitTests
         Assert.AreEqual(1, hits.Length, "Row hover area should cover the visual inter-row gap (UX contract)");
     }
 
+    // --- RangeColumnSeries ----------------------------------------------
+    // Inherits FindPointsInPosition from BarSeries (ExactMatch = visual rect,
+    // others = HoverArea). MeasureBarLayout gives the visual a Y span of
+    // |HighPx - LowPx| anchored at min(High,Low)Px — so ExactMatch hits the
+    // [Low, High] band and misses the area above High / below Low.
+
+    [TestMethod]
+    public void RangeColumn_CompareOnlyX_HitsAtColumnCenter()
+    {
+        var series = new RangeColumnSeries<RangeValue>
+        {
+            Values = [new(10, 20), new(15, 25), new(5, 30)],
+        };
+        var chart = NewCartesianChart(series);
+        var center = HoverAreaCenter(series, chart, 1);
+
+        var hits = chart.GetPointsAt(new(center.X, center.Y), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(1, hits.Length);
+        Assert.AreEqual(25d, hits[0].Coordinate.PrimaryValue);
+    }
+
+    [TestMethod]
+    public void RangeColumn_ExactMatch_HitsInsideBandVisual()
+    {
+        // Visual spans [Low, High] vertically (height = |HighPx - LowPx|, not
+        // a 0-to-Value column). Probe at the band midpoint must hit; this
+        // distinguishes the range column from a regular column whose visual
+        // spans [Pivot, Value].
+        var series = new RangeColumnSeries<RangeValue>
+        {
+            Values = [new(10, 30)],
+        };
+        var chart = NewCartesianChart(series);
+        var v = ReadVisual<RoundedRectangleGeometry>(series, chart, 0);
+        var probeX = v.X + v.Width * 0.5f;
+        var probeY = v.Y + v.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(probeX, probeY), FindingStrategy.ExactMatch).ToArray();
+        Assert.AreEqual(1, hits.Length, "Probe inside [Low, High] band must hit");
+    }
+
+    [TestMethod]
+    public void RangeColumn_ExactMatch_BelowBandMisses()
+    {
+        // A probe below Low (outside the [Low, High] band on the value axis)
+        // must miss. Pins that the visual rectangle is the [Low, High] band,
+        // not the [Pivot=0, High] column a regular ColumnSeries would draw.
+        var series = new RangeColumnSeries<RangeValue>
+        {
+            Values = [new(10, 30)],
+        };
+        var chart = NewCartesianChart(series);
+        var v = ReadVisual<RoundedRectangleGeometry>(series, chart, 0);
+        var probeX = v.X + v.Width * 0.5f;
+        var probeY = v.Y + v.Height + 5;  // below the band's bottom edge
+
+        var hits = chart.GetPointsAt(new(probeX, probeY), FindingStrategy.ExactMatch).ToArray();
+        Assert.AreEqual(0, hits.Length, "Probe below Low must miss — range column is NOT [0, High]");
+    }
+
+    // --- RangeRowSeries -------------------------------------------------
+    // Mirror of RangeColumn for the horizontal orientation. Default
+    // strategy = CompareOnlyYTakeClosest; ExactMatch hits the [Low, High]
+    // band on X.
+
+    [TestMethod]
+    public void RangeRow_CompareOnlyY_HitsAtRowCenter()
+    {
+        var series = new RangeRowSeries<RangeValue>
+        {
+            Values = [new(10, 20), new(15, 25), new(5, 30)],
+        };
+        var chart = NewCartesianChart(series);
+        var center = HoverAreaCenter(series, chart, 1);
+
+        var hits = chart.GetPointsAt(new(center.X, center.Y), FindingStrategy.CompareOnlyY).ToArray();
+        Assert.AreEqual(1, hits.Length);
+        Assert.AreEqual(25d, hits[0].Coordinate.PrimaryValue);
+    }
+
+    [TestMethod]
+    public void RangeRow_ExactMatch_HitsInsideBandVisual()
+    {
+        var series = new RangeRowSeries<RangeValue>
+        {
+            Values = [new(10, 30)],
+        };
+        var chart = NewCartesianChart(series);
+        var v = ReadVisual<RoundedRectangleGeometry>(series, chart, 0);
+        var probeX = v.X + v.Width * 0.5f;
+        var probeY = v.Y + v.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(probeX, probeY), FindingStrategy.ExactMatch).ToArray();
+        Assert.AreEqual(1, hits.Length);
+    }
+
+    [TestMethod]
+    public void RangeRow_ExactMatch_LeftOfBandMisses()
+    {
+        // Horizontal mirror of RangeColumn_ExactMatch_BelowBandMisses: a
+        // probe to the LEFT of Low (outside the band on X) must miss.
+        var series = new RangeRowSeries<RangeValue>
+        {
+            Values = [new(10, 30)],
+        };
+        var chart = NewCartesianChart(series);
+        var v = ReadVisual<RoundedRectangleGeometry>(series, chart, 0);
+        var probeX = v.X - 5;  // left of the band
+        var probeY = v.Y + v.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(probeX, probeY), FindingStrategy.ExactMatch).ToArray();
+        Assert.AreEqual(0, hits.Length);
+    }
+
     // --- BoxSeries -------------------------------------------------------
     // Default = CompareOnlyXTakeClosest. RectangleHoverArea spans the full
     // whisker rectangle (High → Low). Override goes pixel-precise on ExactMatch.
@@ -499,6 +613,149 @@ public class SeriesHitTests
         Assert.AreEqual(0, hits.Length);
     }
 
+    // --- StackedColumnSeries --------------------------------------------
+    // Inherits FindPointsInPosition from BarSeries verbatim; the contract
+    // worth pinning here is the stacker: each layer's visual is anchored
+    // at its CumulativeStart on the value axis. A probe in the layer 1
+    // slice must hit layer 1 (and not layer 0); ExactMatch is the strict
+    // discriminator because each layer's visual rectangle is distinct.
+
+    [TestMethod]
+    public void StackedColumn_CompareOnlyX_HitsAllLayers()
+    {
+        // CompareOnlyX uses HoverAreas which all share the same X span at
+        // a given category — every stacked layer reports a hit there.
+        var s1 = new StackedColumnSeries<int> { Values = [3, 5, 4] };
+        var s2 = new StackedColumnSeries<int> { Values = [2, 3, 6] };
+        var chart = NewCartesianChartMulti(s1, s2);
+        var center = HoverAreaCenter(s1, chart, 1);
+
+        var hits = chart.GetPointsAt(new(center.X, center.Y), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(2, hits.Length, "CompareOnlyX must report a hit for each stacked layer at the probed X");
+    }
+
+    [TestMethod]
+    public void StackedColumn_ExactMatch_HitsCorrectLayer()
+    {
+        // The stacker shifts s2's visual UP to sit on top of s1's. A probe
+        // inside s2's visual must hit only s2, NOT s1. Pre-stacker regression
+        // would have BOTH visuals at the same Y and either both would hit or
+        // the wrong one would.
+        var s1 = new StackedColumnSeries<int> { Values = [10, 10, 10] };
+        var s2 = new StackedColumnSeries<int> { Values = [10, 10, 10] };
+        var chart = NewCartesianChartMulti(s1, s2);
+        var s2Visual = ReadVisual<RoundedRectangleGeometry>(s2, chart, 1);
+        var probeX = s2Visual.X + s2Visual.Width * 0.5f;
+        var probeY = s2Visual.Y + s2Visual.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(probeX, probeY), FindingStrategy.ExactMatch).ToArray();
+        Assert.AreEqual(1, hits.Length, "ExactMatch inside s2's rect must hit exactly one layer");
+        Assert.AreSame(s2, hits[0].Context.Series, "the hit must be the top layer (s2), not s1 underneath");
+    }
+
+    // --- StackedRowSeries -----------------------------------------------
+    // Horizontal mirror.
+
+    [TestMethod]
+    public void StackedRow_CompareOnlyY_HitsAllLayers()
+    {
+        var s1 = new StackedRowSeries<int> { Values = [3, 5, 4] };
+        var s2 = new StackedRowSeries<int> { Values = [2, 3, 6] };
+        var chart = NewCartesianChartMulti(s1, s2);
+        var center = HoverAreaCenter(s1, chart, 1);
+
+        var hits = chart.GetPointsAt(new(center.X, center.Y), FindingStrategy.CompareOnlyY).ToArray();
+        Assert.AreEqual(2, hits.Length, "CompareOnlyY must report a hit for each stacked layer at the probed Y");
+    }
+
+    [TestMethod]
+    public void StackedRow_LayerHoverAreasOffsetByStacker()
+    {
+        // The stacker shifts s2's HoverArea to the right of s1's (cumulative
+        // on X). Pin the offset explicitly — pre-stacker regression would
+        // collapse both onto the same X.
+        //
+        // Note: HorizontalBarSeries.MeasureBarLayout records categoryHoverWidth
+        // as a NEGATIVE value when stacked (cx = pixel of cumulative END,
+        // width = pixel of START - pixel of END < 0). RectangleHoverArea
+        // normalizes internally (issue #2165 / PR #2183), so CompareOnlyY-style
+        // strategies work; but BarSeries.FindPointsInPosition's ExactMatch
+        // override is a straight `pX > v.X && pX < v.X + v.Width` check that
+        // returns false for negative-width visuals. Test the HoverArea
+        // contract (which is correct) here; the inline ExactMatch case lives
+        // as a known gap on BarSeries.
+        var s1 = new StackedRowSeries<int> { Values = [10, 10, 10] };
+        var s2 = new StackedRowSeries<int> { Values = [10, 10, 10] };
+        var chart = NewCartesianChartMulti(s1, s2);
+        var a1 = ReadHoverArea(s1, chart, 1);
+        var a2 = ReadHoverArea(s2, chart, 1);
+
+        // Use NormalizedXEnd because Width may be negative under the
+        // hood — RectangleHoverArea exposes the *effective* extents but a
+        // direct (X+Width) read would mislead. We just need the offset proof.
+        var s1RightEdge = Math.Max(a1.X, a1.X + a1.Width);
+        var s2LeftEdge = Math.Min(a2.X, a2.X + a2.Width);
+
+        Assert.IsTrue(s2LeftEdge >= s1RightEdge - 0.5,
+            $"Stacker must offset s2 to the right of s1; got s1.right={s1RightEdge}, s2.left={s2LeftEdge}");
+    }
+
+    // --- StackedAreaSeries -----------------------------------------------
+    // Inherits LineSeries' FindPointsInPosition. The stacker anchors each
+    // layer's per-point HoverArea at the layer's CumulativeStart on Y.
+    // Default ctor sets GeometrySize=0; bump it for the test so the
+    // marker-sized hover area is non-degenerate (uwx × geometrySize).
+
+    [TestMethod]
+    public void StackedArea_CompareOnlyX_HitsAllLayers()
+    {
+        var s1 = new StackedAreaSeries<int> { Values = [3, 5, 4], GeometrySize = 12 };
+        var s2 = new StackedAreaSeries<int> { Values = [2, 3, 6], GeometrySize = 12 };
+        var chart = NewCartesianChartMulti(s1, s2);
+        var area = ReadHoverArea(s1, chart, 1);
+        var midX = area.X + area.Width * 0.5f;
+        var midY = area.Y + area.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(midX, midY), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(2, hits.Length, "Each stacked layer reports a hit at the same X");
+    }
+
+    [TestMethod]
+    public void StackedArea_LayerHoverAreasOffsetByStacker()
+    {
+        // The bottom layer's HoverArea sits at the data-value Y; the top
+        // layer's sits at (bottom.Value + top.Value)Y. Pre-stacker regression
+        // would put both at the same Y. Pin the offset explicitly.
+        var s1 = new StackedAreaSeries<int> { Values = [10, 10, 10], GeometrySize = 12 };
+        var s2 = new StackedAreaSeries<int> { Values = [10, 10, 10], GeometrySize = 12 };
+        var chart = NewCartesianChartMulti(s1, s2);
+        var a1 = ReadHoverArea(s1, chart, 1);
+        var a2 = ReadHoverArea(s2, chart, 1);
+
+        // On a non-inverted Y axis, larger Y values render at smaller pixel
+        // Y. s2 sits ATOP s1 in data space, so s2.Y must be a smaller pixel
+        // (higher on screen) than s1.Y.
+        Assert.IsTrue(a2.Y < a1.Y,
+            $"Stacker must offset s2 above s1; got s1.Y={a1.Y}, s2.Y={a2.Y}");
+    }
+
+    // --- StackedStepAreaSeries -------------------------------------------
+    // Same shape as StackedArea but inherits CoreStepLineSeries instead.
+
+    [TestMethod]
+    public void StackedStepArea_CompareOnlyX_HitsAllLayers()
+    {
+        var s1 = new StackedStepAreaSeries<int> { Values = [3, 5, 4], GeometrySize = 12 };
+        var s2 = new StackedStepAreaSeries<int> { Values = [2, 3, 6], GeometrySize = 12 };
+        var chart = NewCartesianChartMulti(s1, s2);
+        var area = ReadHoverArea(s1, chart, 1);
+        var midX = area.X + area.Width * 0.5f;
+        var midY = area.Y + area.Height * 0.5f;
+
+        var hits = chart.GetPointsAt(new(midX, midY), FindingStrategy.CompareOnlyX).ToArray();
+        Assert.AreEqual(2, hits.Length);
+    }
+
     // --- HeatSeries ------------------------------------------------------
     // Default = CompareAllTakeClosest (PrefersXYStrategyTooltips falls through).
     // Each cell carries a RectangleHoverArea covering exactly the cell rect.
@@ -684,6 +941,16 @@ public class SeriesHitTests
             Width = 1000,
             Height = 1000,
             Series = [series],
+            XAxes = [new Axis { IsVisible = false }],
+            YAxes = [new Axis { IsVisible = false }],
+        };
+
+    private static SKCartesianChart NewCartesianChartMulti(params ISeries[] series) =>
+        new()
+        {
+            Width = 1000,
+            Height = 1000,
+            Series = series,
             XAxes = [new Axis { IsVisible = false }],
             YAxes = [new Axis { IsVisible = false }],
         };
