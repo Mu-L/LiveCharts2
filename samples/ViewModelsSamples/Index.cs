@@ -64,6 +64,7 @@ public static class Index
         "StackedBars/Groups",
 
         "Financial/BasicCandlesticks",
+        "Financial/BasicOhlc",
 
         "Error/Basic",
 
