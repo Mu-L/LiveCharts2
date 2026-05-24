@@ -1,4 +1,5 @@
 using LiveChartsCore.Defaults;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
@@ -86,6 +87,98 @@ public sealed class SankeySeriesTests
         };
 
         chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(WithLabels)}");
+    }
+
+    [TestMethod]
+    public void JobApplicationFunnel()
+    {
+        // Best-effort approximation of a real-world sankey: job-application
+        // funnel with 4 columns. The interesting stresses are (a) a node
+        // that is BOTH a sink and a source (1st Interviews, 2nd Interviews,
+        // Offers), (b) labels showing both the flow value and the node name,
+        // and (c) per-node coloring via NodeColorMapper so each outcome
+        // reads as its own swimlane.
+        var applications = new SankeyNode("Applications");
+        var firstInterviews = new SankeyNode("1st Interviews");
+        var secondInterviews = new SankeyNode("2nd Interviews");
+        var offers = new SankeyNode("Offers");
+        var accepted = new SankeyNode("Accepted");
+        var declined = new SankeyNode("Declined");
+        var dropped = new SankeyNode("Dropped by Myself");
+        var noOffer = new SankeyNode("No Offer Received");
+        var rejected = new SankeyNode("Rejected");
+        var noReply = new SankeyNode("No Reply");
+
+        var nodes = new[]
+        {
+            applications,
+            firstInterviews, rejected, noReply,
+            secondInterviews, dropped, noOffer,
+            offers,
+            accepted, declined,
+        };
+
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(applications, firstInterviews, 4),
+            new SankeyLink<SankeyNode>(applications, rejected, 3),
+            new SankeyLink<SankeyNode>(applications, noReply, 2),
+            new SankeyLink<SankeyNode>(firstInterviews, secondInterviews, 2),
+            new SankeyLink<SankeyNode>(firstInterviews, dropped, 1),
+            new SankeyLink<SankeyNode>(firstInterviews, noOffer, 1),
+            new SankeyLink<SankeyNode>(secondInterviews, offers, 2),
+            new SankeyLink<SankeyNode>(offers, accepted, 1),
+            new SankeyLink<SankeyNode>(offers, declined, 1),
+        };
+
+        // Sum incoming + outgoing per node so the label can show the value
+        // that appears in the source diagram ("9 Applications", "4 1st
+        // Interviews", etc). max(in, out) matches what SankeyLayout uses
+        // internally as the node "value".
+        double NodeValue(SankeyNode n)
+        {
+            var inSum = links.Where(l => ReferenceEquals(l.Target, n)).Sum(l => l.Weight);
+            var outSum = links.Where(l => ReferenceEquals(l.Source, n)).Sum(l => l.Weight);
+            return inSum > outSum ? inSum : outSum;
+        }
+
+        var palette = new Dictionary<SankeyNode, LvcColor>(ReferenceEqualityComparer.Instance)
+        {
+            [applications] = new(96, 138, 218),
+            [firstInterviews] = new(96, 138, 218),
+            [secondInterviews] = new(96, 138, 218),
+            [offers] = new(96, 138, 218),
+            [accepted] = new(64, 175, 110),
+            [declined] = new(220, 130, 50),
+            [dropped] = new(220, 130, 50),
+            [noOffer] = new(220, 130, 50),
+            [rejected] = new(210, 80, 80),
+            [noReply] = new(180, 180, 180),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    NodeWidth = 18,
+                    NodePadding = 14,
+                    NodeCornerRadius = 3,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                    LinkFill = new SolidColorPaint(SKColors.White),
+                    NodeColorMapper = n => palette[n],
+                    LabelMapper = n => $"{NodeValue(n):0} {n.Name}",
+                    DataLabelsPaint = new SolidColorPaint(SKColors.Black),
+                    DataLabelsSize = 13,
+                }
+            ],
+            Width = 900,
+            Height = 600,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(JobApplicationFunnel)}");
     }
 
     [TestMethod]
