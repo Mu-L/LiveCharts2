@@ -10,6 +10,8 @@ namespace EtoFormsSample.Treemaps.Basic;
 
 public class View : Panel
 {
+    public readonly TreemapChart Chart;
+
     public View()
     {
         var regions = new[]
@@ -49,11 +51,11 @@ public class View : Panel
             }
         };
 
-        var treemapChart = new TreemapChart
+        Chart = new TreemapChart
         {
             Series = series,
         };
 
-        Content = treemapChart;
+        Content = Chart;
     }
 }

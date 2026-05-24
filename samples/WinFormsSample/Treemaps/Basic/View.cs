@@ -10,6 +10,8 @@ namespace WinFormsSample.Treemaps.Basic;
 
 public partial class View : UserControl
 {
+    public readonly TreemapChart Chart;
+
     public View()
     {
         InitializeComponent();
@@ -52,7 +54,7 @@ public partial class View : UserControl
             }
         };
 
-        var treemapChart = new TreemapChart
+        Chart = new TreemapChart
         {
             Series = series,
             Location = new System.Drawing.Point(0, 0),
@@ -60,6 +62,6 @@ public partial class View : UserControl
             Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom
         };
 
-        Controls.Add(treemapChart);
+        Controls.Add(Chart);
     }
 }
