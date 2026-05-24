@@ -26,6 +26,7 @@ using System.Runtime.CompilerServices;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Drawing;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
@@ -52,9 +53,11 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
 {
     private readonly Dictionary<object, TVisual> _nodeVisuals = new(ReferenceComparer.Instance);
     private readonly Dictionary<object, TLabel> _nodeLabels = new(ReferenceComparer.Instance);
+    private readonly Dictionary<object, ChartPoint> _nodePoints = new(ReferenceComparer.Instance);
     private readonly HashSet<object> _seenThisMeasure = new(ReferenceComparer.Instance);
     private readonly HashSet<object> _labeledThisMeasure = new(ReferenceComparer.Instance);
     private readonly Dictionary<object, double> _weightCache = new(ReferenceComparer.Instance);
+    private Func<ChartPoint, string>? _tooltipLabelFormatter;
 
     /// <summary>Gets or sets the fill paint applied to every tile.</summary>
     public Paint? Fill
@@ -112,6 +115,19 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     /// <see cref="Series{TModel, TVisual, TLabel}.DataLabelsPaint"/> to opt in.
     /// </summary>
     public Func<TModel, string?>? LabelMapper { get; set => SetProperty(ref field, value); }
+
+    /// <summary>Tooltip label formatter on the typed point — null falls back to "&lt;label&gt;: &lt;value&gt;".</summary>
+    public Func<ChartPoint<TModel, TVisual, TLabel>, string>? ToolTipLabelFormatter
+    {
+        get => _tooltipLabelFormatter;
+        set => ((ITreemapSeries)this).TooltipLabelFormatter = value is null ? null : p => value(ConvertToTypedChartPoint(p));
+    }
+
+    Func<ChartPoint, string>? ITreemapSeries.TooltipLabelFormatter
+    {
+        get => _tooltipLabelFormatter;
+        set => SetProperty(ref _tooltipLabelFormatter, value);
+    }
 
     // ---- template method ----------------------------------------------------
 
@@ -222,7 +238,11 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
                 CollapseRemovedVisual(kv.Value);
                 toRemove.Add(kv.Key);
             }
-            foreach (var k in toRemove) _ = _nodeVisuals.Remove(k);
+            foreach (var k in toRemove)
+            {
+                _ = _nodeVisuals.Remove(k);
+                _ = _nodePoints.Remove(k);
+            }
         }
 
         // Reap labels for any key not labeled this pass. Covers: node removed
@@ -373,11 +393,48 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         var kids = ResolveChildren(node);
         var isLeaf = kids is null;
 
+        // Leaves get a ChartPoint with a RectangleHoverArea matching the tile
+        // so tooltip / DataPointerDown / hover dispatch via the engine just
+        // works. Internal nodes don't — a hover would otherwise hit both the
+        // child and every ancestor along the path.
+        if (isLeaf) EnsureChartPoint(node, inner, in ctx);
+
         // Labels go on leaves only — internal-node tiles are containers and
         // would just overlap with their children's labels.
         if (isLeaf) MeasureDataLabel(node, inner, in ctx);
 
         if (!isLeaf) LayoutSiblings(kids!, inner, in ctx);
+    }
+
+    /// <summary>
+    /// Creates or refreshes the <see cref="ChartPoint"/> for a leaf — its
+    /// HoverArea is set to the tile rectangle, Coordinate.PrimaryValue to
+    /// the resolved weight, and DataSource to the user's node model so the
+    /// tooltip formatter can access either via context or the typed point.
+    /// </summary>
+    private void EnsureChartPoint(TModel node, LvcRectangle rect, in TreemapMeasureContext ctx)
+    {
+        if (!_nodePoints.TryGetValue(node!, out var point))
+        {
+            var entity = new MappedChartEntity
+            {
+                MetaData = new ChartEntityMetaData(_ => { }) { EntityIndex = _nodePoints.Count },
+            };
+            point = new ChartPoint(ctx.Chart.View, this, entity);
+            _nodePoints[node!] = point;
+        }
+        point.Context.DataSource = node;
+        point.Context.Visual = _nodeVisuals[node!];
+
+        var ha = point.Context.HoverArea as RectangleHoverArea ?? new RectangleHoverArea();
+        _ = ha
+            .SetDimensions(rect.Location.X, rect.Location.Y, rect.Size.Width, rect.Size.Height)
+            .CenterXToolTip()
+            .CenterYToolTip();
+        point.Context.HoverArea = ha;
+
+        ((MappedChartEntity)point.Context.Entity).Coordinate =
+            new Coordinate(point.Context.Entity.MetaData!.EntityIndex, ResolveValue(node));
     }
 
     /// <summary>
@@ -434,10 +491,26 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     // ---- Series abstract members (image-gen scope: stubs / no-ops) ----------
 
     /// <inheritdoc cref="ISeries.GetPrimaryToolTipText(ChartPoint)"/>
-    public override string? GetPrimaryToolTipText(ChartPoint point) => null;
+    public override string? GetPrimaryToolTipText(ChartPoint point)
+    {
+        if (_tooltipLabelFormatter is not null) return _tooltipLabelFormatter(point);
+
+        // Default: "<label>: <value>" — or just "<value>" when the label is empty.
+        var node = point.Context.DataSource is TModel m ? m : default;
+        var label = node is not null ? ResolveLabel(node) : null;
+        var value = point.Coordinate.PrimaryValue;
+        return string.IsNullOrEmpty(label) ? value.ToString() : $"{label}: {value}";
+    }
 
     /// <inheritdoc cref="ISeries.GetSecondaryToolTipText(ChartPoint)"/>
     public override string? GetSecondaryToolTipText(ChartPoint point) => LiveCharts.IgnoreToolTipLabel;
+
+    /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.FindPointsInPosition"/>
+    protected override IEnumerable<ChartPoint> FindPointsInPosition(
+        Chart chart, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor) =>
+        _nodePoints.Values.Where(p =>
+            p.Context.HoverArea is not null &&
+            p.Context.HoverArea.IsPointerOver(pointerPosition, strategy));
 
     /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.GetMiniatureGeometry(ChartPoint?)"/>
     public override IDrawnElement GetMiniatureGeometry(ChartPoint? point) =>
@@ -469,6 +542,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         foreach (var visual in _nodeVisuals.Values)
             CollapseRemovedVisual(visual);
         _nodeVisuals.Clear();
+        _nodePoints.Clear();
         foreach (var label in _nodeLabels.Values)
         {
             label.Opacity = 0;
