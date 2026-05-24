@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,35 +20,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using LiveChartsCore.Drawing;
+
 namespace LiveChartsCore.Kernel.Sketches;
 
 /// <summary>
-/// Defines a chart kind.
+/// Common (non-typed) surface of a treemap series. The hierarchical data
+/// model is provided via series-level mappers exposed on the typed
+/// <c>CoreTreemapSeries&lt;TModel, TVisual, TLabel&gt;</c>.
 /// </summary>
-public enum ChartKind
+public interface ITreemapSeries : ISeries, IStrokedAndFilled
 {
     /// <summary>
-    /// The cartesian chart.
+    /// Gets or sets the gap (in pixels) inset on every node before its
+    /// children are laid out. Default is 2.
     /// </summary>
-    Cartesian,
+    double Padding { get; set; }
 
     /// <summary>
-    /// The pie chart.
+    /// Gets or sets the corner radius (in pixels) for tiles that use a rounded
+    /// rectangle visual. Default is 0.
     /// </summary>
-    Pie,
+    double CornerRadius { get; set; }
 
     /// <summary>
-    /// The polar chart.
+    /// The sub-rectangle of the chart draw margin that this series owns. Set
+    /// by <see cref="TreemapChartEngine"/> on every measure pass — the engine
+    /// squarifies the draw margin between visible series by their totals.
     /// </summary>
-    Polar,
+    LvcRectangle AssignedRectangle { get; set; }
 
     /// <summary>
-    /// The geo map chart.
+    /// Returns the sum of root weights for this series (rolling internal nodes
+    /// up via the children mapper). Used by the engine to partition the draw
+    /// margin between multiple series.
     /// </summary>
-    GeoMap,
-
-    /// <summary>
-    /// The treemap chart.
-    /// </summary>
-    Treemap
+    double GetTotalWeight();
 }
