@@ -23,6 +23,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Sketches;
@@ -288,26 +289,32 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     /// <summary>
     /// Resolves a node's weight. Falls back to the sum of its descendants'
     /// resolved weights when the node has children and no explicit non-zero
-    /// value of its own. Memoized per measure pass (cleared at the top of
-    /// <see cref="GetTotalWeight"/> and <see cref="Invalidate"/>) so deep
-    /// hierarchies don't re-sum the same subtrees at every depth.
+    /// value of its own. When mappers are not configured but the node is a
+    /// built-in <see cref="TreemapNode"/>, its members are used directly —
+    /// covers the XAML path where source-generated wrappers instantiate the
+    /// underlying series with an erased TModel that prevents the facade
+    /// constructor's auto-wire from running. Memoized per measure pass
+    /// (cleared at the top of <see cref="GetTotalWeight"/> and
+    /// <see cref="Invalidate"/>) so deep hierarchies don't re-sum the same
+    /// subtrees at every depth.
     /// </summary>
     private double ResolveValue(TModel node)
     {
-        if (ValueMapper is null)
-            throw new InvalidOperationException(
-                $"{nameof(ValueMapper)} is required on {nameof(CoreTreemapSeries<TModel, TVisual, TLabel>)}.");
-
         if (_weightCache.TryGetValue(node!, out var cached)) return cached;
 
-        var v = ValueMapper(node);
+        var v = ValueMapper is not null
+            ? ValueMapper(node)
+            : node is TreemapNode tn ? tn.Value
+            : throw new InvalidOperationException(
+                $"{nameof(ValueMapper)} is required on {nameof(CoreTreemapSeries<TModel, TVisual, TLabel>)} when TModel is not {nameof(TreemapNode)}.");
+
         if (Math.Abs(v) > double.Epsilon)
         {
             _weightCache[node!] = v;
             return v;
         }
 
-        var children = ChildrenMapper?.Invoke(node);
+        var children = ResolveChildren(node);
         if (children is null)
         {
             _weightCache[node!] = 0;
@@ -322,6 +329,23 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         }
         _weightCache[node!] = sum;
         return sum;
+    }
+
+    /// <summary>Resolves a node's children, with the same TreemapNode fallback as <see cref="ResolveValue"/>.</summary>
+    private IEnumerable<TModel>? ResolveChildren(TModel node)
+    {
+        if (ChildrenMapper is not null) return ChildrenMapper(node);
+        if (node is TreemapNode tn && tn.Children is { } children)
+            return (IEnumerable<TModel>)children;
+        return null;
+    }
+
+    /// <summary>Resolves a node's label, with the same TreemapNode fallback as <see cref="ResolveValue"/>.</summary>
+    private string? ResolveLabel(TModel node)
+    {
+        if (LabelMapper is not null) return LabelMapper(node);
+        if (node is TreemapNode tn) return tn.Name;
+        return null;
     }
 
     private void EmitTile(TModel node, LvcRectangle rect, in TreemapMeasureContext ctx)
@@ -346,7 +370,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         UpdateVisualGeometry(visual, inner, in ctx);
         _ = _seenThisMeasure.Add(node!);
 
-        var kids = ChildrenMapper?.Invoke(node);
+        var kids = ResolveChildren(node);
         var isLeaf = kids is null;
 
         // Labels go on leaves only — internal-node tiles are containers and
@@ -363,10 +387,10 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     /// </summary>
     private void MeasureDataLabel(TModel node, LvcRectangle rect, in TreemapMeasureContext ctx)
     {
-        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default || LabelMapper is null)
+        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
             return;
 
-        var text = LabelMapper(node);
+        var text = ResolveLabel(node);
         if (string.IsNullOrEmpty(text)) return;
 
         var cx = rect.Location.X + rect.Size.Width * 0.5f;
