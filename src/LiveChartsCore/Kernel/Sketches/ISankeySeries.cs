@@ -49,10 +49,22 @@ public interface ISankeySeries : ISeries, IStrokedAndFilled
     /// </summary>
     int LayoutIterations { get; set; }
 
+    /// <summary>Where node labels are placed relative to the node rectangle.</summary>
+    SankeyLabelPosition NodeLabelPosition { get; set; }
+}
+
+/// <summary>Placement of node labels relative to the node rectangle.</summary>
+public enum SankeyLabelPosition
+{
     /// <summary>
-    /// Alpha (0..1) the link fill is multiplied by when rendering the ribbons
-    /// (since the ribbon fill is typically a tinted version of the node fill).
-    /// Default 0.5.
+    /// Source nodes (no incoming links) get a label outside-left, sink nodes
+    /// (no outgoing links) get a label outside-right, pass-through nodes
+    /// (both incoming + outgoing) get a label overlaid on the node — the
+    /// d3-sankey "reads naturally" convention. Default.
     /// </summary>
-    double LinkOpacity { get; set; }
+    Auto,
+    /// <summary>Always outside the node; side flips per node so the label points away from chart center.</summary>
+    Outside,
+    /// <summary>Always overlaid on the node, centered.</summary>
+    Inside
 }

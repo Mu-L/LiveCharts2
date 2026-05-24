@@ -29,7 +29,7 @@ namespace LiveChartsCore.SkiaSharpView;
 
 /// <summary>Defines a sankey series in the user interface.</summary>
 public class SankeySeries<TNode>
-    : SankeySeries<TNode, RoundedRectangleGeometry, LabelGeometry>
+    : SankeySeries<TNode, ColoredRoundedRectangleGeometry, LabelGeometry>
     where TNode : notnull
 {
     /// <summary>Initializes a new instance of the <see cref="SankeySeries{TNode}"/> class.</summary>

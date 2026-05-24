@@ -59,7 +59,15 @@ public class SankeyRibbonGeometry : BaseSankeyRibbonGeometry, IDrawnElement<Skia
         path.CubicTo(mx, ty1, mx, sy1, sx, sy1); // bottom edge (reversed)
         path.Close();
 
-        context.Canvas.DrawPath(path, context.ActiveSkiaPaint);
+        // Per-instance Color override (mirrors ColoredRectangleGeometry).
+        // IsEmpty is the canonical "no override" sentinel — when set, the
+        // shared paint's color flows through unchanged.
+        var c = Color;
+        var activePaint = context.ActiveSkiaPaint;
+        if (!c.Equals(LvcColor.Empty))
+            activePaint.Color = new SKColor(c.R, c.G, c.B, c.A);
+
+        context.Canvas.DrawPath(path, activePaint);
     }
 
     /// <inheritdoc cref="DrawnGeometry.Measure()" />

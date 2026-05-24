@@ -40,7 +40,6 @@ public readonly ref struct SankeyMeasureContext
         float nodeWidth,
         float nodePadding,
         int layoutIterations,
-        float linkOpacity,
         bool isFirstDraw)
     {
         Chart = chart;
@@ -49,7 +48,6 @@ public readonly ref struct SankeyMeasureContext
         NodeWidth = nodeWidth;
         NodePadding = nodePadding;
         LayoutIterations = layoutIterations;
-        LinkOpacity = linkOpacity;
         IsFirstDraw = isFirstDraw;
     }
 
@@ -65,8 +63,6 @@ public readonly ref struct SankeyMeasureContext
     public float NodePadding { get; }
     /// <summary>Sweep-relaxation iteration count.</summary>
     public int LayoutIterations { get; }
-    /// <summary>Alpha multiplier applied to the link fill (0..1).</summary>
-    public float LinkOpacity { get; }
     /// <summary>True if this is the first draw of the series.</summary>
     public bool IsFirstDraw { get; }
 }

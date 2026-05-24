@@ -90,8 +90,25 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// <inheritdoc cref="ISankeySeries.LayoutIterations"/>
     public int LayoutIterations { get; set => SetProperty(ref field, value); } = 32;
 
-    /// <inheritdoc cref="ISankeySeries.LinkOpacity"/>
-    public double LinkOpacity { get; set => SetProperty(ref field, value); } = 0.5;
+    /// <inheritdoc cref="ISankeySeries.NodeLabelPosition"/>
+    public SankeyLabelPosition NodeLabelPosition { get; set => SetProperty(ref field, value); }
+
+    /// <summary>
+    /// Per-node color override. When non-null, the returned <see cref="LvcColor"/>
+    /// is applied to the node's visual — the visual must implement
+    /// <see cref="IColoredGeometry"/> (the default
+    /// <c>ColoredRoundedRectangleGeometry</c> does). When null the series's
+    /// <see cref="Fill"/> paint color flows through unchanged.
+    /// </summary>
+    public Func<TNode, LvcColor>? NodeColorMapper { get; set => SetProperty(ref field, value); }
+
+    /// <summary>
+    /// Per-link color override. When null, ribbons inherit the source node's
+    /// color (via <see cref="NodeColorMapper"/>) tinted to half opacity, or
+    /// fall back to <see cref="LinkFill"/> / <see cref="Fill"/>. Set
+    /// explicitly to take full control of per-ribbon color including alpha.
+    /// </summary>
+    public Func<SankeyLink<TNode>, LvcColor>? LinkColorMapper { get; set => SetProperty(ref field, value); }
 
     /// <summary>
     /// The graph's edges. Each <see cref="SankeyLink{TNode}"/>.Source and .Target
@@ -122,7 +139,6 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             nodeWidth: (float)NodeWidth,
             nodePadding: (float)NodePadding,
             layoutIterations: LayoutIterations,
-            linkOpacity: (float)LinkOpacity,
             isFirstDraw: isFirstDraw);
     }
 
@@ -137,6 +153,15 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             Width = 0,
             Height = 0,
         };
+
+        // Seed Color BEFORE Animate (in the Invalidate loop below) so the
+        // motion property's start value is the right color — assigning after
+        // Animate makes the property animate from Empty/Black to the target,
+        // which under IsTesting reads as the start (= invisible/wrong color).
+        // Same pattern CoreHeatSeries.EnsureVisualForPoint uses.
+        if (NodeColorMapper is not null && v is IColoredGeometry coloredInit)
+            coloredInit.Color = NodeColorMapper(node);
+
         _nodeVisuals[node] = v;
         return v;
     }
@@ -154,6 +179,18 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         v.TargetX = box.TargetX;
         v.TargetY0 = midY;
         v.TargetY1 = midY;
+
+        // Seed Color before Animate — see EnsureVisualForNode rationale.
+        if (LinkColorMapper is not null)
+        {
+            v.Color = LinkColorMapper(link);
+        }
+        else if (NodeColorMapper is not null)
+        {
+            var srcColor = NodeColorMapper(link.Source);
+            v.Color = new LvcColor(srcColor.R, srcColor.G, srcColor.B, (byte)(srcColor.A / 2));
+        }
+
         _linkVisuals[link] = v;
         return v;
     }
@@ -176,7 +213,29 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             return;
         }
 
-        var rect = new LvcRectangle(ctx.DrawLocation, ctx.DrawMarginSize);
+        // For Auto label placement we need per-node in/out degree (source =
+        // no incoming -> outside-left; sink = no outgoing -> outside-right;
+        // pass-through -> inside). Compute once per measure.
+        var incoming = new Dictionary<TNode, int>(ReferenceComparer<TNode>.Instance);
+        var outgoing = new Dictionary<TNode, int>(ReferenceComparer<TNode>.Instance);
+        foreach (var n in Values) { incoming[n] = 0; outgoing[n] = 0; }
+        if (Links is not null)
+            foreach (var l in Links)
+            {
+                if (l is null) continue;
+                if (outgoing.ContainsKey(l.Source)) outgoing[l.Source]++;
+                if (incoming.ContainsKey(l.Target)) incoming[l.Target]++;
+            }
+
+        // Reserve canvas margin for outside-placed labels so they don't clip
+        // off the chart edges. Skip for Inside placement and when labels are
+        // disabled. Measured up-front so the layout columns get the right
+        // horizontal budget on the first try.
+        var (leftReserve, rightReserve) = MeasureOutsideLabelReserve(incoming, outgoing);
+        var rect = new LvcRectangle(
+            new LvcPoint(ctx.DrawLocation.X + leftReserve, ctx.DrawLocation.Y),
+            new LvcSize(ctx.DrawMarginSize.Width - leftReserve - rightReserve, ctx.DrawMarginSize.Height));
+
         var layout = SankeyLayout.Compute(
             Values,
             Links ?? [],
@@ -211,7 +270,12 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
                 rr.BorderRadius = new LvcPoint(r, r);
             }
 
-            MeasureNodeLabel(node, box, chartCenterX, anim, sankeyChart);
+            // Per-node color (requires an IColoredGeometry visual — true for
+            // the default ColoredRoundedRectangleGeometry).
+            if (NodeColorMapper is not null && visual is IColoredGeometry coloredNode)
+                coloredNode.Color = NodeColorMapper(node);
+
+            MeasureNodeLabel(node, box, incoming[node], outgoing[node], chartCenterX, anim, sankeyChart);
             _ = seenNodes.Add(node);
         }
 
@@ -231,6 +295,19 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             visual.TargetX = rb.TargetX;
             visual.TargetY0 = rb.TargetY0;
             visual.TargetY1 = rb.TargetY1;
+
+            // Per-link color: explicit LinkColorMapper wins; otherwise tint
+            // the source-node color at half alpha so ribbons read as "from
+            // node X" without overpowering the destination.
+            if (LinkColorMapper is not null)
+            {
+                visual.Color = LinkColorMapper(rb.Link);
+            }
+            else if (NodeColorMapper is not null)
+            {
+                var srcColor = NodeColorMapper(rb.Link.Source);
+                visual.Color = new LvcColor(srcColor.R, srcColor.G, srcColor.B, (byte)(srcColor.A / 2));
+            }
             visual.RemoveOnCompleted = false;
 
             _ = seenLinks.Add(rb.Link);
@@ -287,14 +364,19 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     }
 
     /// <summary>
-    /// Places a node label outside the node rectangle. The label goes to the
-    /// right of nodes left of chart center and to the left of nodes right of
-    /// center — keeps labels out of the way of the next column's nodes and
-    /// the chart edges.
+    /// Places a node label per <see cref="NodeLabelPosition"/>:
+    /// <list type="bullet">
+    ///   <item><c>Auto</c> — pure source (no incoming) goes outside-left,
+    ///     pure sink (no outgoing) goes outside-right, pass-through goes
+    ///     inside-centered. Matches the d3-sankey convention.</item>
+    ///   <item><c>Outside</c> — flips per-node based on chart center
+    ///     (label on the side closer to the chart edge).</item>
+    ///   <item><c>Inside</c> — always centered on the node.</item>
+    /// </list>
     /// </summary>
     private void MeasureNodeLabel(
-        TNode node, SankeyLayout.NodeBox box, float chartCenterX,
-        Animation anim, SankeyChartEngine chart)
+        TNode node, SankeyLayout.NodeBox box, int inDeg, int outDeg,
+        float chartCenterX, Animation anim, SankeyChartEngine chart)
     {
         if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
             return;
@@ -302,14 +384,52 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         var text = ResolveLabel(node);
         if (string.IsNullOrEmpty(text)) return;
 
+        // Resolve effective placement.
+        var placement = NodeLabelPosition;
         var nodeCenterX = box.X + box.Width * 0.5f;
-        var preferRight = nodeCenterX <= chartCenterX;
+        bool isInside;
+        bool labelOnRight;
+        if (placement == SankeyLabelPosition.Inside)
+        {
+            isInside = true;
+            labelOnRight = false; // unused for inside
+        }
+        else if (placement == SankeyLabelPosition.Outside)
+        {
+            // The original heuristic: label opposite chart center to avoid the
+            // next column / chart edge. Stays meaningful when the user
+            // explicitly opts out of Auto.
+            isInside = false;
+            labelOnRight = nodeCenterX > chartCenterX;
+        }
+        else
+        {
+            // Auto: in-deg=0 -> source -> outside-left; out-deg=0 -> sink
+            // -> outside-right; both nonzero -> inside.
+            if (inDeg == 0 && outDeg > 0) { isInside = false; labelOnRight = false; }
+            else if (outDeg == 0 && inDeg > 0) { isInside = false; labelOnRight = true; }
+            else { isInside = true; labelOnRight = false; }
+        }
 
-        // 4px gap between node edge and label so the stroke / fill doesn't
-        // crowd the text.
         const float gap = 4f;
-        float labelX = preferRight ? box.X + box.Width + gap : box.X - gap;
-        var labelY = box.Y + box.Height * 0.5f;
+        float labelX;
+        float labelY = box.Y + box.Height * 0.5f;
+        Align hAlign;
+        if (isInside)
+        {
+            labelX = box.X + box.Width * 0.5f;
+            hAlign = Align.Middle;
+        }
+        else if (labelOnRight)
+        {
+            labelX = box.X + box.Width + gap;
+            hAlign = Align.Start;
+        }
+        else
+        {
+            labelX = box.X - gap;
+            hAlign = Align.End;
+        }
 
         if (!_nodeLabels.TryGetValue(node, out var label))
         {
@@ -317,7 +437,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             {
                 X = labelX,
                 Y = labelY,
-                HorizontalAlign = preferRight ? Align.Start : Align.End,
+                HorizontalAlign = hAlign,
                 VerticalAlign = Align.Middle,
                 MaxWidth = (float)DataLabelsMaxWidth,
             };
@@ -331,12 +451,72 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         label.TextSize = (float)DataLabelsSize;
         label.Padding = DataLabelsPadding;
         label.Paint = DataLabelsPaint;
-        label.HorizontalAlign = preferRight ? Align.Start : Align.End;
+        label.HorizontalAlign = hAlign;
         label.VerticalAlign = Align.Middle;
         label.X = labelX;
         label.Y = labelY;
         label.Opacity = 1;
         label.RemoveOnCompleted = false;
+    }
+
+    /// <summary>
+    /// Returns (leftReserve, rightReserve) — pixel budgets to subtract from
+    /// the chart's left/right edges so outside-placed labels fit. Empty when
+    /// placement is <see cref="SankeyLabelPosition.Inside"/> or labels are off.
+    /// Auto reserves left for pure-source nodes (inDeg=0) and right for
+    /// pure-sink nodes (outDeg=0); Outside reserves both sides for all nodes.
+    /// </summary>
+    private (float Left, float Right) MeasureOutsideLabelReserve(
+        Dictionary<TNode, int> incoming, Dictionary<TNode, int> outgoing)
+    {
+        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
+            return (0f, 0f);
+        if (NodeLabelPosition == SankeyLabelPosition.Inside)
+            return (0f, 0f);
+        if (Values is null) return (0f, 0f);
+
+        const float gap = 4f;
+
+        // A single throwaway label measures successive node texts — Measure()
+        // re-renders with the current Text/TextSize/Padding/Paint, so the
+        // instance is reusable across iterations.
+        var probe = new TLabel
+        {
+            TextSize = (float)DataLabelsSize,
+            Padding = DataLabelsPadding,
+            Paint = DataLabelsPaint,
+            MaxWidth = (float)DataLabelsMaxWidth,
+        };
+
+        float leftMax = 0f, rightMax = 0f;
+        foreach (var node in Values)
+        {
+            var text = ResolveLabel(node);
+            if (string.IsNullOrEmpty(text)) continue;
+
+            probe.Text = text!;
+            var size = probe.Measure();
+
+            // Outside places every node's label outside (per the heuristic);
+            // Auto only places pure-source/pure-sink outside.
+            var inDeg = incoming.TryGetValue(node, out var i) ? i : 0;
+            var outDeg = outgoing.TryGetValue(node, out var o) ? o : 0;
+
+            if (NodeLabelPosition == SankeyLabelPosition.Outside)
+            {
+                // Outside flips per side; reserve symmetrically since either
+                // edge may host any node's label.
+                if (size.Width > leftMax) leftMax = size.Width;
+                if (size.Width > rightMax) rightMax = size.Width;
+            }
+            else // Auto
+            {
+                if (inDeg == 0 && outDeg > 0 && size.Width > leftMax) leftMax = size.Width;
+                else if (outDeg == 0 && inDeg > 0 && size.Width > rightMax) rightMax = size.Width;
+            }
+        }
+
+        return (leftMax > 0 ? leftMax + gap : 0f, rightMax > 0 ? rightMax + gap : 0f);
     }
 
     private static void EnsureNodeAnimation(TVisual visual, Animation anim)

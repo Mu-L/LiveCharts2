@@ -29,10 +29,32 @@ namespace LiveChartsCore.Drawing;
 /// source node to the left edge of a target node. Six animatable endpoints
 /// (X + top-Y + bottom-Y for each end) drive the path; the platform-specific
 /// implementation builds two cubic curves with control points at the
-/// horizontal midpoint between source and target.
+/// horizontal midpoint between source and target. Implements
+/// <see cref="IColoredGeometry"/> so each ribbon can carry its own tint
+/// (typically derived from its source node) while sharing a single Paint
+/// task.
 /// </summary>
-public abstract partial class BaseSankeyRibbonGeometry : DrawnGeometry
+public abstract partial class BaseSankeyRibbonGeometry : DrawnGeometry, IColoredGeometry
 {
+    /// <summary>Initializes <see cref="Color"/> to the
+    /// <see cref="LvcColor.Empty"/> sentinel so the ribbon defaults to "use
+    /// the shared paint color." Without this, the source-gen would default
+    /// to <c>default(LvcColor)</c> = (0,0,0,0,IsEmpty=false), which the
+    /// Draw's <c>!Equals(Empty)</c> check treats as a real (transparent
+    /// black) override — and the ribbon renders invisible.</summary>
+    protected BaseSankeyRibbonGeometry()
+    {
+        _ColorMotionProperty = new(LvcColor.Empty);
+    }
+
+    /// <summary>
+    /// Per-instance color override. When <see cref="LvcColor.Empty"/>, the
+    /// shared paint's own color is used — matches the
+    /// <c>ColoredRectangleGeometry</c> convention.
+    /// </summary>
+    [MotionProperty]
+    public partial LvcColor Color { get; set; }
+
     /// <summary>X coordinate of the source connection (right edge of source node).</summary>
     [MotionProperty]
     public partial float SourceX { get; set; }
