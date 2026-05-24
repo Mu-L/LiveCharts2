@@ -84,6 +84,9 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// <inheritdoc cref="ISankeySeries.NodePadding"/>
     public double NodePadding { get; set => SetProperty(ref field, value); } = 8;
 
+    /// <inheritdoc cref="ISankeySeries.NodeCornerRadius"/>
+    public double NodeCornerRadius { get; set => SetProperty(ref field, value); }
+
     /// <inheritdoc cref="ISankeySeries.LayoutIterations"/>
     public int LayoutIterations { get; set => SetProperty(ref field, value); } = 32;
 
@@ -201,6 +204,12 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             visual.Width = box.Width;
             visual.Height = box.Height;
             visual.RemoveOnCompleted = false;
+
+            if (visual is BaseRoundedRectangleGeometry rr)
+            {
+                var r = (float)NodeCornerRadius;
+                rr.BorderRadius = new LvcPoint(r, r);
+            }
 
             MeasureNodeLabel(node, box, chartCenterX, anim, sankeyChart);
             _ = seenNodes.Add(node);

@@ -36,15 +36,23 @@ public interface ISankeySeries : ISeries, IStrokedAndFilled
     double NodePadding { get; set; }
 
     /// <summary>
+    /// Corner radius (px) applied to node rectangles when the visual is a
+    /// rounded-rectangle geometry. Default 0 — matches the typical d3-sankey
+    /// sharp-corner aesthetic. Ignored when the user picks a custom TVisual
+    /// that doesn't derive from <c>BaseRoundedRectangleGeometry</c>.
+    /// </summary>
+    double NodeCornerRadius { get; set; }
+
+    /// <summary>
     /// Number of relaxation iterations used by the d3-sankey layout to
     /// minimize ribbon crossings. Higher = cleaner but slower. Default 32.
     /// </summary>
     int LayoutIterations { get; set; }
 
     /// <summary>
-    /// Alpha (0..1) the link <see cref="ISeries.Fill"/> is multiplied by when
-    /// rendering the ribbons (since the ribbon fill is typically a tinted
-    /// version of the node fill). Default 0.5.
+    /// Alpha (0..1) the link fill is multiplied by when rendering the ribbons
+    /// (since the ribbon fill is typically a tinted version of the node fill).
+    /// Default 0.5.
     /// </summary>
     double LinkOpacity { get; set; }
 }
