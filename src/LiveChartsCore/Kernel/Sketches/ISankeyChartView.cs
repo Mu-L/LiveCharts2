@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -23,32 +23,13 @@
 namespace LiveChartsCore.Kernel.Sketches;
 
 /// <summary>
-/// Defines a chart kind.
+/// Defines a sankey chart view. Like Treemap, has no axes — series partition
+/// the draw-margin rectangle and lay out their own node columns + flow
+/// ribbons directly.
 /// </summary>
-public enum ChartKind
+/// <seealso cref="IChartView" />
+public interface ISankeyChartView : IChartView
 {
-    /// <summary>
-    /// The cartesian chart.
-    /// </summary>
-    Cartesian,
-
-    /// <summary>
-    /// The pie chart.
-    /// </summary>
-    Pie,
-
-    /// <summary>
-    /// The polar chart.
-    /// </summary>
-    Polar,
-
-    /// <summary>
-    /// The geo map chart.
-    /// </summary>
-    GeoMap,
-
-    /// <summary>
-    /// The sankey diagram.
-    /// </summary>
-    Sankey
+    /// <summary>Gets the core engine.</summary>
+    SankeyChartEngine Core { get; }
 }

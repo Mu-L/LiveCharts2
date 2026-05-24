@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -23,32 +23,28 @@
 namespace LiveChartsCore.Kernel.Sketches;
 
 /// <summary>
-/// Defines a chart kind.
+/// Common (non-typed) surface of a sankey series. Graph topology is provided
+/// via series-level mappers exposed on the typed
+/// <c>CoreSankeySeries&lt;TNode, TVisual, TLabel&gt;</c>.
 /// </summary>
-public enum ChartKind
+public interface ISankeySeries : ISeries, IStrokedAndFilled
 {
-    /// <summary>
-    /// The cartesian chart.
-    /// </summary>
-    Cartesian,
+    /// <summary>Width (px) reserved for each node's column rectangle. Default 12.</summary>
+    double NodeWidth { get; set; }
+
+    /// <summary>Vertical gap (px) between sibling nodes within the same column. Default 8.</summary>
+    double NodePadding { get; set; }
 
     /// <summary>
-    /// The pie chart.
+    /// Number of relaxation iterations used by the d3-sankey layout to
+    /// minimize ribbon crossings. Higher = cleaner but slower. Default 32.
     /// </summary>
-    Pie,
+    int LayoutIterations { get; set; }
 
     /// <summary>
-    /// The polar chart.
+    /// Alpha (0..1) the link <see cref="ISeries.Fill"/> is multiplied by when
+    /// rendering the ribbons (since the ribbon fill is typically a tinted
+    /// version of the node fill). Default 0.5.
     /// </summary>
-    Polar,
-
-    /// <summary>
-    /// The geo map chart.
-    /// </summary>
-    GeoMap,
-
-    /// <summary>
-    /// The sankey diagram.
-    /// </summary>
-    Sankey
+    double LinkOpacity { get; set; }
 }

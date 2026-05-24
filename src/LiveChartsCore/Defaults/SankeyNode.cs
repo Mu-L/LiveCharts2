@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,35 +20,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace LiveChartsCore.Kernel.Sketches;
+namespace LiveChartsCore.Defaults;
 
 /// <summary>
-/// Defines a chart kind.
+/// A built-in node model for sankey diagrams — just a label. Each node's
+/// "value" is computed by the layout as the sum of incoming (or outgoing,
+/// whichever is greater) link weights, so no Value field is required on the
+/// node itself.
 /// </summary>
-public enum ChartKind
+public class SankeyNode
 {
-    /// <summary>
-    /// The cartesian chart.
-    /// </summary>
-    Cartesian,
+    /// <summary>Initializes a new instance of the <see cref="SankeyNode"/> class.</summary>
+    public SankeyNode() { }
 
-    /// <summary>
-    /// The pie chart.
-    /// </summary>
-    Pie,
+    /// <summary>Initializes a new instance of the <see cref="SankeyNode"/> class with the given label.</summary>
+    public SankeyNode(string? name) { Name = name; }
 
-    /// <summary>
-    /// The polar chart.
-    /// </summary>
-    Polar,
-
-    /// <summary>
-    /// The geo map chart.
-    /// </summary>
-    GeoMap,
-
-    /// <summary>
-    /// The sankey diagram.
-    /// </summary>
-    Sankey
+    /// <summary>Human-readable label rendered next to the node and surfaced via the label mapper.</summary>
+    public string? Name { get; set; }
 }
