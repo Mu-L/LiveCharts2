@@ -22,24 +22,12 @@
 
 using LiveChartsCore.Kernel.Sketches;
 
-namespace LiveChartsCore.SkiaSharpView.SKCharts;
+namespace LiveChartsGeneratedCode;
 
-// ==============================================================================
-//
-// use the LiveChartsGeneratedCode.SourceGenSKTreemapChart class to add Skia (image generation) specific
-// code, this class is just to expose the TreemapChart class in this namespace.
-//
-// ==============================================================================
+// ===============================================
+// this file contains the WinUI/Uno specific code
+// ===============================================
 
-/// <inheritdoc cref="ITreemapChartView"/>
-public class SKTreemapChart : LiveChartsGeneratedCode.SourceGenSKTreemapChart
-{
-    /// <summary>Initializes a new instance of the <see cref="SKTreemapChart"/> class.</summary>
-    public SKTreemapChart() : base(null) { }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SKTreemapChart"/> class
-    /// from an existing chart view (theme + control size are reused).
-    /// </summary>
-    public SKTreemapChart(IChartView chartView) : base(chartView) { }
-}
+/// <inheritdoc cref="IChartView" />
+public partial class SourceGenTreemapChart : SourceGenChart, ITreemapChartView
+{ }

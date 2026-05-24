@@ -20,26 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Kernel.Sketches;
+namespace LiveChartsGeneratedCode;
 
-namespace LiveChartsCore.SkiaSharpView.SKCharts;
+// Treemap currently has no chart-level UIProperty markers — every configurable
+// property lives on the series (Padding, CornerRadius, Fill, Stroke, etc).
+// The empty partial keeps the file shape consistent with the other chart
+// families so the source generator + projitems list stays uniform. When
+// chart-level DPs get added in the future, mirror SourceGenPieChart.sgp.cs:
+// add `static UIProperty<T>` markers + an Avalonia OnPropertyChanged override
+// that calls OnXamlPropertyChanged (the generator emits the latter from the
+// presence of UIProperty markers).
 
-// ==============================================================================
-//
-// use the LiveChartsGeneratedCode.SourceGenSKTreemapChart class to add Skia (image generation) specific
-// code, this class is just to expose the TreemapChart class in this namespace.
-//
-// ==============================================================================
-
-/// <inheritdoc cref="ITreemapChartView"/>
-public class SKTreemapChart : LiveChartsGeneratedCode.SourceGenSKTreemapChart
+#if SKIA_IMAGE_LVC
+public partial class SourceGenSKTreemapChart
+#else
+public partial class SourceGenTreemapChart
+#endif
 {
-    /// <summary>Initializes a new instance of the <see cref="SKTreemapChart"/> class.</summary>
-    public SKTreemapChart() : base(null) { }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SKTreemapChart"/> class
-    /// from an existing chart view (theme + control size are reused).
-    /// </summary>
-    public SKTreemapChart(IChartView chartView) : base(chartView) { }
 }

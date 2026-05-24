@@ -41,5 +41,13 @@
     <Compile Update="SourceGenMapChart.*.cs">
       <DependentUpon>GeoMap.cs</DependentUpon>
     </Compile>
+
+    <Compile Include="..\_Shared\SourceGenTreemapChart.*.cs">
+      <Link>%(Filename).cs</Link>
+      <DependentUpon>TreemapChart.cs</DependentUpon>
+    </Compile>
+    <Compile Update="SourceGenTreemapChart.*.cs">
+      <DependentUpon>TreemapChart.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
 </Project>
