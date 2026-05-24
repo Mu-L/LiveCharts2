@@ -51,6 +51,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     private readonly Dictionary<TNode, TVisual> _nodeVisuals = new(ReferenceComparer<TNode>.Instance);
     private readonly Dictionary<SankeyLink<TNode>, BaseSankeyRibbonGeometry> _linkVisuals =
         new(ReferenceComparer<SankeyLink<TNode>>.Instance);
+    private readonly Dictionary<TNode, TLabel> _nodeLabels = new(ReferenceComparer<TNode>.Instance);
 
     /// <summary>Gets or sets the fill paint applied to every node rectangle.</summary>
     public Paint? Fill
@@ -95,6 +96,14 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// links pointing at unknown nodes are silently dropped by the layout.
     /// </summary>
     public IEnumerable<SankeyLink<TNode>>? Links { get; set => SetProperty(ref field, value); }
+
+    /// <summary>
+    /// Returns the per-node label text. Set
+    /// <see cref="Series{TModel, TVisual, TLabel}.DataLabelsPaint"/> to opt
+    /// in. When null and TNode is the built-in <see cref="SankeyNode"/>,
+    /// <see cref="SankeyNode.Name"/> is used automatically.
+    /// </summary>
+    public Func<TNode, string?>? LabelMapper { get; set => SetProperty(ref field, value); }
 
     // ---- template method ----------------------------------------------------
 
@@ -175,6 +184,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
 
         // Nodes
         var seenNodes = new HashSet<TNode>(ReferenceComparer<TNode>.Instance);
+        var chartCenterX = rect.Location.X + rect.Size.Width * 0.5f;
         foreach (var kv in layout.Nodes)
         {
             var node = kv.Key;
@@ -192,6 +202,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             visual.Height = box.Height;
             visual.RemoveOnCompleted = false;
 
+            MeasureNodeLabel(node, box, chartCenterX, anim, sankeyChart);
             _ = seenNodes.Add(node);
         }
 
@@ -240,6 +251,83 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
                 }
             foreach (var k in toRemove) _ = _linkVisuals.Remove(k);
         }
+
+        if (_nodeLabels.Count > 0)
+        {
+            var toRemove = new List<TNode>();
+            foreach (var kv in _nodeLabels)
+                if (!seenNodes.Contains(kv.Key))
+                {
+                    kv.Value.Opacity = 0;
+                    kv.Value.RemoveOnCompleted = true;
+                    toRemove.Add(kv.Key);
+                }
+            foreach (var k in toRemove) _ = _nodeLabels.Remove(k);
+        }
+    }
+
+    /// <summary>
+    /// Resolves a node's label, with a fallback to <see cref="SankeyNode.Name"/>
+    /// when no <see cref="LabelMapper"/> is set and the node is the built-in type.
+    /// </summary>
+    private string? ResolveLabel(TNode node)
+    {
+        if (LabelMapper is not null) return LabelMapper(node);
+        if (node is SankeyNode sn) return sn.Name;
+        return null;
+    }
+
+    /// <summary>
+    /// Places a node label outside the node rectangle. The label goes to the
+    /// right of nodes left of chart center and to the left of nodes right of
+    /// center — keeps labels out of the way of the next column's nodes and
+    /// the chart edges.
+    /// </summary>
+    private void MeasureNodeLabel(
+        TNode node, SankeyLayout.NodeBox box, float chartCenterX,
+        Animation anim, SankeyChartEngine chart)
+    {
+        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
+            return;
+
+        var text = ResolveLabel(node);
+        if (string.IsNullOrEmpty(text)) return;
+
+        var nodeCenterX = box.X + box.Width * 0.5f;
+        var preferRight = nodeCenterX <= chartCenterX;
+
+        // 4px gap between node edge and label so the stroke / fill doesn't
+        // crowd the text.
+        const float gap = 4f;
+        float labelX = preferRight ? box.X + box.Width + gap : box.X - gap;
+        var labelY = box.Y + box.Height * 0.5f;
+
+        if (!_nodeLabels.TryGetValue(node, out var label))
+        {
+            label = new TLabel
+            {
+                X = labelX,
+                Y = labelY,
+                HorizontalAlign = preferRight ? Align.Start : Align.End,
+                VerticalAlign = Align.Middle,
+                MaxWidth = (float)DataLabelsMaxWidth,
+            };
+            label.Animate(anim, BaseLabelGeometry.XProperty, BaseLabelGeometry.YProperty);
+            _nodeLabels[node] = label;
+        }
+
+        DataLabelsPaint.AddGeometryToPaintTask(chart.Canvas, label);
+
+        label.Text = text!;
+        label.TextSize = (float)DataLabelsSize;
+        label.Padding = DataLabelsPadding;
+        label.Paint = DataLabelsPaint;
+        label.HorizontalAlign = preferRight ? Align.Start : Align.End;
+        label.VerticalAlign = Align.Middle;
+        label.X = labelX;
+        label.Y = labelY;
+        label.Opacity = 1;
+        label.RemoveOnCompleted = false;
     }
 
     private static void EnsureNodeAnimation(TVisual visual, Animation anim)
@@ -281,6 +369,12 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         _nodeVisuals.Clear();
         foreach (var v in _linkVisuals.Values) CollapseRemovedRibbon(v);
         _linkVisuals.Clear();
+        foreach (var l in _nodeLabels.Values)
+        {
+            l.Opacity = 0;
+            l.RemoveOnCompleted = true;
+        }
+        _nodeLabels.Clear();
     }
 
     private void InitializePaints(SankeyChartEngine chart)
@@ -303,6 +397,14 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         {
             Stroke.ZIndex = actualZIndex + PaintConstants.SeriesStrokeZIndexOffset;
             chart.Canvas.AddDrawableTask(Stroke, zone: CanvasZone.DrawMargin);
+        }
+        if (ShowDataLabels && DataLabelsPaint is not null && DataLabelsPaint != Paint.Default)
+        {
+            // Labels sit above tiles + ribbons; PieSeriesDataLabelsBaseZIndex
+            // is the established "always-on-top, no clipping" base offset.
+            DataLabelsPaint.ZIndex =
+                PaintConstants.PieSeriesDataLabelsBaseZIndex + actualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
+            chart.Canvas.AddDrawableTask(DataLabelsPaint);
         }
     }
 

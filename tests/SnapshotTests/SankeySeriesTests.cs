@@ -48,6 +48,47 @@ public sealed class SankeySeriesTests
     }
 
     [TestMethod]
+    public void WithLabels()
+    {
+        // DataLabelsPaint opt-in + auto-wired SankeyNode.Name. The label-side
+        // heuristic places labels right-of-node for the left column (A/B/C)
+        // and left-of-node for the right column (X/Y), keeping text out of
+        // the ribbon area on both sides.
+        var sources = new[] { new SankeyNode("Alice"), new SankeyNode("Bob"), new SankeyNode("Carol") };
+        var sinks = new[] { new SankeyNode("Trips"), new SankeyNode("Other") };
+
+        var nodes = sources.Concat(sinks).ToArray();
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(sources[0], sinks[0], 8),
+            new SankeyLink<SankeyNode>(sources[0], sinks[1], 4),
+            new SankeyLink<SankeyNode>(sources[1], sinks[0], 6),
+            new SankeyLink<SankeyNode>(sources[1], sinks[1], 2),
+            new SankeyLink<SankeyNode>(sources[2], sinks[1], 10),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    NodeWidth = 16,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                    LinkFill = new SolidColorPaint(new SKColor(96, 138, 218, 90)),
+                    DataLabelsPaint = new SolidColorPaint(SKColors.Black),
+                    DataLabelsSize = 16,
+                }
+            ],
+            Width = 700,
+            Height = 400,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(WithLabels)}");
+    }
+
+    [TestMethod]
     public void ThreeColumnsWithBranching()
     {
         // Three columns (A,B,C -> M,N -> P,Q) — exercises depth > 2 and the
