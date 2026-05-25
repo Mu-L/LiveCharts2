@@ -1,5 +1,6 @@
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
@@ -179,6 +180,157 @@ public sealed class SankeySeriesTests
         };
 
         chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(JobApplicationFunnel)}");
+    }
+
+    [TestMethod]
+    public void BipartiteArc()
+    {
+        // BipartiteArc layout: 3 sources → 5 targets with mixed weights.
+        // Pins (a) the d3-sankey topology + value sums, (b) the angular sweep
+        // distribution proportional to node value, (c) per-column visual-Y
+        // band sorting that prevents source-side crossings, and (d) the
+        // chord-ribbon math (cubic with control points at center).
+        var furniture = new SankeyNode("Furniture");
+        var technology = new SankeyNode("Technology");
+        var office = new SankeyNode("Office Supplies");
+
+        var chairs = new SankeyNode("Chairs");
+        var phones = new SankeyNode("Phones");
+        var storage = new SankeyNode("Storage");
+        var tables = new SankeyNode("Tables");
+        var paper = new SankeyNode("Paper");
+
+        var nodes = new[] { furniture, technology, office, chairs, phones, storage, tables, paper };
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(furniture, chairs, 12),
+            new SankeyLink<SankeyNode>(furniture, tables, 6),
+            new SankeyLink<SankeyNode>(technology, phones, 14),
+            new SankeyLink<SankeyNode>(technology, storage, 8),
+            new SankeyLink<SankeyNode>(office, storage, 4),
+            new SankeyLink<SankeyNode>(office, paper, 9),
+            new SankeyLink<SankeyNode>(office, chairs, 2),
+        };
+
+        var palette = new Dictionary<SankeyNode, LvcColor>(ReferenceEqualityComparer.Instance)
+        {
+            [furniture] = new(96, 138, 218),
+            [technology] = new(52, 78, 144),
+            [office] = new(150, 188, 232),
+            [chairs] = new(96, 138, 218),
+            [phones] = new(52, 78, 144),
+            [storage] = new(120, 158, 220),
+            [tables] = new(170, 60, 80),
+            [paper] = new(232, 168, 130),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    Layout = SankeyLayoutKind.BipartiteArc,
+                    ArcSpanDegrees = 150,
+                    NodeWidth = 20,
+                    NodePadding = 8,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                    LinkFill = new SolidColorPaint(new SKColor(96, 138, 218, 90)),
+                    NodeColorMapper = n => palette[n],
+                }
+            ],
+            Width = 700,
+            Height = 600,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(BipartiteArc)}");
+    }
+
+    [TestMethod]
+    public void BipartiteArcWithLabels()
+    {
+        // Same shape as BipartiteArc + radial labels enabled. Pins the
+        // label-margin reserve (outer radius shrinks to fit max label width)
+        // and the rotation-flip on left-half labels.
+        var a = new SankeyNode("Alpha");
+        var b = new SankeyNode("Beta");
+        var c = new SankeyNode("Gamma");
+        var x = new SankeyNode("Xenon");
+        var y = new SankeyNode("Yttrium");
+        var z = new SankeyNode("Zinc");
+
+        var nodes = new[] { a, b, c, x, y, z };
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(a, x, 8),
+            new SankeyLink<SankeyNode>(a, y, 4),
+            new SankeyLink<SankeyNode>(b, x, 6),
+            new SankeyLink<SankeyNode>(b, z, 5),
+            new SankeyLink<SankeyNode>(c, y, 10),
+            new SankeyLink<SankeyNode>(c, z, 3),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    Layout = SankeyLayoutKind.BipartiteArc,
+                    NodeWidth = 14,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                    LinkFill = new SolidColorPaint(new SKColor(96, 138, 218, 90)),
+                    DataLabelsPaint = new SolidColorPaint(SKColors.Black),
+                    DataLabelsSize = 14,
+                }
+            ],
+            Width = 700,
+            Height = 600,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(BipartiteArcWithLabels)}");
+    }
+
+    [TestMethod]
+    public void BipartiteArc_ThrowsOnMultiColumn()
+    {
+        // BipartiteArc rejects graphs where any node is BOTH a target and a
+        // source — i.e. pass-through nodes that push maxDepth > 1. The same
+        // ThreeColumnsWithBranching data should throw a clear message
+        // pointing users at SankeyLayoutKind.Vertical.
+        var aa = new SankeyNode("A");
+        var bb = new SankeyNode("B");
+        var mm = new SankeyNode("M");
+        var pp = new SankeyNode("P");
+
+        var nodes = new[] { aa, bb, mm, pp };
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(aa, mm, 5),
+            new SankeyLink<SankeyNode>(bb, mm, 3),
+            new SankeyLink<SankeyNode>(mm, pp, 8), // mm is a pass-through -> 3 columns
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    Layout = SankeyLayoutKind.BipartiteArc,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                }
+            ],
+            Width = 400,
+            Height = 400,
+        };
+
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(() => chart.GetImage());
+        StringAssert.Contains(ex.Message, "BipartiteArc");
+        StringAssert.Contains(ex.Message, "Vertical");
     }
 
     [TestMethod]
