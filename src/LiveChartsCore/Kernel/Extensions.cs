@@ -49,7 +49,11 @@ public static class Extensions
         LvcSize tooltipSize,
         Chart chart)
     {
-        var location = chart.Kind is ChartKind.Cartesian or ChartKind.Polar
+        // Treemap follows the cartesian path — its tiles are rectangles with
+        // RectangleHoverArea which populates MostLeft/MostRight/MostTop/
+        // MostBottom (not PieX/PieY), so the cartesian tooltip layout is the
+        // one that knows how to read them.
+        var location = chart.Kind is ChartKind.Cartesian or ChartKind.Polar or ChartKind.Treemap
             ? _getCartesianTooltipLocation(foundPoints, chart, tooltipSize)
             : _getPieTooltipLocation(foundPoints, chart, tooltipSize);
 

@@ -82,6 +82,51 @@ public sealed class TreemapSeriesTests
     }
 
     [TestMethod]
+    public void HoverTooltip()
+    {
+        // Probe the synthesized ChartPoint + hover-area pipeline: hover near
+        // the China tile (top-left of the squarified layout) and assert the
+        // default formatter renders "China: 1400".
+        var roots = new[]
+        {
+            new TreemapNode("Asia", new[]
+            {
+                new TreemapNode(1400, "China"),
+                new TreemapNode(1300, "India"),
+                new TreemapNode(125,  "Japan"),
+                new TreemapNode(270,  "Indonesia"),
+            }),
+            new TreemapNode("Europe", new[]
+            {
+                new TreemapNode(83, "Germany"),
+                new TreemapNode(67, "France"),
+                new TreemapNode(60, "Italy"),
+                new TreemapNode(46, "Spain"),
+            }),
+        };
+
+        var chart = new SKTreemapChart
+        {
+            Series = [
+                new TreemapSeries<TreemapNode>
+                {
+                    Values = roots,
+                    Padding = 4,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                    Stroke = new SolidColorPaint(SKColors.White) { StrokeThickness = 2 },
+                }
+            ],
+            Width = 600,
+            Height = 600,
+        };
+
+        // China is the largest leaf in Asia (which is the larger root) — top-left
+        // quadrant in the squarified output.
+        chart.PointerAt(150, 150);
+        chart.AssertSnapshotMatches($"{nameof(TreemapSeriesTests)}_{nameof(HoverTooltip)}");
+    }
+
+    [TestMethod]
     public void TwoSeriesWithTitleAndLegend()
     {
         // Two series with named entries (legend), a title, and the engine's

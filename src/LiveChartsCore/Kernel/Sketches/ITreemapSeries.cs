@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
 using LiveChartsCore.Drawing;
 
 namespace LiveChartsCore.Kernel.Sketches;
@@ -56,4 +57,11 @@ public interface ITreemapSeries : ISeries, IStrokedAndFilled
     /// margin between multiple series.
     /// </summary>
     double GetTotalWeight();
+
+    /// <summary>
+    /// Builds the tooltip text for a tile. Receives the leaf's <see cref="ChartPoint"/>
+    /// (Context.DataSource is the user's node model, Coordinate.PrimaryValue is the
+    /// resolved weight). When null the default formatter renders "&lt;label&gt;: &lt;value&gt;".
+    /// </summary>
+    Func<ChartPoint, string>? TooltipLabelFormatter { get; set; }
 }
