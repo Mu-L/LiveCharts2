@@ -52,6 +52,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     private readonly Dictionary<object, TVisual> _nodeVisuals = new(ReferenceComparer.Instance);
     private readonly Dictionary<object, TLabel> _nodeLabels = new(ReferenceComparer.Instance);
     private readonly HashSet<object> _seenThisMeasure = new(ReferenceComparer.Instance);
+    private readonly HashSet<object> _labeledThisMeasure = new(ReferenceComparer.Instance);
 
     /// <summary>Gets or sets the fill paint applied to every tile.</summary>
     public Paint? Fill
@@ -199,6 +200,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         InitializePaints(treemapChart);
 
         _seenThisMeasure.Clear();
+        _labeledThisMeasure.Clear();
 
         if (Values is not null)
         {
@@ -206,7 +208,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
             LayoutSiblings(Values, rect, in ctx);
         }
 
-        // Reap visuals and labels for nodes that were not visited this measure.
+        // Reap visuals for nodes that were not visited this measure.
         if (_nodeVisuals.Count != _seenThisMeasure.Count)
         {
             var toRemove = new List<object>();
@@ -216,32 +218,23 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
                 CollapseRemovedVisual(kv.Value);
                 toRemove.Add(kv.Key);
             }
-            foreach (var k in toRemove)
-            {
-                _ = _nodeVisuals.Remove(k);
-                if (_nodeLabels.TryGetValue(k, out var label))
-                {
-                    label.Opacity = 0;
-                    label.RemoveOnCompleted = true;
-                    _ = _nodeLabels.Remove(k);
-                }
-            }
+            foreach (var k in toRemove) _ = _nodeVisuals.Remove(k);
         }
 
-        // Also drop labels for tiles that became internal nodes (they had a
-        // label, now they shouldn't) or whose LabelMapper started returning null.
-        if (_nodeLabels.Count > 0)
+        // Reap labels for any key not labeled this pass. Covers: node removed
+        // entirely, node became internal (leaf → parent), LabelMapper returned
+        // null, ShowDataLabels / DataLabelsPaint / LabelMapper turned off.
+        // Note: still-visible-but-too-small tiles ARE added to _labeledThisMeasure
+        // (with Opacity=0) so a later resize can bring them back without recreate.
+        if (_nodeLabels.Count != _labeledThisMeasure.Count)
         {
             var toDrop = new List<object>();
             foreach (var kv in _nodeLabels)
             {
-                if (_seenThisMeasure.Contains(kv.Key) && kv.Value.Opacity > 0) continue;
-                if (!_seenThisMeasure.Contains(kv.Key))
-                {
-                    kv.Value.Opacity = 0;
-                    kv.Value.RemoveOnCompleted = true;
-                    toDrop.Add(kv.Key);
-                }
+                if (_labeledThisMeasure.Contains(kv.Key)) continue;
+                kv.Value.Opacity = 0;
+                kv.Value.RemoveOnCompleted = true;
+                toDrop.Add(kv.Key);
             }
             foreach (var k in toDrop) _ = _nodeLabels.Remove(k);
         }
@@ -376,6 +369,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
             label.Animate(GetAnimation(ctx.Chart), BaseLabelGeometry.XProperty, BaseLabelGeometry.YProperty);
             _nodeLabels[node!] = label;
         }
+        _ = _labeledThisMeasure.Add(node!);
 
         DataLabelsPaint.AddGeometryToPaintTask(ctx.Chart.Canvas, label);
 
@@ -442,6 +436,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         }
         _nodeLabels.Clear();
         _seenThisMeasure.Clear();
+        _labeledThisMeasure.Clear();
 
         foreach (var pt in GetPaintTasks())
             if (pt is not null) core.Canvas.RemovePaintTask(pt);
