@@ -403,7 +403,23 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         // would just overlap with their children's labels.
         if (isLeaf) MeasureDataLabel(node, inner, in ctx);
 
-        if (!isLeaf) LayoutSiblings(kids!, inner, in ctx);
+        if (!isLeaf)
+        {
+            // Evict leaf-only state when a node transitions from leaf →
+            // internal between measures. The Invalidate-time reaper only
+            // fires on disappearance (not in _seenThisMeasure), so without
+            // this we'd leave a stale ChartPoint with an active HoverArea
+            // (phantom tooltips on internal-node tiles) and a stale label
+            // still painted at Opacity=1 over the children's tiles.
+            _ = _nodePoints.Remove(node!);
+            if (_nodeLabels.TryGetValue(node!, out var staleLabel))
+            {
+                staleLabel.Opacity = 0;
+                staleLabel.RemoveOnCompleted = true;
+                _ = _nodeLabels.Remove(node!);
+            }
+            LayoutSiblings(kids!, inner, in ctx);
+        }
     }
 
     /// <summary>
