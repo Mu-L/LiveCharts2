@@ -85,7 +85,13 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     /// <inheritdoc cref="ITreemapSeries.GetTotalWeight"/>
     public double GetTotalWeight()
     {
-        if (Values is null || ValueMapper is null) return 0;
+        // No `ValueMapper is null` short-circuit: ResolveValue has its own
+        // TreemapNode fallback (covers the XAML wrapper path where the
+        // source-generated facade can't auto-wire mappers). Bypassing this
+        // method when ValueMapper is null would give the engine a 0 total
+        // for every XAML-driven series — they'd all be partitioned to an
+        // empty rect, fall back to the full draw margin, and overlap.
+        if (Values is null) return 0;
         _weightCache.Clear();
         var total = 0.0;
         foreach (var n in Values)
