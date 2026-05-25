@@ -102,7 +102,12 @@ public class TreemapChartEngine(
         SeriesContext = new SeriesContext(VisibleSeries, this);
         var themeId = theme.ThemeId;
 
-        foreach (var series in Series)
+        // Fail fast on non-treemap series, matching PieChartEngine's
+        // `Series.Cast<IPieSeries>()` pattern — the engine has no axes and
+        // the partition step below relies on ITreemapSeries.GetTotalWeight
+        // / AssignedRectangle, so a foreign series would either crash deeper
+        // or silently render in the wrong slot.
+        foreach (var series in Series.Cast<ITreemapSeries>())
         {
             if (series.SeriesId == -1) series.SeriesId = GetNextSeriesId();
 
