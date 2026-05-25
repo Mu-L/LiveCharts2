@@ -53,6 +53,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     private readonly Dictionary<object, TLabel> _nodeLabels = new(ReferenceComparer.Instance);
     private readonly HashSet<object> _seenThisMeasure = new(ReferenceComparer.Instance);
     private readonly HashSet<object> _labeledThisMeasure = new(ReferenceComparer.Instance);
+    private readonly Dictionary<object, double> _weightCache = new(ReferenceComparer.Instance);
 
     /// <summary>Gets or sets the fill paint applied to every tile.</summary>
     public Paint? Fill
@@ -81,6 +82,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     public double GetTotalWeight()
     {
         if (Values is null || ValueMapper is null) return 0;
+        _weightCache.Clear();
         var total = 0.0;
         foreach (var n in Values)
         {
@@ -201,6 +203,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
 
         _seenThisMeasure.Clear();
         _labeledThisMeasure.Clear();
+        _weightCache.Clear();
 
         if (Values is not null)
         {
@@ -285,7 +288,9 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     /// <summary>
     /// Resolves a node's weight. Falls back to the sum of its descendants'
     /// resolved weights when the node has children and no explicit non-zero
-    /// value of its own.
+    /// value of its own. Memoized per measure pass (cleared at the top of
+    /// <see cref="GetTotalWeight"/> and <see cref="Invalidate"/>) so deep
+    /// hierarchies don't re-sum the same subtrees at every depth.
     /// </summary>
     private double ResolveValue(TModel node)
     {
@@ -293,11 +298,21 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
             throw new InvalidOperationException(
                 $"{nameof(ValueMapper)} is required on {nameof(CoreTreemapSeries<TModel, TVisual, TLabel>)}.");
 
+        if (_weightCache.TryGetValue(node!, out var cached)) return cached;
+
         var v = ValueMapper(node);
-        if (Math.Abs(v) > double.Epsilon) return v;
+        if (Math.Abs(v) > double.Epsilon)
+        {
+            _weightCache[node!] = v;
+            return v;
+        }
 
         var children = ChildrenMapper?.Invoke(node);
-        if (children is null) return 0;
+        if (children is null)
+        {
+            _weightCache[node!] = 0;
+            return 0;
+        }
 
         var sum = 0.0;
         foreach (var c in children)
@@ -305,6 +320,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
             if (c is null) continue;
             sum += ResolveValue(c);
         }
+        _weightCache[node!] = sum;
         return sum;
     }
 
@@ -437,6 +453,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
         _nodeLabels.Clear();
         _seenThisMeasure.Clear();
         _labeledThisMeasure.Clear();
+        _weightCache.Clear();
 
         foreach (var pt in GetPaintTasks())
             if (pt is not null) core.Canvas.RemovePaintTask(pt);
