@@ -88,6 +88,72 @@ internal static class SankeyLayout
         public float TargetY1 { get; }
     }
 
+    /// <summary>Result of <see cref="ComputeBipartiteArc"/> — same shape as
+    /// <see cref="Result{TNode}"/> but with arc-segment node boxes and chord
+    /// ribbon endpoints.</summary>
+    public sealed class ArcResult<TNode> where TNode : notnull
+    {
+        public ArcResult(
+            Dictionary<TNode, ArcNodeBox> nodes,
+            List<ChordRibbonBox<TNode>> links)
+        {
+            Nodes = nodes;
+            Links = links;
+        }
+        public IReadOnlyDictionary<TNode, ArcNodeBox> Nodes { get; }
+        public IReadOnlyList<ChordRibbonBox<TNode>> Links { get; }
+    }
+
+    /// <summary>Per-node arc placement: annular sector centered at (CenterX,
+    /// CenterY), from InnerRadius to OuterRadius, drawn clockwise from
+    /// StartAngle for SweepAngle degrees (Skia convention).</summary>
+    public readonly struct ArcNodeBox
+    {
+        public ArcNodeBox(float cx, float cy, float innerR, float outerR, float startAngle, float sweepAngle)
+        {
+            CenterX = cx; CenterY = cy;
+            InnerRadius = innerR; OuterRadius = outerR;
+            StartAngle = startAngle; SweepAngle = sweepAngle;
+        }
+        public float CenterX { get; }
+        public float CenterY { get; }
+        public float InnerRadius { get; }
+        public float OuterRadius { get; }
+        public float StartAngle { get; }
+        public float SweepAngle { get; }
+    }
+
+    /// <summary>Per-link chord placement: 4 cartesian endpoints on inner-arc
+    /// chords (two per node, in band order) plus the chart center used as
+    /// the cubic-Bezier control attractor.</summary>
+    public readonly struct ChordRibbonBox<TNode> where TNode : notnull
+    {
+        public ChordRibbonBox(
+            SankeyLink<TNode> link,
+            float centerX, float centerY,
+            float sp0X, float sp0Y, float sp1X, float sp1Y,
+            float tp0X, float tp0Y, float tp1X, float tp1Y)
+        {
+            Link = link;
+            CenterX = centerX; CenterY = centerY;
+            SourceP0X = sp0X; SourceP0Y = sp0Y;
+            SourceP1X = sp1X; SourceP1Y = sp1Y;
+            TargetP0X = tp0X; TargetP0Y = tp0Y;
+            TargetP1X = tp1X; TargetP1Y = tp1Y;
+        }
+        public SankeyLink<TNode> Link { get; }
+        public float CenterX { get; }
+        public float CenterY { get; }
+        public float SourceP0X { get; }
+        public float SourceP0Y { get; }
+        public float SourceP1X { get; }
+        public float SourceP1Y { get; }
+        public float TargetP0X { get; }
+        public float TargetP0Y { get; }
+        public float TargetP1X { get; }
+        public float TargetP1Y { get; }
+    }
+
     public static Result<TNode> Compute<TNode>(
         IEnumerable<TNode> nodes,
         IEnumerable<SankeyLink<TNode>> links,
@@ -281,6 +347,273 @@ internal static class SankeyLayout
         }
 
         return new Result<TNode>(nodeBoxes, ribbons);
+    }
+
+    /// <summary>
+    /// BipartiteArc layout: every node lies on one of two arcs (source nodes
+    /// on a left arc centered at 180°, target nodes on a right arc centered
+    /// at 0°), with ribbons curving through the chart center as cubic Beziers
+    /// with control point at center. Returns angular node spans + the four
+    /// chord endpoints per ribbon, all in cartesian coordinates derived from
+    /// the inner radius of each node's arc segment.
+    ///
+    /// Throws <see cref="InvalidOperationException"/> if the graph has more
+    /// than two depth columns — caller is responsible for catching upstream
+    /// and surfacing a clear API error.
+    /// </summary>
+    public static ArcResult<TNode> ComputeBipartiteArc<TNode>(
+        IEnumerable<TNode> nodes,
+        IEnumerable<SankeyLink<TNode>> links,
+        LvcRectangle rect,
+        float nodeWidth,
+        float nodePadding,
+        float arcSpanDegrees,
+        float labelMargin) where TNode : notnull
+    {
+        var nodeList = new List<TNode>();
+        var byNode = new Dictionary<TNode, _State<TNode>>(ReferenceComparer<TNode>.Instance);
+
+        foreach (var n in nodes)
+        {
+            if (n is null) continue;
+            if (byNode.ContainsKey(n)) continue;
+            var s = new _State<TNode>(n);
+            byNode[n] = s;
+            nodeList.Add(n);
+        }
+
+        var keepLinks = new List<SankeyLink<TNode>>();
+        foreach (var l in links)
+        {
+            if (l is null) continue;
+            if (l.Source is null || l.Target is null) continue;
+            if (ReferenceComparer<TNode>.Instance.Equals(l.Source, l.Target)) continue;
+            if (!byNode.TryGetValue(l.Source, out var src)) continue;
+            if (!byNode.TryGetValue(l.Target, out var tgt)) continue;
+            if (l.Weight <= 0 || double.IsNaN(l.Weight) || double.IsInfinity(l.Weight)) continue;
+            src.Outgoing.Add(l);
+            tgt.Incoming.Add(l);
+            keepLinks.Add(l);
+        }
+
+        if (nodeList.Count == 0 || rect.Size.Width <= 0 || rect.Size.Height <= 0)
+            return new ArcResult<TNode>(
+                new Dictionary<TNode, ArcNodeBox>(ReferenceComparer<TNode>.Instance),
+                []);
+
+        // Depth assignment — same Kahn BFS as Compute, then assert exactly 2
+        // columns. Pass-through nodes (any node that is both target of some
+        // link and source of another) push maxDepth > 1 and are rejected with
+        // a clear message; users wanting multi-column flows must stay on
+        // Vertical layout.
+        var inDegree = new Dictionary<TNode, int>(ReferenceComparer<TNode>.Instance);
+        foreach (var n in nodeList) inDegree[n] = byNode[n].Incoming.Count;
+
+        var queue = new Queue<TNode>();
+        foreach (var n in nodeList)
+            if (inDegree[n] == 0)
+            {
+                byNode[n].Depth = 0;
+                queue.Enqueue(n);
+            }
+
+        var processed = 0;
+        while (queue.Count > 0)
+        {
+            var n = queue.Dequeue();
+            processed++;
+            var s = byNode[n];
+            foreach (var link in s.Outgoing)
+            {
+                var tgt = byNode[link.Target];
+                if (s.Depth + 1 > tgt.Depth) tgt.Depth = s.Depth + 1;
+                inDegree[link.Target]--;
+                if (inDegree[link.Target] == 0) queue.Enqueue(link.Target);
+            }
+        }
+        if (processed < nodeList.Count)
+            throw new InvalidOperationException(
+                "SankeyLayout: graph contains a cycle. v1 only supports acyclic graphs.");
+
+        var maxDepth = 0;
+        foreach (var n in nodeList)
+            if (byNode[n].Depth > maxDepth) maxDepth = byNode[n].Depth;
+
+        if (maxDepth > 1)
+            throw new InvalidOperationException(
+                "SankeyLayout.BipartiteArc: graph has more than two depth columns. " +
+                "BipartiteArc requires strictly bipartite data — every node must be " +
+                "either pure source (no incoming) or pure sink (no outgoing). " +
+                "Use SankeyLayoutKind.Vertical for multi-column flows.");
+
+        foreach (var n in nodeList)
+        {
+            var s = byNode[n];
+            var inSum = 0.0;
+            foreach (var l in s.Incoming) inSum += l.Weight;
+            var outSum = 0.0;
+            foreach (var l in s.Outgoing) outSum += l.Weight;
+            s.Value = inSum > outSum ? inSum : outSum;
+            if (s.Value <= 0) s.Value = 1;
+        }
+
+        var leftCol = new List<TNode>();
+        var rightCol = new List<TNode>();
+        foreach (var n in nodeList)
+        {
+            if (byNode[n].Depth == 0) leftCol.Add(n);
+            else rightCol.Add(n);
+        }
+
+        // Geometry of the chart-center ellipse: pick a circle whose radius
+        // fits both axes minus the label margin (reserved by the caller via
+        // labelMargin). NodeWidth is the radial thickness, so innerR =
+        // outerR - nodeWidth. Ribbons attach to innerR.
+        var cx = rect.Location.X + rect.Size.Width * 0.5f;
+        var cy = rect.Location.Y + rect.Size.Height * 0.5f;
+        var avail = (rect.Size.Width < rect.Size.Height ? rect.Size.Width : rect.Size.Height) * 0.5f;
+        var outerR = avail - labelMargin;
+        if (outerR < nodeWidth + 1) outerR = nodeWidth + 1;
+        var innerR = outerR - nodeWidth;
+        if (innerR < 1) innerR = 1;
+
+        // Convert nodePadding (px) to an angular padding on the inner radius;
+        // matches the "gap reads as N pixels regardless of arc size" intent
+        // of the existing NodePadding property.
+        const float toDeg = (float)(180.0 / System.Math.PI);
+        var angularPadDeg = (nodePadding / innerR) * toDeg;
+
+        var nodeBoxes = new Dictionary<TNode, ArcNodeBox>(ReferenceComparer<TNode>.Instance);
+        var nodeAngular = new Dictionary<TNode, _ArcSpan>(ReferenceComparer<TNode>.Instance);
+
+        // Left arc: visual top = 180+ArcSpan/2 (Skia angle), going down =
+        // counterclockwise = angle decreases. Right arc: visual top =
+        // -ArcSpan/2, going down = clockwise = angle increases.
+        _LayoutColumnOnArc(leftCol, byNode, cx, cy, innerR, outerR,
+            visualTopAngleDeg: 180f + arcSpanDegrees * 0.5f, direction: -1,
+            arcSpanDegrees, angularPadDeg, nodeBoxes, nodeAngular);
+        _LayoutColumnOnArc(rightCol, byNode, cx, cy, innerR, outerR,
+            visualTopAngleDeg: -arcSpanDegrees * 0.5f, direction: +1,
+            arcSpanDegrees, angularPadDeg, nodeBoxes, nodeAngular);
+
+        // Sort outgoing/incoming so chord bands stack in target's visual
+        // order at the source, and source's visual order at the target —
+        // direct port of the vertical sweep's "sort by other-end Y" trick,
+        // adapted to "sort by other-end cartesian Y on the inner arc."
+        foreach (var n in nodeList)
+        {
+            var s = byNode[n];
+            s.Outgoing.Sort((a, b) => _VisualTopY(nodeAngular[a.Target], cy, innerR)
+                .CompareTo(_VisualTopY(nodeAngular[b.Target], cy, innerR)));
+            s.Incoming.Sort((a, b) => _VisualTopY(nodeAngular[a.Source], cy, innerR)
+                .CompareTo(_VisualTopY(nodeAngular[b.Source], cy, innerR)));
+        }
+
+        var ribbons = new List<ChordRibbonBox<TNode>>(keepLinks.Count);
+        var outAcc = new Dictionary<TNode, double>(ReferenceComparer<TNode>.Instance);
+        var inAcc = new Dictionary<TNode, double>(ReferenceComparer<TNode>.Instance);
+        foreach (var n in nodeList) { outAcc[n] = 0; inAcc[n] = 0; }
+
+        foreach (var n in nodeList)
+        {
+            var s = byNode[n];
+            var spanN = nodeAngular[n];
+            foreach (var link in s.Outgoing)
+            {
+                var tgt = byNode[link.Target];
+                var spanT = nodeAngular[link.Target];
+
+                // Source-side band: a fractional slice of n's angular extent,
+                // proportional to link.Weight / n.Value. Direction = n's
+                // arc direction.
+                var bandFracS = (float)(link.Weight / s.Value);
+                var bandSweepS = spanN.SweepMag * bandFracS;
+                var sBandStart = spanN.VisualTopAngleDeg + spanN.Direction * (float)outAcc[n];
+                var sBandEnd = sBandStart + spanN.Direction * bandSweepS;
+                outAcc[n] += bandSweepS;
+
+                var bandFracT = (float)(link.Weight / tgt.Value);
+                var bandSweepT = spanT.SweepMag * bandFracT;
+                var tBandStart = spanT.VisualTopAngleDeg + spanT.Direction * (float)inAcc[link.Target];
+                var tBandEnd = tBandStart + spanT.Direction * bandSweepT;
+                inAcc[link.Target] += bandSweepT;
+
+                // Chord endpoints on inner arc, in Skia cartesian.
+                const float toRad = (float)(System.Math.PI / 180);
+                var sp0x = cx + (float)System.Math.Cos(sBandStart * toRad) * innerR;
+                var sp0y = cy + (float)System.Math.Sin(sBandStart * toRad) * innerR;
+                var sp1x = cx + (float)System.Math.Cos(sBandEnd * toRad) * innerR;
+                var sp1y = cy + (float)System.Math.Sin(sBandEnd * toRad) * innerR;
+                var tp0x = cx + (float)System.Math.Cos(tBandStart * toRad) * innerR;
+                var tp0y = cy + (float)System.Math.Sin(tBandStart * toRad) * innerR;
+                var tp1x = cx + (float)System.Math.Cos(tBandEnd * toRad) * innerR;
+                var tp1y = cy + (float)System.Math.Sin(tBandEnd * toRad) * innerR;
+
+                ribbons.Add(new ChordRibbonBox<TNode>(
+                    link, cx, cy,
+                    sp0x, sp0y, sp1x, sp1y,
+                    tp0x, tp0y, tp1x, tp1y));
+            }
+        }
+
+        return new ArcResult<TNode>(nodeBoxes, ribbons);
+    }
+
+    /// <summary>Lays out one column's nodes on its arc — proportional sweeps
+    /// from the column's value sum, separated by angularPadDeg.</summary>
+    private static void _LayoutColumnOnArc<TNode>(
+        List<TNode> col,
+        Dictionary<TNode, _State<TNode>> byNode,
+        float cx, float cy, float innerR, float outerR,
+        float visualTopAngleDeg, int direction,
+        float arcSpanDegrees, float angularPadDeg,
+        Dictionary<TNode, ArcNodeBox> nodeBoxes,
+        Dictionary<TNode, _ArcSpan> nodeAngular) where TNode : notnull
+    {
+        if (col.Count == 0) return;
+
+        var total = 0.0;
+        foreach (var n in col) total += byNode[n].Value;
+        if (total <= 0) total = 1;
+
+        var totalPad = angularPadDeg * (col.Count - 1);
+        var usableSweep = arcSpanDegrees - totalPad;
+        if (usableSweep < 1) usableSweep = 1;
+
+        var acc = 0f;
+        foreach (var n in col)
+        {
+            var s = byNode[n];
+            var sweep = (float)(s.Value / total) * usableSweep;
+            var nodeVisualTop = visualTopAngleDeg + direction * acc;
+            // Skia start = smaller angle; for direction=+1 that's the visual
+            // top, for direction=-1 it's the visual bottom (visualTop - sweep).
+            var skiaStart = direction > 0 ? nodeVisualTop : nodeVisualTop - sweep;
+
+            nodeBoxes[n] = new ArcNodeBox(cx, cy, innerR, outerR, skiaStart, sweep);
+            nodeAngular[n] = new _ArcSpan(nodeVisualTop, sweep, direction);
+
+            acc += sweep + angularPadDeg;
+        }
+    }
+
+    private static float _VisualTopY(_ArcSpan span, float cy, float innerR)
+    {
+        const float toRad = (float)(System.Math.PI / 180);
+        return cy + (float)System.Math.Sin(span.VisualTopAngleDeg * toRad) * innerR;
+    }
+
+    private readonly struct _ArcSpan
+    {
+        public _ArcSpan(float visualTopAngleDeg, float sweepMag, int direction)
+        {
+            VisualTopAngleDeg = visualTopAngleDeg;
+            SweepMag = sweepMag;
+            Direction = direction;
+        }
+        public float VisualTopAngleDeg { get; }
+        public float SweepMag { get; }
+        public int Direction { get; }
     }
 
     private static void _relaxToTargets<TNode>(
