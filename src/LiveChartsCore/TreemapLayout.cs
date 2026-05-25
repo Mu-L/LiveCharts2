@@ -136,18 +136,13 @@ internal static class TreemapLayout
             }
 
             // Shrink the remaining rectangle by the row's depth.
-            if (isHorizontalRow)
-            {
-                current = new LvcRectangle(
+            current = isHorizontalRow
+                ? new LvcRectangle(
                     new LvcPoint(current.Location.X, (float)(current.Location.Y + depth)),
-                    new LvcSize(current.Size.Width, (float)(current.Size.Height - depth)));
-            }
-            else
-            {
-                current = new LvcRectangle(
+                    new LvcSize(current.Size.Width, (float)(current.Size.Height - depth)))
+                : new LvcRectangle(
                     new LvcPoint((float)(current.Location.X + depth), current.Location.Y),
                     new LvcSize((float)(current.Size.Width - depth), current.Size.Height));
-            }
         }
 
         return placements;

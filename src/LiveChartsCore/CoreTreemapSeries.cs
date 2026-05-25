@@ -300,7 +300,7 @@ public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
                 $"{nameof(ValueMapper)} is required on {nameof(CoreTreemapSeries<TModel, TVisual, TLabel>)}.");
 
         var v = ValueMapper(node);
-        if (v != 0) return v;
+        if (Math.Abs(v) > double.Epsilon) return v;
 
         var children = ChildrenMapper?.Invoke(node);
         if (children is null) return 0;
