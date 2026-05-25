@@ -51,6 +51,22 @@ public interface ISankeySeries : ISeries, IStrokedAndFilled
 
     /// <summary>Where node labels are placed relative to the node rectangle.</summary>
     SankeyLabelPosition NodeLabelPosition { get; set; }
+
+    /// <summary>
+    /// How the graph is laid out on the canvas. Default
+    /// <see cref="SankeyLayoutKind.Vertical"/> — the classic d3-sankey L→R
+    /// column layout. Other modes (e.g. <see cref="SankeyLayoutKind.BipartiteArc"/>)
+    /// have their own constraints; see the enum members for details.
+    /// </summary>
+    SankeyLayoutKind Layout { get; set; }
+
+    /// <summary>
+    /// Angular span (degrees) covered by each arc when
+    /// <see cref="Layout"/> = <see cref="SankeyLayoutKind.BipartiteArc"/>.
+    /// Default 150°: each arc covers 150° leaving a 30° gap at the top and
+    /// bottom poles of the ellipse. Ignored in other layout modes.
+    /// </summary>
+    double ArcSpanDegrees { get; set; }
 }
 
 /// <summary>Placement of node labels relative to the node rectangle.</summary>
@@ -67,4 +83,22 @@ public enum SankeyLabelPosition
     Outside,
     /// <summary>Always overlaid on the node, centered.</summary>
     Inside
+}
+
+/// <summary>How a sankey series arranges its nodes on the canvas.</summary>
+public enum SankeyLayoutKind
+{
+    /// <summary>
+    /// Classic L→R columns of stacked rectangles. Supports any number of
+    /// columns (depths). Default.
+    /// </summary>
+    Vertical,
+
+    /// <summary>
+    /// Source nodes on a left arc, target nodes on a right arc; ribbons curve
+    /// through the center. Requires bipartite data (every node is either pure
+    /// source or pure sink — exactly two depth columns); throws
+    /// <see cref="System.InvalidOperationException"/> on multi-column data.
+    /// </summary>
+    BipartiteArc,
 }

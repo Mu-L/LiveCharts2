@@ -93,6 +93,12 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// <inheritdoc cref="ISankeySeries.NodeLabelPosition"/>
     public SankeyLabelPosition NodeLabelPosition { get; set => SetProperty(ref field, value); }
 
+    /// <inheritdoc cref="ISankeySeries.Layout"/>
+    public SankeyLayoutKind Layout { get; set => SetProperty(ref field, value); }
+
+    /// <inheritdoc cref="ISankeySeries.ArcSpanDegrees"/>
+    public double ArcSpanDegrees { get; set => SetProperty(ref field, value); } = 150;
+
     /// <summary>
     /// Per-node color override. When non-null, the returned <see cref="LvcColor"/>
     /// is applied to the node's visual — the visual must implement
