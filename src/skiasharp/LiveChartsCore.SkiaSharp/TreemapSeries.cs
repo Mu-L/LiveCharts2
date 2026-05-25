@@ -33,6 +33,7 @@ namespace LiveChartsCore.SkiaSharpView;
 /// <typeparam name="TModel">The user's node type.</typeparam>
 public class TreemapSeries<TModel>
     : TreemapSeries<TModel, RoundedRectangleGeometry, LabelGeometry>
+        where TModel : class
 {
     /// <summary>Initializes a new instance of the <see cref="TreemapSeries{TModel}"/> class.</summary>
     public TreemapSeries() : base() { }
@@ -46,6 +47,7 @@ public class TreemapSeries<TModel>
 /// </summary>
 public class TreemapSeries<TModel, TVisual>
     : TreemapSeries<TModel, TVisual, LabelGeometry>
+        where TModel : class
         where TVisual : BoundedDrawnGeometry, new()
 {
     /// <summary>Initializes a new instance of the <see cref="TreemapSeries{TModel, TVisual}"/> class.</summary>
@@ -61,6 +63,7 @@ public class TreemapSeries<TModel, TVisual>
 /// </summary>
 public class TreemapSeries<TModel, TVisual, TLabel>
     : CoreTreemapSeries<TModel, TVisual, TLabel>
+        where TModel : class
         where TVisual : BoundedDrawnGeometry, new()
         where TLabel : BaseLabelGeometry, new()
 {

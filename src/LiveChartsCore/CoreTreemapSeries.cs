@@ -45,6 +45,7 @@ namespace LiveChartsCore;
 public abstract class CoreTreemapSeries<TModel, TVisual, TLabel>(
     IReadOnlyCollection<TModel>? values)
         : Series<TModel, TVisual, TLabel>(SeriesProperties.Solid, values), ITreemapSeries
+            where TModel : class
             where TVisual : BoundedDrawnGeometry, new()
             where TLabel : BaseLabelGeometry, new()
 {
