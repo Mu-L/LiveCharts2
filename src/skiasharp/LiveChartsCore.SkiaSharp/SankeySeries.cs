@@ -69,4 +69,10 @@ public class SankeySeries<TNode, TVisual, TLabel>
 
     /// <inheritdoc cref="CoreSankeySeries{TNode, TVisual, TLabel}.CreateRibbonVisual"/>
     protected override BaseSankeyRibbonGeometry CreateRibbonVisual() => new SankeyRibbonGeometry();
+
+    /// <inheritdoc cref="CoreSankeySeries{TNode, TVisual, TLabel}.CreateArcNodeVisual"/>
+    protected override BaseSankeyArcSegmentGeometry CreateArcNodeVisual() => new SankeyArcSegmentGeometry();
+
+    /// <inheritdoc cref="CoreSankeySeries{TNode, TVisual, TLabel}.CreateChordRibbonVisual"/>
+    protected override BaseSankeyChordRibbonGeometry CreateChordRibbonVisual() => new SankeyChordRibbonGeometry();
 }

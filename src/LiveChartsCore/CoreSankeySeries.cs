@@ -51,6 +51,10 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     private readonly Dictionary<TNode, TVisual> _nodeVisuals = new(ReferenceComparer<TNode>.Instance);
     private readonly Dictionary<SankeyLink<TNode>, BaseSankeyRibbonGeometry> _linkVisuals =
         new(ReferenceComparer<SankeyLink<TNode>>.Instance);
+    private readonly Dictionary<TNode, BaseSankeyArcSegmentGeometry> _arcNodeVisuals =
+        new(ReferenceComparer<TNode>.Instance);
+    private readonly Dictionary<SankeyLink<TNode>, BaseSankeyChordRibbonGeometry> _chordLinkVisuals =
+        new(ReferenceComparer<SankeyLink<TNode>>.Instance);
     private readonly Dictionary<TNode, TLabel> _nodeLabels = new(ReferenceComparer<TNode>.Instance);
 
     /// <summary>Gets or sets the fill paint applied to every node rectangle.</summary>
@@ -204,6 +208,16 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// <summary>Factory hook — subclasses override to pick the ribbon visual concrete type (default RoundedRectangleGeometry-shaped sibling per platform).</summary>
     protected abstract BaseSankeyRibbonGeometry CreateRibbonVisual();
 
+    /// <summary>Factory hook for the arc-segment node visual used in
+    /// <see cref="SankeyLayoutKind.BipartiteArc"/>. The vertical-mode TVisual
+    /// generic doesn't apply here (arc segments aren't BoundedDrawnGeometry);
+    /// platform facades pick the concrete type.</summary>
+    protected abstract BaseSankeyArcSegmentGeometry CreateArcNodeVisual();
+
+    /// <summary>Factory hook for the chord-ribbon visual used in
+    /// <see cref="SankeyLayoutKind.BipartiteArc"/>.</summary>
+    protected abstract BaseSankeyChordRibbonGeometry CreateChordRibbonVisual();
+
     /// <inheritdoc cref="ChartElement.Invalidate(Chart)"/>
     public sealed override void Invalidate(Chart chart)
     {
@@ -219,6 +233,22 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             return;
         }
 
+        // Reap whichever-layout's stale visuals exist when the user toggles
+        // Layout at runtime. ReapVerticalVisuals / ReapArcVisuals only act on
+        // their own dicts, so this is cheap when no switch occurred.
+        if (Layout == SankeyLayoutKind.BipartiteArc)
+        {
+            ReapVerticalVisuals();
+            MeasureBipartiteArc(sankeyChart, ctx, anim);
+            return;
+        }
+
+        ReapArcVisuals();
+        MeasureVertical(sankeyChart, ctx, anim);
+    }
+
+    private void MeasureVertical(SankeyChartEngine sankeyChart, SankeyMeasureContext ctx, Animation anim)
+    {
         // For Auto label placement we need per-node in/out degree (source =
         // no incoming -> outside-left; sink = no outgoing -> outside-right;
         // pass-through -> inside). Compute once per measure.
@@ -356,6 +386,257 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
                 }
             foreach (var k in toRemove) _ = _nodeLabels.Remove(k);
         }
+    }
+
+    // ---- BipartiteArc layout ------------------------------------------------
+
+    private void MeasureBipartiteArc(SankeyChartEngine sankeyChart, SankeyMeasureContext ctx, Animation anim)
+    {
+        // Arc mode reserves a uniform radial margin around the ellipse for
+        // labels — measured up-front so the inner/outer radii are stable on
+        // the first paint. Then SankeyLayout.ComputeBipartiteArc validates
+        // bipartite-ness (throws on multi-column) and produces the angular
+        // node spans + chord endpoints.
+        var labelMargin = MeasureArcLabelMargin();
+        var rect = new LvcRectangle(ctx.DrawLocation, ctx.DrawMarginSize);
+
+        var layout = SankeyLayout.ComputeBipartiteArc(
+            Values!,
+            Links ?? [],
+            rect,
+            ctx.NodeWidth,
+            ctx.NodePadding,
+            (float)ArcSpanDegrees,
+            labelMargin);
+
+        var seenNodes = new HashSet<TNode>(ReferenceComparer<TNode>.Instance);
+        foreach (var kv in layout.Nodes)
+        {
+            var node = kv.Key;
+            var box = kv.Value;
+            var visual = EnsureArcVisualForNode(node, box);
+
+            if (Fill is not null && Fill != Paint.Default)
+                Fill.AddGeometryToPaintTask(sankeyChart.Canvas, visual);
+            if (Stroke is not null && Stroke != Paint.Default)
+                Stroke.AddGeometryToPaintTask(sankeyChart.Canvas, visual);
+
+            visual.Animate(anim);
+            visual.CenterX = box.CenterX;
+            visual.CenterY = box.CenterY;
+            visual.InnerRadius = box.InnerRadius;
+            visual.OuterRadius = box.OuterRadius;
+            visual.StartAngle = box.StartAngle;
+            visual.SweepAngle = box.SweepAngle;
+            visual.CornerRadius = (float)NodeCornerRadius;
+            visual.RemoveOnCompleted = false;
+
+            if (NodeColorMapper is not null)
+                visual.Color = NodeColorMapper(node);
+
+            MeasureArcNodeLabel(node, box, anim, sankeyChart);
+            _ = seenNodes.Add(node);
+        }
+
+        var ribbonPaint = LinkFill is not null && LinkFill != Paint.Default ? LinkFill : Fill;
+        var seenLinks = new HashSet<SankeyLink<TNode>>(ReferenceComparer<SankeyLink<TNode>>.Instance);
+        foreach (var rb in layout.Links)
+        {
+            var visual = EnsureChordVisualForLink(rb.Link, rb);
+            if (ribbonPaint is not null && ribbonPaint != Paint.Default)
+                ribbonPaint.AddGeometryToPaintTask(sankeyChart.Canvas, visual);
+
+            visual.Animate(anim);
+            visual.CenterX = rb.CenterX;
+            visual.CenterY = rb.CenterY;
+            visual.SourceP0X = rb.SourceP0X; visual.SourceP0Y = rb.SourceP0Y;
+            visual.SourceP1X = rb.SourceP1X; visual.SourceP1Y = rb.SourceP1Y;
+            visual.TargetP0X = rb.TargetP0X; visual.TargetP0Y = rb.TargetP0Y;
+            visual.TargetP1X = rb.TargetP1X; visual.TargetP1Y = rb.TargetP1Y;
+
+            if (LinkColorMapper is not null)
+            {
+                visual.Color = LinkColorMapper(rb.Link);
+            }
+            else if (NodeColorMapper is not null)
+            {
+                var srcColor = NodeColorMapper(rb.Link.Source);
+                visual.Color = new LvcColor(srcColor.R, srcColor.G, srcColor.B, (byte)(srcColor.A / 2));
+            }
+            visual.RemoveOnCompleted = false;
+
+            _ = seenLinks.Add(rb.Link);
+        }
+
+        // Reap orphans (arc dicts)
+        if (_arcNodeVisuals.Count != seenNodes.Count)
+        {
+            var toRemove = new List<TNode>();
+            foreach (var kv in _arcNodeVisuals)
+                if (!seenNodes.Contains(kv.Key))
+                {
+                    CollapseRemovedArcNode(kv.Value);
+                    toRemove.Add(kv.Key);
+                }
+            foreach (var k in toRemove) _ = _arcNodeVisuals.Remove(k);
+        }
+        if (_chordLinkVisuals.Count != seenLinks.Count)
+        {
+            var toRemove = new List<SankeyLink<TNode>>();
+            foreach (var kv in _chordLinkVisuals)
+                if (!seenLinks.Contains(kv.Key))
+                {
+                    CollapseRemovedChordRibbon(kv.Value);
+                    toRemove.Add(kv.Key);
+                }
+            foreach (var k in toRemove) _ = _chordLinkVisuals.Remove(k);
+        }
+        if (_nodeLabels.Count > 0)
+        {
+            var toRemove = new List<TNode>();
+            foreach (var kv in _nodeLabels)
+                if (!seenNodes.Contains(kv.Key))
+                {
+                    kv.Value.Opacity = 0;
+                    kv.Value.RemoveOnCompleted = true;
+                    toRemove.Add(kv.Key);
+                }
+            foreach (var k in toRemove) _ = _nodeLabels.Remove(k);
+        }
+    }
+
+    /// <summary>Seeds a new arc visual collapsed at its center angle (zero
+    /// sweep), so its entrance animates "wedge opens up."</summary>
+    private BaseSankeyArcSegmentGeometry EnsureArcVisualForNode(TNode node, SankeyLayout.ArcNodeBox box)
+    {
+        if (_arcNodeVisuals.TryGetValue(node, out var existing)) return existing;
+        var v = CreateArcNodeVisual();
+        v.CenterX = box.CenterX;
+        v.CenterY = box.CenterY;
+        v.InnerRadius = box.InnerRadius;
+        v.OuterRadius = box.OuterRadius;
+        v.StartAngle = box.StartAngle + box.SweepAngle * 0.5f;
+        v.SweepAngle = 0;
+        v.CornerRadius = (float)NodeCornerRadius;
+        if (NodeColorMapper is not null)
+            v.Color = NodeColorMapper(node);
+        _arcNodeVisuals[node] = v;
+        return v;
+    }
+
+    /// <summary>Seeds a new chord visual collapsed at the chart center, so
+    /// its entrance animates "ribbon expands out from center."</summary>
+    private BaseSankeyChordRibbonGeometry EnsureChordVisualForLink(SankeyLink<TNode> link, SankeyLayout.ChordRibbonBox<TNode> box)
+    {
+        if (_chordLinkVisuals.TryGetValue(link, out var existing)) return existing;
+        var v = CreateChordRibbonVisual();
+        v.CenterX = box.CenterX;
+        v.CenterY = box.CenterY;
+        v.SourceP0X = box.CenterX; v.SourceP0Y = box.CenterY;
+        v.SourceP1X = box.CenterX; v.SourceP1Y = box.CenterY;
+        v.TargetP0X = box.CenterX; v.TargetP0Y = box.CenterY;
+        v.TargetP1X = box.CenterX; v.TargetP1Y = box.CenterY;
+        if (LinkColorMapper is not null)
+        {
+            v.Color = LinkColorMapper(link);
+        }
+        else if (NodeColorMapper is not null)
+        {
+            var srcColor = NodeColorMapper(link.Source);
+            v.Color = new LvcColor(srcColor.R, srcColor.G, srcColor.B, (byte)(srcColor.A / 2));
+        }
+        _chordLinkVisuals[link] = v;
+        return v;
+    }
+
+    /// <summary>
+    /// Places a node's label radially outside its arc segment. Anchor sits
+    /// just past the outer radius along the node's mid-angle; text is rotated
+    /// so it reads outward from the chart center on whichever half of the
+    /// circle the node lives on (right half = rotation matches angle; left
+    /// half = +180° flip + HorizontalAlign.End so the text grows away from
+    /// the anchor toward the chart edge instead of toward the center).
+    /// </summary>
+    private void MeasureArcNodeLabel(TNode node, SankeyLayout.ArcNodeBox box, Animation anim, SankeyChartEngine chart)
+    {
+        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
+            return;
+        var text = ResolveLabel(node);
+        if (string.IsNullOrEmpty(text)) return;
+
+        var midAngle = box.StartAngle + box.SweepAngle * 0.5f;
+        var θ = ((midAngle % 360f) + 360f) % 360f;
+        const float toRad = (float)(System.Math.PI / 180);
+        const float gap = 4f;
+
+        var anchorR = box.OuterRadius + gap;
+        var labelX = box.CenterX + (float)System.Math.Cos(θ * toRad) * anchorR;
+        var labelY = box.CenterY + (float)System.Math.Sin(θ * toRad) * anchorR;
+
+        // Right half: text reads outward, anchored at its near end (Start).
+        // Left half: flip rotation 180° + anchor the far end (End) so the
+        // visible text still grows away from chart center.
+        var flipped = θ > 90f && θ < 270f;
+        var rotation = flipped ? θ - 180f : θ;
+        var hAlign = flipped ? Align.End : Align.Start;
+
+        if (!_nodeLabels.TryGetValue(node, out var label))
+        {
+            label = new TLabel
+            {
+                X = labelX,
+                Y = labelY,
+                HorizontalAlign = hAlign,
+                VerticalAlign = Align.Middle,
+                MaxWidth = (float)DataLabelsMaxWidth,
+            };
+            label.Animate(anim, BaseLabelGeometry.XProperty, BaseLabelGeometry.YProperty);
+            _nodeLabels[node] = label;
+        }
+
+        DataLabelsPaint.AddGeometryToPaintTask(chart.Canvas, label);
+
+        label.Text = text!;
+        label.TextSize = (float)DataLabelsSize;
+        label.Padding = DataLabelsPadding;
+        label.Paint = DataLabelsPaint;
+        label.HorizontalAlign = hAlign;
+        label.VerticalAlign = Align.Middle;
+        label.X = labelX;
+        label.Y = labelY;
+        label.RotateTransform = rotation;
+        label.Opacity = 1;
+        label.RemoveOnCompleted = false;
+    }
+
+    /// <summary>Measures the widest label so the layout can shrink the outer
+    /// radius by that amount + a small gap; otherwise long labels would clip
+    /// the canvas edge. Returns 0 when labels are off.</summary>
+    private float MeasureArcLabelMargin()
+    {
+        if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
+            return 0f;
+        if (Values is null) return 0f;
+
+        const float gap = 4f;
+        var probe = new TLabel
+        {
+            TextSize = (float)DataLabelsSize,
+            Padding = DataLabelsPadding,
+            Paint = DataLabelsPaint,
+            MaxWidth = (float)DataLabelsMaxWidth,
+        };
+
+        float maxW = 0f;
+        foreach (var node in Values)
+        {
+            var text = ResolveLabel(node);
+            if (string.IsNullOrEmpty(text)) continue;
+            probe.Text = text!;
+            var size = probe.Measure();
+            if (size.Width > maxW) maxW = size.Width;
+        }
+        return maxW > 0 ? maxW + gap : 0f;
     }
 
     /// <summary>
@@ -558,18 +839,55 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         visual.RemoveOnCompleted = true;
     }
 
+    private static void CollapseRemovedArcNode(BaseSankeyArcSegmentGeometry visual)
+    {
+        // Shrink to a zero-sweep wedge at its current start angle. The
+        // animator interpolates the sweep down which reads as "wedge fades
+        // closed," parallel to the rect collapse for vertical mode.
+        visual.SweepAngle = 0;
+        visual.RemoveOnCompleted = true;
+    }
+
+    private static void CollapseRemovedChordRibbon(BaseSankeyChordRibbonGeometry visual)
+    {
+        // Collapse all four anchors to the chord-attractor center — the band
+        // animates into a single point at chart center, which reads as "ribbon
+        // pulls into center then disappears."
+        visual.SourceP0X = visual.CenterX; visual.SourceP0Y = visual.CenterY;
+        visual.SourceP1X = visual.CenterX; visual.SourceP1Y = visual.CenterY;
+        visual.TargetP0X = visual.CenterX; visual.TargetP0Y = visual.CenterY;
+        visual.TargetP1X = visual.CenterX; visual.TargetP1Y = visual.CenterY;
+        visual.RemoveOnCompleted = true;
+    }
+
     private void ReapAll()
     {
-        foreach (var v in _nodeVisuals.Values) CollapseRemovedNode(v);
-        _nodeVisuals.Clear();
-        foreach (var v in _linkVisuals.Values) CollapseRemovedRibbon(v);
-        _linkVisuals.Clear();
+        ReapVerticalVisuals();
+        ReapArcVisuals();
         foreach (var l in _nodeLabels.Values)
         {
             l.Opacity = 0;
             l.RemoveOnCompleted = true;
         }
         _nodeLabels.Clear();
+    }
+
+    private void ReapVerticalVisuals()
+    {
+        if (_nodeVisuals.Count == 0 && _linkVisuals.Count == 0) return;
+        foreach (var v in _nodeVisuals.Values) CollapseRemovedNode(v);
+        _nodeVisuals.Clear();
+        foreach (var v in _linkVisuals.Values) CollapseRemovedRibbon(v);
+        _linkVisuals.Clear();
+    }
+
+    private void ReapArcVisuals()
+    {
+        if (_arcNodeVisuals.Count == 0 && _chordLinkVisuals.Count == 0) return;
+        foreach (var v in _arcNodeVisuals.Values) CollapseRemovedArcNode(v);
+        _arcNodeVisuals.Clear();
+        foreach (var v in _chordLinkVisuals.Values) CollapseRemovedChordRibbon(v);
+        _chordLinkVisuals.Clear();
     }
 
     private void InitializePaints(SankeyChartEngine chart)
