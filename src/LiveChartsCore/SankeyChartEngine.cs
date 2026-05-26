@@ -55,7 +55,10 @@ public class SankeyChartEngine(
     public override IChartView View => view;
 
     /// <inheritdoc cref="Chart.FindHoveredPointsBy(LvcPoint)"/>
-    public override IEnumerable<ChartPoint> FindHoveredPointsBy(LvcPoint pointerPosition) => [];
+    public override IEnumerable<ChartPoint> FindHoveredPointsBy(LvcPoint pointerPosition) =>
+        VisibleSeries
+            .Where(s => s.IsHoverable)
+            .SelectMany(s => s.FindHitPoints(this, pointerPosition, FindingStrategy.CompareAll, FindPointFor.HoverEvent));
 
     /// <inheritdoc cref="Chart.Measure"/>
     protected internal override void Measure()

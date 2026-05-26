@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
+
 namespace LiveChartsCore.Kernel.Sketches;
 
 /// <summary>
@@ -67,6 +69,15 @@ public interface ISankeySeries : ISeries, IStrokedAndFilled
     /// bottom poles of the ellipse. Ignored in other layout modes.
     /// </summary>
     double ArcSpanDegrees { get; set; }
+
+    /// <summary>
+    /// Builds the tooltip text for a node. Receives the hovered node's
+    /// <see cref="ChartPoint"/> (Context.DataSource is the user's node model,
+    /// Coordinate.PrimaryValue is the node's resolved value = max(in-sum,
+    /// out-sum)). When null the default formatter renders
+    /// "&lt;label&gt;: &lt;value&gt;".
+    /// </summary>
+    Func<ChartPoint, string>? TooltipLabelFormatter { get; set; }
 }
 
 /// <summary>Placement of node labels relative to the node rectangle.</summary>

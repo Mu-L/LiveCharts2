@@ -49,7 +49,13 @@ public static class Extensions
         LvcSize tooltipSize,
         Chart chart)
     {
-        var location = chart.Kind is ChartKind.Cartesian or ChartKind.Polar
+        // Sankey rides the cartesian tooltip layout: its hover areas
+        // (RectangleHoverArea for Vertical-mode rects, AnnularSectorHoverArea
+        // for BipartiteArc nodes) both populate MostLeft/MostRight/MostTop/
+        // MostBottom on TooltipPlacementContext (not PieX/PieY), which the
+        // cartesian path reads — same workaround treemap landed for the
+        // same reason.
+        var location = chart.Kind is ChartKind.Cartesian or ChartKind.Polar or ChartKind.Sankey
             ? _getCartesianTooltipLocation(foundPoints, chart, tooltipSize)
             : _getPieTooltipLocation(foundPoints, chart, tooltipSize);
 

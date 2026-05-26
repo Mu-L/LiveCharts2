@@ -60,12 +60,14 @@ internal static class SankeyLayout
 
     public readonly struct NodeBox
     {
-        public NodeBox(float x, float y, float width, float height)
-        { X = x; Y = y; Width = width; Height = height; }
+        public NodeBox(float x, float y, float width, float height, double value)
+        { X = x; Y = y; Width = width; Height = height; Value = value; }
         public float X { get; }
         public float Y { get; }
         public float Width { get; }
         public float Height { get; }
+        /// <summary>Layout-computed node value (max of incoming + outgoing weight sums).</summary>
+        public double Value { get; }
     }
 
     public readonly struct RibbonBox<TNode> where TNode : notnull
@@ -109,11 +111,12 @@ internal static class SankeyLayout
     /// StartAngle for SweepAngle degrees (Skia convention).</summary>
     public readonly struct ArcNodeBox
     {
-        public ArcNodeBox(float cx, float cy, float innerR, float outerR, float startAngle, float sweepAngle)
+        public ArcNodeBox(float cx, float cy, float innerR, float outerR, float startAngle, float sweepAngle, double value)
         {
             CenterX = cx; CenterY = cy;
             InnerRadius = innerR; OuterRadius = outerR;
             StartAngle = startAngle; SweepAngle = sweepAngle;
+            Value = value;
         }
         public float CenterX { get; }
         public float CenterY { get; }
@@ -121,6 +124,8 @@ internal static class SankeyLayout
         public float OuterRadius { get; }
         public float StartAngle { get; }
         public float SweepAngle { get; }
+        /// <summary>Layout-computed node value (max of incoming + outgoing weight sums).</summary>
+        public double Value { get; }
     }
 
     /// <summary>Per-link chord placement: 4 cartesian endpoints on inner-arc
@@ -313,7 +318,7 @@ internal static class SankeyLayout
         foreach (var n in nodeList)
         {
             var s = byNode[n];
-            nodeBoxes[n] = new NodeBox(s.X, s.Y, nodeWidth, s.Height);
+            nodeBoxes[n] = new NodeBox(s.X, s.Y, nodeWidth, s.Height, s.Value);
         }
 
         var ribbons = new List<RibbonBox<TNode>>(keepLinks.Count);
@@ -590,7 +595,7 @@ internal static class SankeyLayout
             // top, for direction=-1 it's the visual bottom (visualTop - sweep).
             var skiaStart = direction > 0 ? nodeVisualTop : nodeVisualTop - sweep;
 
-            nodeBoxes[n] = new ArcNodeBox(cx, cy, innerR, outerR, skiaStart, sweep);
+            nodeBoxes[n] = new ArcNodeBox(cx, cy, innerR, outerR, skiaStart, sweep, s.Value);
             nodeAngular[n] = new _ArcSpan(nodeVisualTop, sweep, direction);
 
             acc += sweep + angularPadDeg;
