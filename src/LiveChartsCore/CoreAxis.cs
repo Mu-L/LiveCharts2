@@ -588,8 +588,13 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
                 UpdateMode.UpdateAndComplete);
         }
         if (SubseparatorsPaint is not null && SubseparatorsPaint != Paint.Default && ShowSeparatorLines &&
-            (visualSeparator.Subseparators is null || visualSeparator.Subseparators.Length == 0))
+            (visualSeparator.Subseparators is null || visualSeparator.Subseparators.Length != SubseparatorsCount))
         {
+            // SubseparatorsCount can change at runtime; if the existing array length no longer
+            // matches the count we must detach the old geometries from the paint task and
+            // rebuild — otherwise UpdateSubseparators iterates `subseparators.Length` and just
+            // repositions the stale set via (j+1)/(count+1), producing gaps (issue #2287).
+            DetachSubseparators(visualSeparator, chart);
             InitializeSubseparators(visualSeparator, chart);
             UpdateSubseparators(
                 visualSeparator.Subseparators!, ctx.ActualScale, ctx.Step, xc + sxco, yc + syco, ctx.LeftX, ctx.RightX, ctx.TopY, ctx.BottomY,
@@ -601,8 +606,9 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
             UpdateTick(visualSeparator.Tick!, _tickLength, xc + txco, yc + tyco, UpdateMode.UpdateAndComplete);
         }
         if (SubticksPaint is not null && SubticksPaint != Paint.Default && SubseparatorsCount > 0 &&
-            (visualSeparator.Subticks is null || visualSeparator.Subticks.Length == 0))
+            (visualSeparator.Subticks is null || visualSeparator.Subticks.Length != SubseparatorsCount))
         {
+            DetachSubticks(visualSeparator, chart);
             InitializeSubticks(visualSeparator, chart);
             UpdateSubticks(visualSeparator.Subticks!, ctx.ActualScale, ctx.Step, xc + txco, yc + tyco, UpdateMode.UpdateAndComplete);
         }
@@ -1297,6 +1303,20 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
             visualSeparator.Subseparators[j] = subSeparator;
             InitializeTick(visualSeparator, cartesianChart, subSeparator);
         }
+    }
+
+    private void DetachSubseparators(AxisVisualSeprator visualSeparator, CartesianChartEngine cartesianChart)
+    {
+        if (visualSeparator.Subseparators is null || SubseparatorsPaint is null) return;
+        foreach (var sub in visualSeparator.Subseparators)
+            SubseparatorsPaint.RemoveGeometryFromPaintTask(cartesianChart.Canvas, sub);
+    }
+
+    private void DetachSubticks(AxisVisualSeprator visualSeparator, CartesianChartEngine cartesianChart)
+    {
+        if (visualSeparator.Subticks is null || SubticksPaint is null) return;
+        foreach (var sub in visualSeparator.Subticks)
+            SubticksPaint.RemoveGeometryFromPaintTask(cartesianChart.Canvas, sub);
     }
 
     private void InitializeLine(BaseLineGeometry lineGeometry, CartesianChartEngine cartesianChart) =>
