@@ -1080,10 +1080,27 @@ public abstract class CoreSankeySeries<TModel, TVisual, TLabel>(
 
     /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.FindPointsInPosition"/>
     protected override IEnumerable<ChartPoint> FindPointsInPosition(
-        Chart chart, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor) =>
-        _nodePoints.Values.Where(p =>
+        Chart chart, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor)
+    {
+        var hits = _nodePoints.Values.Where(p =>
             p.Context.HoverArea is not null &&
             p.Context.HoverArea.IsPointerOver(pointerPosition, strategy));
+
+        // Mirror Series.FindPointsInPosition: the *TakeClosest strategies
+        // (CompareAllTakeClosest=4, CompareOnlyXTakeClosest=5,
+        // CompareOnlyYTakeClosest=6, ExactMatchTakeClosest=8) collapse
+        // overlapping hits to a single closest point. Without this filter
+        // hovering between two adjacent node arcs would return both, which
+        // breaks DataPointerDown / tooltip behavior for those strategies.
+        var s = (int)strategy;
+        if (s is (>= 4 and <= 6) or 8)
+            hits = hits
+                .Select(x => new { distance = x.DistanceTo(pointerPosition, strategy), point = x })
+                .OrderBy(x => x.distance)
+                .SelectFirst(x => x.point);
+
+        return hits;
+    }
 
     /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.GetMiniatureGeometry(ChartPoint?)"/>
     public override IDrawnElement GetMiniatureGeometry(ChartPoint? point) =>
