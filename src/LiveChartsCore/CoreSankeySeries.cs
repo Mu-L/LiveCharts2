@@ -56,6 +56,14 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     private readonly Dictionary<SankeyLink<TNode>, BaseSankeyChordRibbonGeometry> _chordLinkVisuals =
         new(ReferenceComparer<SankeyLink<TNode>>.Instance);
     private readonly Dictionary<TNode, TLabel> _nodeLabels = new(ReferenceComparer<TNode>.Instance);
+    // Implicit ribbon paint: a CloneTask() of Fill, allocated lazily when the
+    // user hasn't set LinkFill. See InitializePaints for the rationale —
+    // ribbons and nodes need DIFFERENT paint tasks so ZIndex can enforce
+    // "ribbons under nodes"; sharing a single paint puts them in the same
+    // HashSet<IDrawnElement> on Paint and draw order becomes undefined.
+    // Source-pinned so we re-clone when the user swaps Fill at runtime.
+    private Paint? _implicitLinkPaint;
+    private Paint? _implicitLinkPaintSource;
 
     /// <summary>Gets or sets the fill paint applied to every node rectangle.</summary>
     public Paint? Fill
@@ -318,8 +326,9 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             _ = seenNodes.Add(node);
         }
 
-        // Links — use LinkFill if set, else fall back to Fill
-        var ribbonPaint = LinkFill is not null && LinkFill != Paint.Default ? LinkFill : Fill;
+        // Links — use LinkFill if user-set, else the implicit Fill clone
+        // (separate paint task; see InitializePaints).
+        var ribbonPaint = GetEffectiveRibbonPaint();
         var seenLinks = new HashSet<SankeyLink<TNode>>(ReferenceComparer<SankeyLink<TNode>>.Instance);
         foreach (var rb in layout.Links)
         {
@@ -441,7 +450,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             _ = seenNodes.Add(node);
         }
 
-        var ribbonPaint = LinkFill is not null && LinkFill != Paint.Default ? LinkFill : Fill;
+        var ribbonPaint = GetEffectiveRibbonPaint();
         var seenLinks = new HashSet<SankeyLink<TNode>>(ReferenceComparer<SankeyLink<TNode>>.Instance);
         foreach (var rb in layout.Links)
         {
@@ -893,18 +902,52 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         _chordLinkVisuals.Clear();
     }
 
+    /// <summary>
+    /// Returns the paint ribbons should attach to. Resolved per measure so
+    /// runtime LinkFill changes / clone invalidations propagate immediately.
+    /// </summary>
+    private Paint? GetEffectiveRibbonPaint() =>
+        LinkFill is not null && LinkFill != Paint.Default ? LinkFill : _implicitLinkPaint;
+
     private void InitializePaints(SankeyChartEngine chart)
     {
         var actualZIndex = ZIndex == 0 ? ((ISeries)this).SeriesId : ZIndex;
 
-        // Ribbons draw underneath nodes so the node rectangles sit on top.
-        var linkPaint = LinkFill is not null && LinkFill != Paint.Default ? LinkFill : Fill;
-        if (linkPaint is not null && linkPaint != Paint.Default)
+        // Ribbons MUST live in a different paint task from nodes so ZIndex
+        // can enforce "ribbons under nodes" deterministically — Paint stores
+        // geometries in a HashSet<IDrawnElement>, so two visual types in
+        // the same task draw in undefined order. When the user provides
+        // LinkFill we already get two tasks; when they don't, we clone Fill
+        // into _implicitLinkPaint and use that for ribbons. Re-clone if
+        // Fill identity changes (runtime swap).
+        Paint? ribbonPaint;
+        if (LinkFill is not null && LinkFill != Paint.Default)
         {
-            linkPaint.ZIndex = actualZIndex + PaintConstants.SeriesFillZIndexOffset;
-            chart.Canvas.AddDrawableTask(linkPaint, zone: CanvasZone.DrawMargin);
+            ribbonPaint = LinkFill;
+            DisposeImplicitLinkPaint(chart);
         }
-        if (Fill is not null && Fill != Paint.Default && !ReferenceEquals(Fill, linkPaint))
+        else if (Fill is not null && Fill != Paint.Default)
+        {
+            if (_implicitLinkPaint is null || !ReferenceEquals(_implicitLinkPaintSource, Fill))
+            {
+                DisposeImplicitLinkPaint(chart);
+                _implicitLinkPaint = Fill.CloneTask();
+                _implicitLinkPaintSource = Fill;
+            }
+            ribbonPaint = _implicitLinkPaint;
+        }
+        else
+        {
+            ribbonPaint = null;
+            DisposeImplicitLinkPaint(chart);
+        }
+
+        if (ribbonPaint is not null && ribbonPaint != Paint.Default)
+        {
+            ribbonPaint.ZIndex = actualZIndex + PaintConstants.SeriesFillZIndexOffset;
+            chart.Canvas.AddDrawableTask(ribbonPaint, zone: CanvasZone.DrawMargin);
+        }
+        if (Fill is not null && Fill != Paint.Default)
         {
             Fill.ZIndex = actualZIndex + PaintConstants.SeriesFillZIndexOffset + 1;
             chart.Canvas.AddDrawableTask(Fill, zone: CanvasZone.DrawMargin);
@@ -922,6 +965,14 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
                 PaintConstants.PieSeriesDataLabelsBaseZIndex + actualZIndex + PaintConstants.SeriesGeometryFillZIndexOffset;
             chart.Canvas.AddDrawableTask(DataLabelsPaint);
         }
+    }
+
+    private void DisposeImplicitLinkPaint(SankeyChartEngine chart)
+    {
+        if (_implicitLinkPaint is null) return;
+        chart.Canvas.RemovePaintTask(_implicitLinkPaint);
+        _implicitLinkPaint = null;
+        _implicitLinkPaintSource = null;
     }
 
     // ---- Series abstract members (image-gen scope: stubs / no-ops) ----------
@@ -959,6 +1010,9 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     {
         var core = ((ISankeyChartView)chart).Core;
         ReapAll();
+        // The implicit Fill clone isn't in GetPaintTasks() (it's a derived
+        // resource the series owns internally) so it needs explicit cleanup.
+        DisposeImplicitLinkPaint(core);
         foreach (var pt in GetPaintTasks())
             if (pt is not null) core.Canvas.RemovePaintTask(pt);
     }
