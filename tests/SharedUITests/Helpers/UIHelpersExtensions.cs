@@ -123,5 +123,16 @@ public static class UIHelpersExtensions
 
             Assert.True(strokeHasContent || fillHasContent);
         }
+
+        public static void ChartIsLoaded(ISankeyChartView chartView)
+        {
+            // Sankey series manage node + ribbon visuals directly (no
+            // ChartPoint round-trip via DataFactory), so the generic
+            // IChartView overload's s.Fetch(...) path would throw on a
+            // HasMap lookup for the user's node type. Instead validate that
+            // the canvas accumulated geometries during the first measure.
+            Assert.True(chartView.CoreChart.IsLoaded);
+            Assert.True(chartView.CoreChart.Canvas.CountGeometries() > 0);
+        }
     }
 }
