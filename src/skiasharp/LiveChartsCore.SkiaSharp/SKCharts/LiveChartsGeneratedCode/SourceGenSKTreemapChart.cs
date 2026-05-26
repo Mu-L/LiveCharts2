@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,40 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Kernel.Sketches;
 
-/// <summary>
-/// Defines a chart kind.
-/// </summary>
-public enum ChartKind
-{
-    /// <summary>
-    /// The cartesian chart.
-    /// </summary>
-    Cartesian,
+namespace LiveChartsGeneratedCode;
 
-    /// <summary>
-    /// The pie chart.
-    /// </summary>
-    Pie,
+// ==============================================================================
+//
+// this file contains the Skia (image generation) specific code for the TreemapChart class,
+// the rest of the code can be found in the _Shared project.
+//
+// ==============================================================================
 
-    /// <summary>
-    /// The polar chart.
-    /// </summary>
-    Polar,
-
-    /// <summary>
-    /// The geo map chart.
-    /// </summary>
-    GeoMap,
-
-    /// <summary>
-    /// The treemap chart.
-    /// </summary>
-    Treemap,
-
-    /// <summary>
-    /// The sankey diagram.
-    /// </summary>
-    Sankey
-}
+/// <inheritdoc cref="ITreemapChartView" />
+public partial class SourceGenSKTreemapChart(IChartView? chartView)
+    : SourceGenSKChart(chartView), ITreemapChartView
+{ }

@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,40 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Kernel.Sketches;
 
-/// <summary>
-/// Defines a chart kind.
-/// </summary>
-public enum ChartKind
+namespace LiveChartsCore.SkiaSharpView.SKCharts;
+
+// ==============================================================================
+//
+// use the LiveChartsGeneratedCode.SourceGenSKTreemapChart class to add Skia (image generation) specific
+// code, this class is just to expose the TreemapChart class in this namespace.
+//
+// ==============================================================================
+
+/// <inheritdoc cref="ITreemapChartView"/>
+public class SKTreemapChart : LiveChartsGeneratedCode.SourceGenSKTreemapChart
 {
-    /// <summary>
-    /// The cartesian chart.
-    /// </summary>
-    Cartesian,
+    /// <summary>Initializes a new instance of the <see cref="SKTreemapChart"/> class.</summary>
+    public SKTreemapChart() : base(null) { }
 
     /// <summary>
-    /// The pie chart.
+    /// Initializes a new instance of the <see cref="SKTreemapChart"/> class
+    /// from an existing chart view (theme + control size are reused).
     /// </summary>
-    Pie,
-
-    /// <summary>
-    /// The polar chart.
-    /// </summary>
-    Polar,
-
-    /// <summary>
-    /// The geo map chart.
-    /// </summary>
-    GeoMap,
-
-    /// <summary>
-    /// The treemap chart.
-    /// </summary>
-    Treemap,
-
-    /// <summary>
-    /// The sankey diagram.
-    /// </summary>
-    Sankey
+    public SKTreemapChart(IChartView chartView) : base(chartView) { }
 }

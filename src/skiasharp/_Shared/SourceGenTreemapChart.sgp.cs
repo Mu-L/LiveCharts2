@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,40 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace LiveChartsCore.Kernel.Sketches;
+namespace LiveChartsGeneratedCode;
 
-/// <summary>
-/// Defines a chart kind.
-/// </summary>
-public enum ChartKind
+// Treemap currently has no chart-level UIProperty markers — every configurable
+// property lives on the series (Padding, CornerRadius, Fill, Stroke, etc).
+// The empty partial keeps the file shape consistent with the other chart
+// families so the source generator + projitems list stays uniform. When
+// chart-level DPs get added in the future, mirror SourceGenPieChart.sgp.cs:
+// add `static UIProperty<T>` markers + an Avalonia OnPropertyChanged override
+// that calls OnXamlPropertyChanged (the generator emits the latter from the
+// presence of UIProperty markers).
+
+#if SKIA_IMAGE_LVC
+public partial class SourceGenSKTreemapChart
+#else
+public partial class SourceGenTreemapChart
+#endif
 {
-    /// <summary>
-    /// The cartesian chart.
-    /// </summary>
-    Cartesian,
-
-    /// <summary>
-    /// The pie chart.
-    /// </summary>
-    Pie,
-
-    /// <summary>
-    /// The polar chart.
-    /// </summary>
-    Polar,
-
-    /// <summary>
-    /// The geo map chart.
-    /// </summary>
-    GeoMap,
-
-    /// <summary>
-    /// The treemap chart.
-    /// </summary>
-    Treemap,
-
-    /// <summary>
-    /// The sankey diagram.
-    /// </summary>
-    Sankey
 }
