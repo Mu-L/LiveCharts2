@@ -20,6 +20,10 @@
       <DependentUpon>GeoMap.cs</DependentUpon>
     </Compile>
 
+    <Compile Update="..\_Shared.WinUI\SourceGenSankeyChart.*.cs">
+      <DependentUpon>SankeyChart.cs</DependentUpon>
+    </Compile>
+
     <Compile Update="..\_Shared.WinUI\SourceGenTreemapChart.*.cs">
       <DependentUpon>TreemapChart.cs</DependentUpon>
     </Compile>

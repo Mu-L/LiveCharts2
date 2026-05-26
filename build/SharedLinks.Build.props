@@ -42,6 +42,14 @@
       <DependentUpon>GeoMap.cs</DependentUpon>
     </Compile>
 
+    <Compile Include="..\_Shared\SourceGenSankeyChart.*.cs">
+      <Link>%(Filename).cs</Link>
+      <DependentUpon>SankeyChart.cs</DependentUpon>
+    </Compile>
+    <Compile Update="SourceGenSankeyChart.*.cs">
+      <DependentUpon>SankeyChart.cs</DependentUpon>
+    </Compile>
+
     <Compile Include="..\_Shared\SourceGenTreemapChart.*.cs">
       <Link>%(Filename).cs</Link>
       <DependentUpon>TreemapChart.cs</DependentUpon>

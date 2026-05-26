@@ -22,24 +22,16 @@
 
 using LiveChartsCore.Kernel.Sketches;
 
-namespace LiveChartsCore.SkiaSharpView.SKCharts;
+namespace LiveChartsGeneratedCode;
 
 // ==============================================================================
 //
-// use the LiveChartsGeneratedCode.SourceGenSKSankeyChart class to add Skia (image generation) specific
-// code, this class is just to expose the SankeyChart class in this namespace.
+// this file contains the Skia (image generation) specific code for the SankeyChart class,
+// the rest of the code can be found in the _Shared project.
 //
 // ==============================================================================
 
-/// <inheritdoc cref="ISankeyChartView"/>
-public class SKSankeyChart : LiveChartsGeneratedCode.SourceGenSKSankeyChart
-{
-    /// <summary>Initializes a new instance of the <see cref="SKSankeyChart"/> class.</summary>
-    public SKSankeyChart() : base(null) { }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SKSankeyChart"/> class
-    /// from an existing chart view (theme + control size are reused).
-    /// </summary>
-    public SKSankeyChart(IChartView chartView) : base(chartView) { }
-}
+/// <inheritdoc cref="ISankeyChartView" />
+public partial class SourceGenSKSankeyChart(IChartView? chartView)
+    : SourceGenSKChart(chartView), ISankeyChartView
+{ }

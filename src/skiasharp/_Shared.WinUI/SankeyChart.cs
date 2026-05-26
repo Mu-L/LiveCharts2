@@ -22,24 +22,16 @@
 
 using LiveChartsCore.Kernel.Sketches;
 
-namespace LiveChartsCore.SkiaSharpView.SKCharts;
+namespace LiveChartsCore.SkiaSharpView.WinUI;
 
 // ==============================================================================
-//
-// use the LiveChartsGeneratedCode.SourceGenSKSankeyChart class to add Skia (image generation) specific
-// code, this class is just to expose the SankeyChart class in this namespace.
-//
+// this file exposes the control at this namespace.
+// to see the code expand this file in the solution explorer, it will include 3 files:
+//    - *.uiFramework.cs:   The UI framework specific code
+//    - *.shared.cs:        shared code between all UI frameworks
+//    - *.sgp.cs:           the source generated properties
 // ==============================================================================
 
-/// <inheritdoc cref="ISankeyChartView"/>
-public class SKSankeyChart : LiveChartsGeneratedCode.SourceGenSKSankeyChart
-{
-    /// <summary>Initializes a new instance of the <see cref="SKSankeyChart"/> class.</summary>
-    public SKSankeyChart() : base(null) { }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SKSankeyChart"/> class
-    /// from an existing chart view (theme + control size are reused).
-    /// </summary>
-    public SKSankeyChart(IChartView chartView) : base(chartView) { }
-}
+/// <inheritdoc cref="IChartView" />
+public sealed partial class SankeyChart : LiveChartsGeneratedCode.SourceGenSankeyChart
+{ }
