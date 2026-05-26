@@ -34,7 +34,7 @@ namespace LiveChartsCore.Drawing;
 /// <see cref="IColoredGeometry"/> so each ribbon can carry its own tint while
 /// sharing a single Paint task.
 /// </summary>
-public abstract partial class BaseSankeyChordRibbonGeometry : DrawnGeometry, IColoredGeometry
+public abstract partial class BaseSankeyChordRibbonGeometry : DrawnGeometry, IColoredGeometry, IDrawnElement
 {
     /// <summary>Initializes <see cref="Color"/> to the
     /// <see cref="LvcColor.Empty"/> sentinel so the ribbon defaults to "use
@@ -89,4 +89,20 @@ public abstract partial class BaseSankeyChordRibbonGeometry : DrawnGeometry, ICo
     /// <summary>Y of the chord-attractor center.</summary>
     [MotionProperty]
     public partial float CenterY { get; set; }
+
+    void IDrawnElement.DisposePaints()
+    {
+        Stroke?.DisposeTask();
+        Fill?.DisposeTask();
+        ((IDrawnElement)this).Paint?.DisposeTask();
+
+        OnDisposed();
+    }
+
+    /// <summary>
+    /// Subclass hook called when the geometry is being removed from a canvas. Use it to
+    /// release any cached native resources (e.g. <c>SankeyChordRibbonGeometry</c>'s
+    /// cached <c>SKPath</c>) that aren't covered by paint disposal.
+    /// </summary>
+    internal virtual void OnDisposed() { }
 }

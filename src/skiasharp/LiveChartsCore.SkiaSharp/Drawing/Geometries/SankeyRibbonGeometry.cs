@@ -61,13 +61,19 @@ public class SankeyRibbonGeometry : BaseSankeyRibbonGeometry, IDrawnElement<Skia
 
         // Per-instance Color override (mirrors ColoredRectangleGeometry).
         // IsEmpty is the canonical "no override" sentinel — when set, the
-        // shared paint's color flows through unchanged.
+        // shared paint's color flows through unchanged. Save/restore the
+        // paint's color so a non-Empty override doesn't bleed into the next
+        // geometry sharing the same paint task.
         var c = Color;
         var activePaint = context.ActiveSkiaPaint;
-        if (!c.Equals(LvcColor.Empty))
+        var previousColor = activePaint.Color;
+        var hasOverride = !c.Equals(LvcColor.Empty);
+        if (hasOverride)
             activePaint.Color = new SKColor(c.R, c.G, c.B, c.A);
 
         context.Canvas.DrawPath(path, activePaint);
+
+        if (hasOverride) activePaint.Color = previousColor;
     }
 
     /// <inheritdoc cref="DrawnGeometry.Measure()" />
@@ -77,5 +83,13 @@ public class SankeyRibbonGeometry : BaseSankeyRibbonGeometry, IDrawnElement<Skia
         var top = SourceY0 < TargetY0 ? SourceY0 : TargetY0;
         var bottom = SourceY1 > TargetY1 ? SourceY1 : TargetY1;
         return new LvcSize(w > 0 ? w : 0, bottom - top);
+    }
+
+    /// <inheritdoc cref="DrawnGeometry.OnDisposed()" />
+    internal override void OnDisposed()
+    {
+        _cachedPath?.Dispose();
+        _cachedPath = null;
+        base.OnDisposed();
     }
 }
