@@ -259,8 +259,8 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             foreach (var l in Links)
             {
                 if (l is null) continue;
-                if (outgoing.ContainsKey(l.Source)) outgoing[l.Source]++;
-                if (incoming.ContainsKey(l.Target)) incoming[l.Target]++;
+                if (outgoing.TryGetValue(l.Source, out var outDeg)) outgoing[l.Source] = outDeg + 1;
+                if (incoming.TryGetValue(l.Target, out var inDeg)) incoming[l.Target] = inDeg + 1;
             }
 
         // Reserve canvas margin for outside-placed labels so they don't clip
