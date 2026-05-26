@@ -20,26 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Kernel.Sketches;
+namespace LiveChartsGeneratedCode;
 
-namespace LiveChartsCore.SkiaSharpView.SKCharts;
+// Sankey currently has no chart-level UIProperty markers — every configurable
+// property lives on the series (NodeWidth, NodePadding, Layout, ArcSpanDegrees,
+// Fill, Stroke, etc). The empty partial keeps the file shape consistent with
+// the other chart families (treemap mirrored this) so the projitems list stays
+// uniform. When chart-level DPs get added in the future, mirror
+// SourceGenPieChart.sgp.cs.
 
-// ==============================================================================
-//
-// use the LiveChartsGeneratedCode.SourceGenSKSankeyChart class to add Skia (image generation) specific
-// code, this class is just to expose the SankeyChart class in this namespace.
-//
-// ==============================================================================
-
-/// <inheritdoc cref="ISankeyChartView"/>
-public class SKSankeyChart : LiveChartsGeneratedCode.SourceGenSKSankeyChart
+#if SKIA_IMAGE_LVC
+public partial class SourceGenSKSankeyChart
+#else
+public partial class SourceGenSankeyChart
+#endif
 {
-    /// <summary>Initializes a new instance of the <see cref="SKSankeyChart"/> class.</summary>
-    public SKSankeyChart() : base(null) { }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SKSankeyChart"/> class
-    /// from an existing chart view (theme + control size are reused).
-    /// </summary>
-    public SKSankeyChart(IChartView chartView) : base(chartView) { }
 }

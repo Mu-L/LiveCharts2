@@ -21,6 +21,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenMapChart.winui.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenPieChart.winui.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenPolarChart.winui.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SourceGenSankeyChart.winui.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SankeyChart.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ThemeListener.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)XamlSeries.cs" />
   </ItemGroup>
