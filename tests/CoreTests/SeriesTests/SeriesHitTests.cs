@@ -996,6 +996,119 @@ public class SeriesHitTests
 
     // --- helpers ---------------------------------------------------------
 
+    // --- SankeySeries -----------------------------------------------------
+    // Vertical layout uses RectangleHoverArea per node (the column rect).
+    // BipartiteArc layout uses AnnularSectorHoverArea (polar bounds).
+    // Series.Fetch goes through DataFactory which requires a registered
+    // mapper for the user node type; sankey synthesizes points internally so
+    // tests probe via the public chart.GetPointsAt path instead.
+
+    [TestMethod]
+    public void Sankey_Vertical_CompareAll_HitsLeftColumnNode()
+    {
+        var (chart, _, _, _) = NewSankeyVertical();
+        _ = chart.GetImage();
+
+        // Left column = x ∈ [0, 24] (NodeWidth=24). Aim somewhere in the
+        // top half of that column — the top source-node will live there.
+        var hits = chart.GetPointsAt(new(12, 200), FindingStrategy.CompareAll).ToArray();
+
+        Assert.AreEqual(1, hits.Length, "expected a single source-column node hit");
+        Assert.IsInstanceOfType<SankeyNode>(hits[0].Context.DataSource);
+    }
+
+    [TestMethod]
+    public void Sankey_Vertical_BetweenColumns_Misses()
+    {
+        var (chart, _, _, _) = NewSankeyVertical();
+        _ = chart.GetImage();
+        // Dead center is between the two columns (ribbons live there but
+        // aren't hit-testable in v1).
+        var hits = chart.GetPointsAt(new(500, 500), FindingStrategy.CompareAll).ToArray();
+        Assert.AreEqual(0, hits.Length);
+    }
+
+    [TestMethod]
+    public void Sankey_BipartiteArc_EastEdgeHitsRightArcNode()
+    {
+        var (chart, _, _, _) = NewSankeyBipartiteArc();
+        _ = chart.GetImage();
+
+        // 1000×1000 chart, center=(500,500), outerR=500 (no labels). Probe
+        // ~(990, 500): angle 0, r=490 — inside [innerR=476, outerR=500],
+        // squarely on the right-arc node ring.
+        var hits = chart.GetPointsAt(new(990, 500), FindingStrategy.CompareAll).ToArray();
+
+        Assert.AreEqual(1, hits.Length, "expected a right-arc node hit");
+        Assert.IsInstanceOfType<SankeyNode>(hits[0].Context.DataSource);
+    }
+
+    [TestMethod]
+    public void Sankey_BipartiteArc_InsideInnerRadius_Misses()
+    {
+        var (chart, _, _, _) = NewSankeyBipartiteArc();
+        _ = chart.GetImage();
+        // Dead center: inside innerR, the chord ribbons pass through here but
+        // ribbons don't get hover areas in v1.
+        var hits = chart.GetPointsAt(new(500, 500), FindingStrategy.CompareAll).ToArray();
+        Assert.AreEqual(0, hits.Length);
+    }
+
+    private static (SKSankeyChart Chart, SankeySeries<SankeyNode> Series, SankeyNode[] Sources, SankeyNode[] Sinks)
+        NewSankeyVertical()
+    {
+        var sources = new[] { new SankeyNode("A"), new SankeyNode("B") };
+        var sinks = new[] { new SankeyNode("X"), new SankeyNode("Y") };
+        var nodes = sources.Concat(sinks).ToArray();
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(sources[0], sinks[0], 4),
+            new SankeyLink<SankeyNode>(sources[0], sinks[1], 2),
+            new SankeyLink<SankeyNode>(sources[1], sinks[1], 6),
+        };
+        var series = new SankeySeries<SankeyNode>
+        {
+            Values = nodes,
+            Links = links,
+            NodeWidth = 24,
+        };
+        var chart = new SKSankeyChart
+        {
+            Width = 1000,
+            Height = 1000,
+            Series = [series],
+        };
+        return (chart, series, sources, sinks);
+    }
+
+    private static (SKSankeyChart Chart, SankeySeries<SankeyNode> Series, SankeyNode[] Sources, SankeyNode[] Sinks)
+        NewSankeyBipartiteArc()
+    {
+        var sources = new[] { new SankeyNode("A"), new SankeyNode("B") };
+        var sinks = new[] { new SankeyNode("X"), new SankeyNode("Y") };
+        var nodes = sources.Concat(sinks).ToArray();
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(sources[0], sinks[0], 4),
+            new SankeyLink<SankeyNode>(sources[0], sinks[1], 2),
+            new SankeyLink<SankeyNode>(sources[1], sinks[1], 6),
+        };
+        var series = new SankeySeries<SankeyNode>
+        {
+            Values = nodes,
+            Links = links,
+            Layout = LiveChartsCore.Kernel.Sketches.SankeyLayoutKind.BipartiteArc,
+            NodeWidth = 24,
+        };
+        var chart = new SKSankeyChart
+        {
+            Width = 1000,
+            Height = 1000,
+            Series = [series],
+        };
+        return (chart, series, sources, sinks);
+    }
+
     private static SKCartesianChart NewCartesianChart(ISeries series) =>
         new()
         {

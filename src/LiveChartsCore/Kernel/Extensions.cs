@@ -49,11 +49,13 @@ public static class Extensions
         LvcSize tooltipSize,
         Chart chart)
     {
-        // Treemap follows the cartesian path — its tiles are rectangles with
-        // RectangleHoverArea which populates MostLeft/MostRight/MostTop/
-        // MostBottom (not PieX/PieY), so the cartesian tooltip layout is the
-        // one that knows how to read them.
-        var location = chart.Kind is ChartKind.Cartesian or ChartKind.Polar or ChartKind.Treemap
+        // Treemap and sankey both ride the cartesian tooltip layout: their
+        // hover areas (RectangleHoverArea for tiles + Vertical-mode sankey
+        // nodes, AnnularSectorHoverArea for BipartiteArc sankey nodes) all
+        // populate MostLeft/MostRight/MostTop/MostBottom on
+        // TooltipPlacementContext (not PieX/PieY), which the cartesian
+        // path reads.
+        var location = chart.Kind is ChartKind.Cartesian or ChartKind.Polar or ChartKind.Treemap or ChartKind.Sankey
             ? _getCartesianTooltipLocation(foundPoints, chart, tooltipSize)
             : _getPieTooltipLocation(foundPoints, chart, tooltipSize);
 

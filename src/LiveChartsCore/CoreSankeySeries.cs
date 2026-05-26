@@ -22,10 +22,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
+using LiveChartsCore.Kernel.Drawing;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
@@ -43,7 +45,7 @@ namespace LiveChartsCore;
 /// <typeparam name="TLabel">The per-node label geometry.</typeparam>
 public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     IReadOnlyCollection<TNode>? values)
-        : Series<TNode, TVisual, TLabel>(SeriesProperties.Solid, values), ISankeySeries
+        : Series<TNode, TVisual, TLabel>(SeriesProperties.Solid | SeriesProperties.Sankey, values), ISankeySeries
             where TNode : notnull
             where TVisual : BoundedDrawnGeometry, new()
             where TLabel : BaseLabelGeometry, new()
@@ -56,6 +58,8 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     private readonly Dictionary<SankeyLink<TNode>, BaseSankeyChordRibbonGeometry> _chordLinkVisuals =
         new(ReferenceComparer<SankeyLink<TNode>>.Instance);
     private readonly Dictionary<TNode, TLabel> _nodeLabels = new(ReferenceComparer<TNode>.Instance);
+    private readonly Dictionary<TNode, ChartPoint> _nodePoints = new(ReferenceComparer<TNode>.Instance);
+    private Func<ChartPoint, string>? _tooltipLabelFormatter;
     // Implicit ribbon paint: a CloneTask() of Fill, allocated lazily when the
     // user hasn't set LinkFill. See InitializePaints for the rationale —
     // ribbons and nodes need DIFFERENT paint tasks so ZIndex can enforce
@@ -142,6 +146,19 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// <see cref="SankeyNode.Name"/> is used automatically.
     /// </summary>
     public Func<TNode, string?>? LabelMapper { get; set => SetProperty(ref field, value); }
+
+    /// <summary>Tooltip label formatter on the typed point — null falls back to "&lt;label&gt;: &lt;value&gt;".</summary>
+    public Func<ChartPoint<TNode, TVisual, TLabel>, string>? ToolTipLabelFormatter
+    {
+        get => _tooltipLabelFormatter;
+        set => ((ISankeySeries)this).TooltipLabelFormatter = value is null ? null : p => value(ConvertToTypedChartPoint(p));
+    }
+
+    Func<ChartPoint, string>? ISankeySeries.TooltipLabelFormatter
+    {
+        get => _tooltipLabelFormatter;
+        set => SetProperty(ref _tooltipLabelFormatter, value);
+    }
 
     // ---- template method ----------------------------------------------------
 
@@ -322,6 +339,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             if (NodeColorMapper is not null && visual is IColoredGeometry coloredNode)
                 coloredNode.Color = NodeColorMapper(node);
 
+            EnsureChartPointForRect(node, box, box.Value, sankeyChart);
             MeasureNodeLabel(node, box, incoming[node], outgoing[node], chartCenterX, anim, sankeyChart);
             _ = seenNodes.Add(node);
         }
@@ -371,7 +389,11 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
                     CollapseRemovedNode(kv.Value);
                     toRemove.Add(kv.Key);
                 }
-            foreach (var k in toRemove) _ = _nodeVisuals.Remove(k);
+            foreach (var k in toRemove)
+            {
+                _ = _nodeVisuals.Remove(k);
+                _ = _nodePoints.Remove(k);
+            }
         }
 
         if (_linkVisuals.Count != seenLinks.Count)
@@ -446,6 +468,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             if (NodeColorMapper is not null)
                 visual.Color = NodeColorMapper(node);
 
+            EnsureChartPointForArc(node, box, box.Value, sankeyChart);
             MeasureArcNodeLabel(node, box, anim, sankeyChart);
             _ = seenNodes.Add(node);
         }
@@ -490,7 +513,11 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
                     CollapseRemovedArcNode(kv.Value);
                     toRemove.Add(kv.Key);
                 }
-            foreach (var k in toRemove) _ = _arcNodeVisuals.Remove(k);
+            foreach (var k in toRemove)
+            {
+                _ = _arcNodeVisuals.Remove(k);
+                _ = _nodePoints.Remove(k);
+            }
         }
         if (_chordLinkVisuals.Count != seenLinks.Count)
         {
@@ -882,6 +909,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             l.RemoveOnCompleted = true;
         }
         _nodeLabels.Clear();
+        _nodePoints.Clear();
     }
 
     private void ReapVerticalVisuals()
@@ -975,13 +1003,104 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         _implicitLinkPaintSource = null;
     }
 
-    // ---- Series abstract members (image-gen scope: stubs / no-ops) ----------
+    // ---- Hit-test + tooltip surface -----------------------------------------
+
+    /// <summary>
+    /// Creates or refreshes the <see cref="ChartPoint"/> for a node — its
+    /// HoverArea is set to the node tile (rectangle for Vertical, annular
+    /// sector for BipartiteArc), Coordinate.PrimaryValue to the node's
+    /// resolved value (max of in/out weight sum), DataSource to the user's
+    /// node model. Same shape treemap PR #2295 uses for leaf tiles.
+    /// </summary>
+    private void EnsureChartPointForRect(TNode node, SankeyLayout.NodeBox box, double value, SankeyChartEngine chart)
+    {
+        if (!_nodePoints.TryGetValue(node, out var point))
+        {
+            var entity = new MappedChartEntity
+            {
+                MetaData = new ChartEntityMetaData(_ => { }) { EntityIndex = _nodePoints.Count },
+            };
+            point = new ChartPoint(chart.View, this, entity);
+            _nodePoints[node] = point;
+        }
+        point.Context.DataSource = node;
+        if (_nodeVisuals.TryGetValue(node, out var visual)) point.Context.Visual = visual;
+
+        var ha = point.Context.HoverArea as RectangleHoverArea ?? new RectangleHoverArea();
+        _ = ha
+            .SetDimensions(box.X, box.Y, box.Width, box.Height)
+            .CenterXToolTip()
+            .CenterYToolTip();
+        point.Context.HoverArea = ha;
+
+        ((MappedChartEntity)point.Context.Entity).Coordinate =
+            new Coordinate(point.Context.Entity.MetaData!.EntityIndex, value);
+    }
+
+    private void EnsureChartPointForArc(TNode node, SankeyLayout.ArcNodeBox box, double value, SankeyChartEngine chart)
+    {
+        if (!_nodePoints.TryGetValue(node, out var point))
+        {
+            var entity = new MappedChartEntity
+            {
+                MetaData = new ChartEntityMetaData(_ => { }) { EntityIndex = _nodePoints.Count },
+            };
+            point = new ChartPoint(chart.View, this, entity);
+            _nodePoints[node] = point;
+        }
+        point.Context.DataSource = node;
+        if (_arcNodeVisuals.TryGetValue(node, out var visual)) point.Context.Visual = visual;
+
+        var ha = point.Context.HoverArea as AnnularSectorHoverArea ?? new AnnularSectorHoverArea();
+        _ = ha
+            .SetDimensions(box.CenterX, box.CenterY, box.InnerRadius, box.OuterRadius, box.StartAngle, box.SweepAngle)
+            .AnchorAtOuterMidpoint();
+        point.Context.HoverArea = ha;
+
+        ((MappedChartEntity)point.Context.Entity).Coordinate =
+            new Coordinate(point.Context.Entity.MetaData!.EntityIndex, value);
+    }
+
+    // ---- Series abstract members --------------------------------------------
 
     /// <inheritdoc cref="ISeries.GetPrimaryToolTipText(ChartPoint)"/>
-    public override string? GetPrimaryToolTipText(ChartPoint point) => null;
+    public override string? GetPrimaryToolTipText(ChartPoint point)
+    {
+        if (_tooltipLabelFormatter is not null) return _tooltipLabelFormatter(point);
+
+        // Default: "<label>: <value>" — or just "<value>" when no label.
+        var node = point.Context.DataSource is TNode m ? m : default;
+        var label = node is not null ? ResolveLabel(node) : null;
+        var value = point.Coordinate.PrimaryValue;
+        return string.IsNullOrEmpty(label) ? value.ToString() : $"{label}: {value}";
+    }
 
     /// <inheritdoc cref="ISeries.GetSecondaryToolTipText(ChartPoint)"/>
     public override string? GetSecondaryToolTipText(ChartPoint point) => LiveCharts.IgnoreToolTipLabel;
+
+    /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.FindPointsInPosition"/>
+    protected override IEnumerable<ChartPoint> FindPointsInPosition(
+        Chart chart, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor)
+    {
+        var hits = _nodePoints.Values.Where(p =>
+            p.Context.HoverArea is not null &&
+            p.Context.HoverArea.IsPointerOver(pointerPosition, strategy));
+
+        // Mirror Series.FindPointsInPosition: the *TakeClosest strategies
+        // (CompareAllTakeClosest=4, CompareOnlyXTakeClosest=5,
+        // CompareOnlyYTakeClosest=6, ExactMatchTakeClosest=8) collapse
+        // overlapping hits to a single closest point. Without this filter
+        // hovering between two adjacent node arcs would return both, which
+        // breaks DataPointerDown / tooltip behavior for those strategies.
+        var s = (int)strategy;
+        if (s is (>= 4 and <= 6) or 8)
+            hits = hits
+                .Select(x => new { distance = x.DistanceTo(pointerPosition, strategy), point = x })
+                .OrderBy(x => x.distance)
+                .SelectFirst(x => x.point);
+
+        return hits;
+    }
 
     /// <inheritdoc cref="Series{TModel, TVisual, TLabel}.GetMiniatureGeometry(ChartPoint?)"/>
     public override IDrawnElement GetMiniatureGeometry(ChartPoint? point) =>

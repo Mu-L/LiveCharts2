@@ -294,6 +294,127 @@ public sealed class SankeySeriesTests
     }
 
     [TestMethod]
+    public void HoverTooltip_Vertical()
+    {
+        // Pointer over the first source node ("A") on the left column should
+        // render the default tooltip text ("A: 12" — A is the source of 8+4
+        // weight). Pins the rect hover area + default formatter.
+        var sources = new[] { new SankeyNode("A"), new SankeyNode("B"), new SankeyNode("C") };
+        var sinks = new[] { new SankeyNode("X"), new SankeyNode("Y") };
+        var nodes = sources.Concat(sinks).ToArray();
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(sources[0], sinks[0], 8),
+            new SankeyLink<SankeyNode>(sources[0], sinks[1], 4),
+            new SankeyLink<SankeyNode>(sources[1], sinks[0], 6),
+            new SankeyLink<SankeyNode>(sources[2], sinks[1], 10),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    NodeWidth = 16,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                    LinkFill = new SolidColorPaint(new SKColor(96, 138, 218, 90)),
+                }
+            ],
+            Width = 600,
+            Height = 400,
+        };
+
+        // Left column at x ≈ 0..16; aim at the top "A" node.
+        chart.PointerAt(8, 80);
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(HoverTooltip_Vertical)}");
+    }
+
+    [TestMethod]
+    public void HoverTooltip_BipartiteArc()
+    {
+        // Pointer over one of the right-arc nodes; exercises
+        // AnnularSectorHoverArea polar hit-test + default tooltip formatter.
+        var furniture = new SankeyNode("Furniture");
+        var technology = new SankeyNode("Technology");
+        var chairs = new SankeyNode("Chairs");
+        var phones = new SankeyNode("Phones");
+        var storage = new SankeyNode("Storage");
+
+        var nodes = new[] { furniture, technology, chairs, phones, storage };
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(furniture, chairs, 12),
+            new SankeyLink<SankeyNode>(technology, phones, 14),
+            new SankeyLink<SankeyNode>(technology, storage, 8),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    Layout = SankeyLayoutKind.BipartiteArc,
+                    NodeWidth = 20,
+                    Fill = new SolidColorPaint(new SKColor(96, 138, 218)),
+                    LinkFill = new SolidColorPaint(new SKColor(96, 138, 218, 90)),
+                }
+            ],
+            Width = 600,
+            Height = 600,
+        };
+
+        // 600x600 chart; arc center ~ (300, 300); outerR ~ rectMin/2 = 300.
+        // Node ring sits between innerR=280 (=300-NodeWidth) and outerR=300
+        // at the perimeter. Pointer at (590, 300) is angle 0 (east-most
+        // point of the right arc) → lands inside whichever target node
+        // happens to sit there after relaxation.
+        chart.PointerAt(590, 300);
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(HoverTooltip_BipartiteArc)}");
+    }
+
+    [TestMethod]
+    public void DefaultTheme_AppliesPaletteColor()
+    {
+        // No Fill / LinkFill set on the series; the default theme rule
+        // should pull a palette color and seed both. Pins the
+        // SeriesProperties.Sankey ↔ SankeySeriesBuilder dispatch.
+        var a = new SankeyNode("A");
+        var b = new SankeyNode("B");
+        var x = new SankeyNode("X");
+        var y = new SankeyNode("Y");
+        var nodes = new[] { a, b, x, y };
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(a, x, 5),
+            new SankeyLink<SankeyNode>(a, y, 3),
+            new SankeyLink<SankeyNode>(b, y, 7),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    NodeWidth = 16,
+                    // Intentionally no Fill / LinkFill — let the theme decide.
+                }
+            ],
+            Width = 600,
+            Height = 400,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(DefaultTheme_AppliesPaletteColor)}");
+    }
+
+    [TestMethod]
     public void BipartiteArc_ThrowsOnMultiColumn()
     {
         // BipartiteArc rejects graphs where any node is BOTH a target and a

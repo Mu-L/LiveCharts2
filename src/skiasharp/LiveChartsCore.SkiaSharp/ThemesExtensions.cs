@@ -332,6 +332,24 @@ public static class ThemesExtensions
                         gaugeFill.Fill =
                             new SolidColorPaint(theme.IsDark ? new(255, 255, 255, 30) : new(30, 30, 30, 10));
                     })
+                    .HasRuleForSankeySeries(sankey =>
+                    {
+                        // Palette colour for nodes; ribbons inherit Fill at
+                        // ~35% alpha so the source-node colour reads through
+                        // without overpowering the destination. Users can
+                        // override per-node via NodeColorMapper or
+                        // per-link via LinkColorMapper on the typed series.
+                        var color = theme.GetSeriesColor(sankey).AsSKColor();
+
+                        sankey.Stroke = null;
+                        sankey.Fill = new SolidColorPaint(color);
+                        if (sankey.LinkFill is null)
+                            sankey.LinkFill = new SolidColorPaint(color.WithAlpha(90));
+
+                        if (sankey.ShowDataLabels)
+                            sankey.DataLabelsPaint =
+                                new SolidColorPaint(theme.IsDark ? new(245, 245, 245) : new(45, 45, 45));
+                    })
                     .HasRuleFor<BaseLabelVisual>(label =>
                     {
                         label.Paint =
