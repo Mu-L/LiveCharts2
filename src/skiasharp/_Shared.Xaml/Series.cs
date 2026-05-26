@@ -153,6 +153,13 @@ public partial class XamlStackedRowSeries<TModel, TVisual, TLabel> : XamlSeries,
     where TLabel : BaseLabelGeometry, new()
 { }
 
+[XamlClass(typeof(SankeySeries<,,>), TVisual = typeof(ColoredRoundedRectangleGeometry))]
+public partial class XamlSankeySeries<TModel, TVisual, TLabel> : XamlSeries, ISankeySeries, IInternalSeries
+    where TModel : class
+    where TVisual : BoundedDrawnGeometry, new()
+    where TLabel : BaseLabelGeometry, new()
+{ }
+
 #if AVALONIA_LVC
 [XamlClass(typeof(PieSeries<,,>),
     FileHeader = "using TModel = LiveChartsCore.Defaults.ObservableValue;",

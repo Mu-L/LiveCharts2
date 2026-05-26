@@ -40,25 +40,25 @@ namespace LiveChartsCore;
 /// <see cref="Links"/> = edges) is laid out via the d3-sankey algorithm
 /// (<see cref="SankeyLayout"/>) on every measure pass.
 /// </summary>
-/// <typeparam name="TNode">The user's node type.</typeparam>
+/// <typeparam name="TModel">The user's node type.</typeparam>
 /// <typeparam name="TVisual">The per-node visual (any bounded geometry).</typeparam>
 /// <typeparam name="TLabel">The per-node label geometry.</typeparam>
-public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
-    IReadOnlyCollection<TNode>? values)
-        : Series<TNode, TVisual, TLabel>(SeriesProperties.Solid | SeriesProperties.Sankey, values), ISankeySeries
-            where TNode : notnull
+public abstract class CoreSankeySeries<TModel, TVisual, TLabel>(
+    IReadOnlyCollection<TModel>? values)
+        : Series<TModel, TVisual, TLabel>(SeriesProperties.Solid | SeriesProperties.Sankey, values), ISankeySeries
+            where TModel : class
             where TVisual : BoundedDrawnGeometry, new()
             where TLabel : BaseLabelGeometry, new()
 {
-    private readonly Dictionary<TNode, TVisual> _nodeVisuals = new(ReferenceComparer<TNode>.Instance);
-    private readonly Dictionary<SankeyLink<TNode>, BaseSankeyRibbonGeometry> _linkVisuals =
-        new(ReferenceComparer<SankeyLink<TNode>>.Instance);
-    private readonly Dictionary<TNode, BaseSankeyArcSegmentGeometry> _arcNodeVisuals =
-        new(ReferenceComparer<TNode>.Instance);
-    private readonly Dictionary<SankeyLink<TNode>, BaseSankeyChordRibbonGeometry> _chordLinkVisuals =
-        new(ReferenceComparer<SankeyLink<TNode>>.Instance);
-    private readonly Dictionary<TNode, TLabel> _nodeLabels = new(ReferenceComparer<TNode>.Instance);
-    private readonly Dictionary<TNode, ChartPoint> _nodePoints = new(ReferenceComparer<TNode>.Instance);
+    private readonly Dictionary<TModel, TVisual> _nodeVisuals = new(ReferenceComparer<TModel>.Instance);
+    private readonly Dictionary<SankeyLink<TModel>, BaseSankeyRibbonGeometry> _linkVisuals =
+        new(ReferenceComparer<SankeyLink<TModel>>.Instance);
+    private readonly Dictionary<TModel, BaseSankeyArcSegmentGeometry> _arcNodeVisuals =
+        new(ReferenceComparer<TModel>.Instance);
+    private readonly Dictionary<SankeyLink<TModel>, BaseSankeyChordRibbonGeometry> _chordLinkVisuals =
+        new(ReferenceComparer<SankeyLink<TModel>>.Instance);
+    private readonly Dictionary<TModel, TLabel> _nodeLabels = new(ReferenceComparer<TModel>.Instance);
+    private readonly Dictionary<TModel, ChartPoint> _nodePoints = new(ReferenceComparer<TModel>.Instance);
     private Func<ChartPoint, string>? _tooltipLabelFormatter;
     // Implicit ribbon paint: a CloneTask() of Fill, allocated lazily when the
     // user hasn't set LinkFill. See InitializePaints for the rationale —
@@ -122,7 +122,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// <c>ColoredRoundedRectangleGeometry</c> does). When null the series's
     /// <see cref="Fill"/> paint color flows through unchanged.
     /// </summary>
-    public Func<TNode, LvcColor>? NodeColorMapper { get; set => SetProperty(ref field, value); }
+    public Func<TModel, LvcColor>? NodeColorMapper { get; set => SetProperty(ref field, value); }
 
     /// <summary>
     /// Per-link color override. When null, ribbons inherit the source node's
@@ -130,25 +130,25 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// fall back to <see cref="LinkFill"/> / <see cref="Fill"/>. Set
     /// explicitly to take full control of per-ribbon color including alpha.
     /// </summary>
-    public Func<SankeyLink<TNode>, LvcColor>? LinkColorMapper { get; set => SetProperty(ref field, value); }
+    public Func<SankeyLink<TModel>, LvcColor>? LinkColorMapper { get; set => SetProperty(ref field, value); }
 
     /// <summary>
-    /// The graph's edges. Each <see cref="SankeyLink{TNode}"/>.Source and .Target
+    /// The graph's edges. Each <see cref="SankeyLink{TModel}"/>.Source and .Target
     /// must reference instances present in <see cref="Series{TModel, TVisual, TLabel}.Values"/>;
     /// links pointing at unknown nodes are silently dropped by the layout.
     /// </summary>
-    public IEnumerable<SankeyLink<TNode>>? Links { get; set => SetProperty(ref field, value); }
+    public IEnumerable<SankeyLink<TModel>>? Links { get; set => SetProperty(ref field, value); }
 
     /// <summary>
     /// Returns the per-node label text. Set
     /// <see cref="Series{TModel, TVisual, TLabel}.DataLabelsPaint"/> to opt
-    /// in. When null and TNode is the built-in <see cref="SankeyNode"/>,
+    /// in. When null and TModel is the built-in <see cref="SankeyNode"/>,
     /// <see cref="SankeyNode.Name"/> is used automatically.
     /// </summary>
-    public Func<TNode, string?>? LabelMapper { get; set => SetProperty(ref field, value); }
+    public Func<TModel, string?>? LabelMapper { get; set => SetProperty(ref field, value); }
 
     /// <summary>Tooltip label formatter on the typed point — null falls back to "&lt;label&gt;: &lt;value&gt;".</summary>
-    public Func<ChartPoint<TNode, TVisual, TLabel>, string>? ToolTipLabelFormatter
+    public Func<ChartPoint<TModel, TVisual, TLabel>, string>? ToolTipLabelFormatter
     {
         get => _tooltipLabelFormatter;
         set => ((ISankeySeries)this).TooltipLabelFormatter = value is null ? null : p => value(ConvertToTypedChartPoint(p));
@@ -178,7 +178,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     }
 
     /// <summary>Ensures a visual exists for a node — seeds at its target rect center with zero size for entrance animation.</summary>
-    private TVisual EnsureVisualForNode(TNode node, SankeyLayout.NodeBox box)
+    private TVisual EnsureVisualForNode(TModel node, SankeyLayout.NodeBox box)
     {
         if (_nodeVisuals.TryGetValue(node, out var existing)) return existing;
         var v = new TVisual
@@ -202,7 +202,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     }
 
     /// <summary>Ensures a ribbon geometry exists for a link — seeded collapsed at the source midpoint.</summary>
-    private BaseSankeyRibbonGeometry EnsureVisualForLink(SankeyLink<TNode> link, SankeyLayout.RibbonBox<TNode> box)
+    private BaseSankeyRibbonGeometry EnsureVisualForLink(SankeyLink<TModel> link, SankeyLayout.RibbonBox<TModel> box)
     {
         if (_linkVisuals.TryGetValue(link, out var existing)) return existing;
 
@@ -277,8 +277,8 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         // For Auto label placement we need per-node in/out degree (source =
         // no incoming -> outside-left; sink = no outgoing -> outside-right;
         // pass-through -> inside). Compute once per measure.
-        var incoming = new Dictionary<TNode, int>(ReferenceComparer<TNode>.Instance);
-        var outgoing = new Dictionary<TNode, int>(ReferenceComparer<TNode>.Instance);
+        var incoming = new Dictionary<TModel, int>(ReferenceComparer<TModel>.Instance);
+        var outgoing = new Dictionary<TModel, int>(ReferenceComparer<TModel>.Instance);
         foreach (var n in Values) { incoming[n] = 0; outgoing[n] = 0; }
         if (Links is not null)
             foreach (var l in Links)
@@ -309,7 +309,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             ctx.LayoutIterations);
 
         // Nodes
-        var seenNodes = new HashSet<TNode>(ReferenceComparer<TNode>.Instance);
+        var seenNodes = new HashSet<TModel>(ReferenceComparer<TModel>.Instance);
         var chartCenterX = rect.Location.X + rect.Size.Width * 0.5f;
         foreach (var kv in layout.Nodes)
         {
@@ -347,7 +347,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         // Links — use LinkFill if user-set, else the implicit Fill clone
         // (separate paint task; see InitializePaints).
         var ribbonPaint = GetEffectiveRibbonPaint();
-        var seenLinks = new HashSet<SankeyLink<TNode>>(ReferenceComparer<SankeyLink<TNode>>.Instance);
+        var seenLinks = new HashSet<SankeyLink<TModel>>(ReferenceComparer<SankeyLink<TModel>>.Instance);
         foreach (var rb in layout.Links)
         {
             var visual = EnsureVisualForLink(rb.Link, rb);
@@ -382,7 +382,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         // Reap orphans
         if (_nodeVisuals.Count != seenNodes.Count)
         {
-            var toRemove = new List<TNode>();
+            var toRemove = new List<TModel>();
             foreach (var kv in _nodeVisuals)
                 if (!seenNodes.Contains(kv.Key))
                 {
@@ -398,7 +398,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
 
         if (_linkVisuals.Count != seenLinks.Count)
         {
-            var toRemove = new List<SankeyLink<TNode>>();
+            var toRemove = new List<SankeyLink<TModel>>();
             foreach (var kv in _linkVisuals)
                 if (!seenLinks.Contains(kv.Key))
                 {
@@ -410,7 +410,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
 
         if (_nodeLabels.Count > 0)
         {
-            var toRemove = new List<TNode>();
+            var toRemove = new List<TModel>();
             foreach (var kv in _nodeLabels)
                 if (!seenNodes.Contains(kv.Key))
                 {
@@ -443,7 +443,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             (float)ArcSpanDegrees,
             labelMargin);
 
-        var seenNodes = new HashSet<TNode>(ReferenceComparer<TNode>.Instance);
+        var seenNodes = new HashSet<TModel>(ReferenceComparer<TModel>.Instance);
         foreach (var kv in layout.Nodes)
         {
             var node = kv.Key;
@@ -474,7 +474,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         }
 
         var ribbonPaint = GetEffectiveRibbonPaint();
-        var seenLinks = new HashSet<SankeyLink<TNode>>(ReferenceComparer<SankeyLink<TNode>>.Instance);
+        var seenLinks = new HashSet<SankeyLink<TModel>>(ReferenceComparer<SankeyLink<TModel>>.Instance);
         foreach (var rb in layout.Links)
         {
             var visual = EnsureChordVisualForLink(rb.Link, rb);
@@ -506,7 +506,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         // Reap orphans (arc dicts)
         if (_arcNodeVisuals.Count != seenNodes.Count)
         {
-            var toRemove = new List<TNode>();
+            var toRemove = new List<TModel>();
             foreach (var kv in _arcNodeVisuals)
                 if (!seenNodes.Contains(kv.Key))
                 {
@@ -521,7 +521,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         }
         if (_chordLinkVisuals.Count != seenLinks.Count)
         {
-            var toRemove = new List<SankeyLink<TNode>>();
+            var toRemove = new List<SankeyLink<TModel>>();
             foreach (var kv in _chordLinkVisuals)
                 if (!seenLinks.Contains(kv.Key))
                 {
@@ -532,7 +532,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         }
         if (_nodeLabels.Count > 0)
         {
-            var toRemove = new List<TNode>();
+            var toRemove = new List<TModel>();
             foreach (var kv in _nodeLabels)
                 if (!seenNodes.Contains(kv.Key))
                 {
@@ -546,7 +546,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
 
     /// <summary>Seeds a new arc visual collapsed at its center angle (zero
     /// sweep), so its entrance animates "wedge opens up."</summary>
-    private BaseSankeyArcSegmentGeometry EnsureArcVisualForNode(TNode node, SankeyLayout.ArcNodeBox box)
+    private BaseSankeyArcSegmentGeometry EnsureArcVisualForNode(TModel node, SankeyLayout.ArcNodeBox box)
     {
         if (_arcNodeVisuals.TryGetValue(node, out var existing)) return existing;
         var v = CreateArcNodeVisual();
@@ -565,7 +565,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
 
     /// <summary>Seeds a new chord visual collapsed at the chart center, so
     /// its entrance animates "ribbon expands out from center."</summary>
-    private BaseSankeyChordRibbonGeometry EnsureChordVisualForLink(SankeyLink<TNode> link, SankeyLayout.ChordRibbonBox<TNode> box)
+    private BaseSankeyChordRibbonGeometry EnsureChordVisualForLink(SankeyLink<TModel> link, SankeyLayout.ChordRibbonBox<TModel> box)
     {
         if (_chordLinkVisuals.TryGetValue(link, out var existing)) return existing;
         var v = CreateChordRibbonVisual();
@@ -596,7 +596,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// half = +180° flip + HorizontalAlign.End so the text grows away from
     /// the anchor toward the chart edge instead of toward the center).
     /// </summary>
-    private void MeasureArcNodeLabel(TNode node, SankeyLayout.ArcNodeBox box, Animation anim, SankeyChartEngine chart)
+    private void MeasureArcNodeLabel(TModel node, SankeyLayout.ArcNodeBox box, Animation anim, SankeyChartEngine chart)
     {
         if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
             return;
@@ -682,7 +682,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// Resolves a node's label, with a fallback to <see cref="SankeyNode.Name"/>
     /// when no <see cref="LabelMapper"/> is set and the node is the built-in type.
     /// </summary>
-    private string? ResolveLabel(TNode node)
+    private string? ResolveLabel(TModel node)
     {
         if (LabelMapper is not null) return LabelMapper(node);
         if (node is SankeyNode sn) return sn.Name;
@@ -701,7 +701,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// </list>
     /// </summary>
     private void MeasureNodeLabel(
-        TNode node, SankeyLayout.NodeBox box, int inDeg, int outDeg,
+        TModel node, SankeyLayout.NodeBox box, int inDeg, int outDeg,
         float chartCenterX, Animation anim, SankeyChartEngine chart)
     {
         if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
@@ -793,7 +793,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// pure-sink nodes (outDeg=0); Outside reserves both sides for all nodes.
     /// </summary>
     private (float Left, float Right) MeasureOutsideLabelReserve(
-        Dictionary<TNode, int> incoming, Dictionary<TNode, int> outgoing)
+        Dictionary<TModel, int> incoming, Dictionary<TModel, int> outgoing)
     {
         if (!ShowDataLabels || DataLabelsPaint is null || DataLabelsPaint == Paint.Default)
             return (0f, 0f);
@@ -1012,7 +1012,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     /// resolved value (max of in/out weight sum), DataSource to the user's
     /// node model. Same shape treemap PR #2295 uses for leaf tiles.
     /// </summary>
-    private void EnsureChartPointForRect(TNode node, SankeyLayout.NodeBox box, double value, SankeyChartEngine chart)
+    private void EnsureChartPointForRect(TModel node, SankeyLayout.NodeBox box, double value, SankeyChartEngine chart)
     {
         if (!_nodePoints.TryGetValue(node, out var point))
         {
@@ -1037,7 +1037,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             new Coordinate(point.Context.Entity.MetaData!.EntityIndex, value);
     }
 
-    private void EnsureChartPointForArc(TNode node, SankeyLayout.ArcNodeBox box, double value, SankeyChartEngine chart)
+    private void EnsureChartPointForArc(TModel node, SankeyLayout.ArcNodeBox box, double value, SankeyChartEngine chart)
     {
         if (!_nodePoints.TryGetValue(node, out var point))
         {
@@ -1069,7 +1069,7 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
         if (_tooltipLabelFormatter is not null) return _tooltipLabelFormatter(point);
 
         // Default: "<label>: <value>" — or just "<value>" when no label.
-        var node = point.Context.DataSource is TNode m ? m : default;
+        var node = point.Context.DataSource is TModel m ? m : default;
         var label = node is not null ? ResolveLabel(node) : null;
         var value = point.Coordinate.PrimaryValue;
         return string.IsNullOrEmpty(label) ? value.ToString() : $"{label}: {value}";

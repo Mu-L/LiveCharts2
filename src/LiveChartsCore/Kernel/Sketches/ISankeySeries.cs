@@ -28,7 +28,7 @@ namespace LiveChartsCore.Kernel.Sketches;
 /// <summary>
 /// Common (non-typed) surface of a sankey series. Graph topology is provided
 /// via series-level mappers exposed on the typed
-/// <c>CoreSankeySeries&lt;TNode, TVisual, TLabel&gt;</c>.
+/// <c>CoreSankeySeries&lt;TModel, TVisual, TLabel&gt;</c>.
 /// </summary>
 public interface ISankeySeries : ISeries, IStrokedAndFilled
 {
