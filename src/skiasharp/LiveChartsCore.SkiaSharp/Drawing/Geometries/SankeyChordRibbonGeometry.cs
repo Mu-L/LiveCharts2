@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
 using LiveChartsCore.Drawing;
 using SkiaSharp;
 
@@ -44,17 +45,40 @@ public class SankeyChordRibbonGeometry : BaseSankeyChordRibbonGeometry, IDrawnEl
         var cx = CenterX;
         var cy = CenterY;
 
+        // Inner-arc radius: chord endpoints lie on the same circle (the
+        // layout computes them via cos/sin at innerR from the chart center),
+        // so any endpoint's distance to (cx, cy) is the radius. SourceP0 is
+        // the cheapest probe.
+        var dx = SourceP0X - cx;
+        var dy = SourceP0Y - cy;
+        var r = (float)Math.Sqrt(dx * dx + dy * dy);
+        var arcRect = new SKRect(cx - r, cy - r, cx + r, cy + r);
+
+        const float toDeg = (float)(180.0 / Math.PI);
+        var sp0Angle = (float)Math.Atan2(SourceP0Y - cy, SourceP0X - cx) * toDeg;
+        var sp1Angle = (float)Math.Atan2(SourceP1Y - cy, SourceP1X - cx) * toDeg;
+        var tp0Angle = (float)Math.Atan2(TargetP0Y - cy, TargetP0X - cx) * toDeg;
+        var tp1Angle = (float)Math.Atan2(TargetP1Y - cy, TargetP1X - cx) * toDeg;
+
+        // Shortest-direction sweep across each chord — band sweeps are well
+        // under 180° in practice (a single node never occupies the full arc),
+        // so normalizing to (-180, 180] picks the inside-the-node direction.
+        var targetSweep = _NormalizeSweep(tp1Angle - tp0Angle);
+        var sourceCloseSweep = _NormalizeSweep(sp0Angle - sp1Angle);
+
         var path = _cachedPath ??= new SKPath();
         path.Reset();
 
-        // s0 → t1 (top edge, curving through center)
-        // t1 → t0 (target chord)
-        // t0 → s1 (bottom edge, curving back through center)
-        // s1 → s0 (source chord, implicit Close)
+        // Untwisted band: source-top → target-top via cubic; trace the inner
+        // arc along the target chord (rounded end); target-bottom →
+        // source-bottom via cubic; trace the inner arc back along the source
+        // chord (rounded end). Control points coincident at chart center
+        // collapse the cubic to a curve through (cx, cy) — d3-chord convention.
         path.MoveTo(SourceP0X, SourceP0Y);
-        path.CubicTo(cx, cy, cx, cy, TargetP1X, TargetP1Y);
-        path.LineTo(TargetP0X, TargetP0Y);
+        path.CubicTo(cx, cy, cx, cy, TargetP0X, TargetP0Y);
+        path.ArcTo(arcRect, tp0Angle, targetSweep, forceMoveTo: false);
         path.CubicTo(cx, cy, cx, cy, SourceP1X, SourceP1Y);
+        path.ArcTo(arcRect, sp1Angle, sourceCloseSweep, forceMoveTo: false);
         path.Close();
 
         var c = Color;
@@ -63,6 +87,13 @@ public class SankeyChordRibbonGeometry : BaseSankeyChordRibbonGeometry, IDrawnEl
             activePaint.Color = new SKColor(c.R, c.G, c.B, c.A);
 
         context.Canvas.DrawPath(path, activePaint);
+    }
+
+    private static float _NormalizeSweep(float sweep)
+    {
+        while (sweep > 180f) sweep -= 360f;
+        while (sweep < -180f) sweep += 360f;
+        return sweep;
     }
 
     /// <inheritdoc cref="DrawnGeometry.Measure()" />
