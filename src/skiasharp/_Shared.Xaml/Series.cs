@@ -118,6 +118,7 @@ public partial class XamlPieSeries<TModel, TVisual, TLabel> : XamlSeries, IPieSe
 
 [XamlClass(typeof(TreemapSeries<,,>), TVisual = typeof(RoundedRectangleGeometry))]
 public partial class XamlTreemapSeries<TModel, TVisual, TLabel> : XamlSeries, ITreemapSeries, IInternalSeries
+    where TModel : class
     where TVisual : BoundedDrawnGeometry, new()
     where TLabel : BaseLabelGeometry, new()
 { }
