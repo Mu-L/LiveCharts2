@@ -117,6 +117,7 @@ public class DisposeTests
         }
     }
 
+#if MAUI_UI_TESTING
     // https://github.com/Live-Charts/LiveCharts2/issues/2297
     //
     // On iOS, MAUI's UITabBarController fires Unloaded for the chart on the tab
@@ -127,11 +128,11 @@ public class DisposeTests
     // chart went permanently blank. The fix gates the disconnect on Window ==
     // null, so transient tab-switch unloads no longer drop the handler.
     //
-    // This is a focused contract test: push a TabbedPage modally and verify the
-    // hidden tab's chart Handler stays alive after the switch. The buggy version
-    // failed the Handler null assertion on iOS (Window != null but
-    // DisconnectHandler still ran); on every other XAML platform the disconnect
-    // is gated by `#if IOS || MACCATALYST` so the assertion always holds.
+    // This is a MAUI-only contract test — TabbedPage and the Handler property
+    // are MAUI concepts, and the regression view (Issue2297Repro) lives only
+    // in MauiSample. On non-iOS MAUI targets the disconnect is gated by
+    // `#if IOS || MACCATALYST` so the assertion always holds; the test still
+    // runs there as a smoke check that the Window-null gate doesn't regress.
     [AppTestMethod]
     public async Task ChartHandlerSurvivesTabSwitch_Issue2297()
     {
@@ -151,5 +152,6 @@ public class DisposeTests
 
         await sut.PopTabbedPageAsync();
     }
+#endif
 #endif
 }
