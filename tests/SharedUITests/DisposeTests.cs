@@ -116,5 +116,40 @@ public class DisposeTests
             await Task.Delay(500);
         }
     }
+
+    // https://github.com/Live-Charts/LiveCharts2/issues/2297
+    //
+    // On iOS, MAUI's UITabBarController fires Unloaded for the chart on the tab
+    // the user just switched AWAY from, even though the chart's element is still
+    // mounted in the window — UIKit just hides the platform UIView. The #1725
+    // Apple-side handler-disconnect ran on that Unloaded and set Handler=null;
+    // MAUI then never raised Loaded when the user returned to the tab and the
+    // chart went permanently blank. The fix gates the disconnect on Window ==
+    // null, so transient tab-switch unloads no longer drop the handler.
+    //
+    // This is a focused contract test: push a TabbedPage modally and verify the
+    // hidden tab's chart Handler stays alive after the switch. The buggy version
+    // failed the Handler null assertion on iOS (Window != null but
+    // DisconnectHandler still ran); on every other XAML platform the disconnect
+    // is gated by `#if IOS || MACCATALYST` so the assertion always holds.
+    [AppTestMethod]
+    public async Task ChartHandlerSurvivesTabSwitch_Issue2297()
+    {
+        var sut = await App.NavigateTo<Samples.Test.Issue2297Repro.View>();
+        await Task.Delay(1000);
+
+        await sut.PushTabbedPageAsync();
+        await Task.Delay(1500);
+
+        var hiddenTabChart = sut.GetChart(0);
+        Assert.NotNull(hiddenTabChart.Handler);
+
+        sut.SwitchToTab(1);
+        await Task.Delay(1500);
+
+        Assert.NotNull(hiddenTabChart.Handler);
+
+        await sut.PopTabbedPageAsync();
+    }
 #endif
 }
