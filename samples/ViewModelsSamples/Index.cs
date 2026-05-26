@@ -136,6 +136,8 @@ public static class Index
         "Maps/OrthographicWorld",
         "Maps/RotatingOrthographic",
         "Maps/CustomMap",
-        "Maps/MarkersOnMap"
+        "Maps/MarkersOnMap",
+
+        "Sankeys/Basic"
     ];
 }
