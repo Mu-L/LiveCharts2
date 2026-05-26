@@ -28,51 +28,51 @@ using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
 namespace LiveChartsCore.SkiaSharpView;
 
 /// <summary>Defines a sankey series in the user interface.</summary>
-public class SankeySeries<TNode>
-    : SankeySeries<TNode, ColoredRoundedRectangleGeometry, LabelGeometry>
-    where TNode : notnull
+public class SankeySeries<TModel>
+    : SankeySeries<TModel, ColoredRoundedRectangleGeometry, LabelGeometry>
+    where TModel : notnull
 {
-    /// <summary>Initializes a new instance of the <see cref="SankeySeries{TNode}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SankeySeries{TModel}"/> class.</summary>
     public SankeySeries() : base() { }
 
     /// <summary>Initializes a new instance with the given nodes.</summary>
-    public SankeySeries(IReadOnlyCollection<TNode>? nodes) : base(nodes) { }
+    public SankeySeries(IReadOnlyCollection<TModel>? nodes) : base(nodes) { }
 }
 
 /// <summary>Defines a sankey series in the user interface with a custom node visual.</summary>
-public class SankeySeries<TNode, TVisual>
-    : SankeySeries<TNode, TVisual, LabelGeometry>
-    where TNode : notnull
+public class SankeySeries<TModel, TVisual>
+    : SankeySeries<TModel, TVisual, LabelGeometry>
+    where TModel : notnull
     where TVisual : BoundedDrawnGeometry, new()
 {
-    /// <summary>Initializes a new instance of the <see cref="SankeySeries{TNode, TVisual}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SankeySeries{TModel, TVisual}"/> class.</summary>
     public SankeySeries() : base() { }
 
     /// <summary>Initializes a new instance with the given nodes.</summary>
-    public SankeySeries(IReadOnlyCollection<TNode>? nodes) : base(nodes) { }
+    public SankeySeries(IReadOnlyCollection<TModel>? nodes) : base(nodes) { }
 }
 
 /// <summary>Defines a sankey series in the user interface with custom node visual and label.</summary>
-public class SankeySeries<TNode, TVisual, TLabel>
-    : CoreSankeySeries<TNode, TVisual, TLabel>
-    where TNode : notnull
+public class SankeySeries<TModel, TVisual, TLabel>
+    : CoreSankeySeries<TModel, TVisual, TLabel>
+    where TModel : notnull
     where TVisual : BoundedDrawnGeometry, new()
     where TLabel : BaseLabelGeometry, new()
 {
     static SankeySeries() => LiveChartsSkiaSharp.EnsureInitialized();
 
-    /// <summary>Initializes a new instance of the <see cref="SankeySeries{TNode, TVisual, TLabel}"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="SankeySeries{TModel, TVisual, TLabel}"/> class.</summary>
     public SankeySeries() : base(null) { }
 
     /// <summary>Initializes a new instance with the given nodes.</summary>
-    public SankeySeries(IReadOnlyCollection<TNode>? nodes) : base(nodes) { }
+    public SankeySeries(IReadOnlyCollection<TModel>? nodes) : base(nodes) { }
 
-    /// <inheritdoc cref="CoreSankeySeries{TNode, TVisual, TLabel}.CreateRibbonVisual"/>
+    /// <inheritdoc cref="CoreSankeySeries{TModel, TVisual, TLabel}.CreateRibbonVisual"/>
     protected override BaseSankeyRibbonGeometry CreateRibbonVisual() => new SankeyRibbonGeometry();
 
-    /// <inheritdoc cref="CoreSankeySeries{TNode, TVisual, TLabel}.CreateArcNodeVisual"/>
+    /// <inheritdoc cref="CoreSankeySeries{TModel, TVisual, TLabel}.CreateArcNodeVisual"/>
     protected override BaseSankeyArcSegmentGeometry CreateArcNodeVisual() => new SankeyArcSegmentGeometry();
 
-    /// <inheritdoc cref="CoreSankeySeries{TNode, TVisual, TLabel}.CreateChordRibbonVisual"/>
+    /// <inheritdoc cref="CoreSankeySeries{TModel, TVisual, TLabel}.CreateChordRibbonVisual"/>
     protected override BaseSankeyChordRibbonGeometry CreateChordRibbonVisual() => new SankeyChordRibbonGeometry();
 }
