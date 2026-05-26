@@ -31,7 +31,7 @@ namespace LiveChartsCore.Drawing;
 /// N node tiles each in its own color (parallel to
 /// <see cref="BaseSankeyRibbonGeometry"/>'s convention).
 /// </summary>
-public abstract partial class BaseSankeyArcSegmentGeometry : DrawnGeometry, IColoredGeometry
+public abstract partial class BaseSankeyArcSegmentGeometry : DrawnGeometry, IColoredGeometry, IDrawnElement
 {
     /// <summary>Initializes <see cref="Color"/> to the
     /// <see cref="LvcColor.Empty"/> sentinel so the segment defaults to "use
@@ -76,4 +76,20 @@ public abstract partial class BaseSankeyArcSegmentGeometry : DrawnGeometry, ICol
     /// <summary>Corner rounding (px) applied to the arc's straight (radial) edges. 0 = sharp.</summary>
     [MotionProperty]
     public partial float CornerRadius { get; set; }
+
+    void IDrawnElement.DisposePaints()
+    {
+        Stroke?.DisposeTask();
+        Fill?.DisposeTask();
+        ((IDrawnElement)this).Paint?.DisposeTask();
+
+        OnDisposed();
+    }
+
+    /// <summary>
+    /// Subclass hook called when the geometry is being removed from a canvas. Use it to
+    /// release any cached native resources (e.g. <c>SankeyArcSegmentGeometry</c>'s
+    /// cached <c>SKPath</c>) that aren't covered by paint disposal.
+    /// </summary>
+    internal virtual void OnDisposed() { }
 }

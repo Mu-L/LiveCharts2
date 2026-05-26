@@ -18,5 +18,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenPolarChart.sgp.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenSankeyChart.shared.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SourceGenSankeyChart.sgp.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SourceGenTreemapChart.shared.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SourceGenTreemapChart.sgp.cs" />
   </ItemGroup>
 </Project>
