@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using System;
+using LiveChartsCore.Painting;
 
 namespace LiveChartsCore.Kernel.Sketches;
 
@@ -69,6 +70,13 @@ public interface ISankeySeries : ISeries, IStrokedAndFilled
     /// bottom poles of the ellipse. Ignored in other layout modes.
     /// </summary>
     double ArcSpanDegrees { get; set; }
+
+    /// <summary>
+    /// Fill paint applied to flow ribbons. Typically a translucent version
+    /// of <see cref="IStrokedAndFilled.Fill"/>; when null the ribbons
+    /// inherit <see cref="IStrokedAndFilled.Fill"/> directly.
+    /// </summary>
+    Paint? LinkFill { get; set; }
 
     /// <summary>
     /// Builds the tooltip text for a node. Receives the hovered node's

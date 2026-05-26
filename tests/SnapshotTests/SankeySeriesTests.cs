@@ -379,6 +379,42 @@ public sealed class SankeySeriesTests
     }
 
     [TestMethod]
+    public void DefaultTheme_AppliesPaletteColor()
+    {
+        // No Fill / LinkFill set on the series; the default theme rule
+        // should pull a palette color and seed both. Pins the
+        // SeriesProperties.Sankey ↔ SankeySeriesBuilder dispatch.
+        var a = new SankeyNode("A");
+        var b = new SankeyNode("B");
+        var x = new SankeyNode("X");
+        var y = new SankeyNode("Y");
+        var nodes = new[] { a, b, x, y };
+        var links = new[]
+        {
+            new SankeyLink<SankeyNode>(a, x, 5),
+            new SankeyLink<SankeyNode>(a, y, 3),
+            new SankeyLink<SankeyNode>(b, y, 7),
+        };
+
+        var chart = new SKSankeyChart
+        {
+            Series = [
+                new SankeySeries<SankeyNode>
+                {
+                    Values = nodes,
+                    Links = links,
+                    NodeWidth = 16,
+                    // Intentionally no Fill / LinkFill — let the theme decide.
+                }
+            ],
+            Width = 600,
+            Height = 400,
+        };
+
+        chart.AssertSnapshotMatches($"{nameof(SankeySeriesTests)}_{nameof(DefaultTheme_AppliesPaletteColor)}");
+    }
+
+    [TestMethod]
     public void BipartiteArc_ThrowsOnMultiColumn()
     {
         // BipartiteArc rejects graphs where any node is BOTH a target and a

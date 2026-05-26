@@ -45,7 +45,7 @@ namespace LiveChartsCore;
 /// <typeparam name="TLabel">The per-node label geometry.</typeparam>
 public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
     IReadOnlyCollection<TNode>? values)
-        : Series<TNode, TVisual, TLabel>(SeriesProperties.Solid, values), ISankeySeries
+        : Series<TNode, TVisual, TLabel>(SeriesProperties.Solid | SeriesProperties.Sankey, values), ISankeySeries
             where TNode : notnull
             where TVisual : BoundedDrawnGeometry, new()
             where TLabel : BaseLabelGeometry, new()
