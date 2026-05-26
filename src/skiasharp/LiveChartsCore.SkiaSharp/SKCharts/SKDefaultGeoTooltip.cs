@@ -89,7 +89,7 @@ public class SKDefaultGeoTooltip : Container<PopUpGeometry>, IGeoMapTooltip
 
         if (_drawnTask is null || _drawnTask.IsEmpty)
         {
-            _drawnTask = chart.View.CoreCanvas.AddGeometry(this);
+            _drawnTask = chart.View.CoreCanvas.AddGeometry(CanvasZone.Overlay, this);
             _drawnTask.ZIndex = 10100;
         }
 
