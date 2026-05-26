@@ -70,12 +70,45 @@ public class SankeyArcSegmentGeometry : BaseSankeyArcSegmentGeometry, IDrawnElem
         path.ArcTo(innerRect, start + sweep, -sweep, false);
         path.Close();
 
+        // Save/restore paint color around the per-instance override so a
+        // non-Empty Color doesn't bleed into the next geometry sharing the
+        // same paint task. Same for PathEffect (rounded radial edges).
         var c = Color;
         var activePaint = context.ActiveSkiaPaint;
-        if (!c.Equals(LvcColor.Empty))
+        var previousColor = activePaint.Color;
+        var previousPathEffect = activePaint.PathEffect;
+        var hasOverride = !c.Equals(LvcColor.Empty);
+        if (hasOverride)
             activePaint.Color = new SKColor(c.R, c.G, c.B, c.A);
 
+        // CornerRadius rounds the four radial corners (where the inner/outer
+        // arcs meet the straight radial edges). The path-effect approach
+        // also smooths the arc/line tangent joins, which reads as a clean
+        // pill shape on thin nodes — matching the intent of NodeCornerRadius.
+        var cr = CornerRadius;
+        SKPathEffect? cornerEffect = null;
+        if (cr > 0f)
+        {
+            cornerEffect = SKPathEffect.CreateCorner(cr);
+            activePaint.PathEffect = cornerEffect;
+        }
+
         context.Canvas.DrawPath(path, activePaint);
+
+        if (cornerEffect is not null)
+        {
+            activePaint.PathEffect = previousPathEffect;
+            cornerEffect.Dispose();
+        }
+        if (hasOverride) activePaint.Color = previousColor;
+    }
+
+    /// <inheritdoc cref="DrawnGeometry.OnDisposed()" />
+    internal override void OnDisposed()
+    {
+        _cachedPath?.Dispose();
+        _cachedPath = null;
+        base.OnDisposed();
     }
 
     /// <inheritdoc cref="DrawnGeometry.Measure()" />

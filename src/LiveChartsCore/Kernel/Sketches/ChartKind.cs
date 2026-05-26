@@ -48,6 +48,11 @@ public enum ChartKind
     GeoMap,
 
     /// <summary>
+    /// The treemap chart.
+    /// </summary>
+    Treemap,
+
+    /// <summary>
     /// The sankey diagram.
     /// </summary>
     Sankey

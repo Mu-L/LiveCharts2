@@ -116,6 +116,13 @@ public partial class XamlPieSeries<TModel, TVisual, TLabel> : XamlSeries, IPieSe
     where TLabel : BaseLabelGeometry, new()
 { }
 
+[XamlClass(typeof(TreemapSeries<,,>), TVisual = typeof(RoundedRectangleGeometry))]
+public partial class XamlTreemapSeries<TModel, TVisual, TLabel> : XamlSeries, ITreemapSeries, IInternalSeries
+    where TModel : class
+    where TVisual : BoundedDrawnGeometry, new()
+    where TLabel : BaseLabelGeometry, new()
+{ }
+
 [XamlClass(typeof(PolarLineSeries<,,>), TVisual = typeof(CircleGeometry))]
 public partial class XamlPolarLineSeries<TModel, TVisual, TLabel> : XamlSeries, IPolarLineSeries, IInternalSeries
     where TVisual : BoundedDrawnGeometry, new()

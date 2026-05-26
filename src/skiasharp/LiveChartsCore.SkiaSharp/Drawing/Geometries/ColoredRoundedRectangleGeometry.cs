@@ -54,13 +54,19 @@ public partial class ColoredRoundedRectangleGeometry
         // Sentinel LvcColor.Empty means "no per-instance override" — leave the
         // paint task's own color alone (the typical "all-N-nodes-same-color"
         // path). Any non-Empty value overrides per-draw, which is the path
-        // taken by NodeColorMapper.
-        if (!c.Equals(LvcColor.Empty))
+        // taken by NodeColorMapper. Save/restore the paint color so a
+        // non-Empty override doesn't bleed into the next geometry sharing
+        // the same paint task.
+        var previousColor = activePaint.Color;
+        var hasOverride = !c.Equals(LvcColor.Empty);
+        if (hasOverride)
             activePaint.Color = new SKColor(c.R, c.G, c.B, c.A);
 
         var br = BorderRadius;
         context.Canvas.DrawRoundRect(
             new SKRect { Top = Y, Left = X, Size = new SKSize { Height = Height, Width = Width } },
             br.X, br.Y, activePaint);
+
+        if (hasOverride) activePaint.Color = previousColor;
     }
 }
