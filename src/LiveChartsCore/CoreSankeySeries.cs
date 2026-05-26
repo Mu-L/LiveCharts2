@@ -259,8 +259,11 @@ public abstract class CoreSankeySeries<TNode, TVisual, TLabel>(
             foreach (var l in Links)
             {
                 if (l is null) continue;
-                if (outgoing.TryGetValue(l.Source, out var outDeg)) outgoing[l.Source] = outDeg + 1;
-                if (incoming.TryGetValue(l.Target, out var inDeg)) incoming[l.Target] = inDeg + 1;
+                // SankeyLink<TNode>'s parameterless ctor sets Source/Target to default!,
+                // and the layout pass null-filters; mirror that filtering here so the
+                // degree dictionaries (which hash by reference) don't throw on null keys.
+                if (l.Source is not null && outgoing.TryGetValue(l.Source, out var outDeg)) outgoing[l.Source] = outDeg + 1;
+                if (l.Target is not null && incoming.TryGetValue(l.Target, out var inDeg)) incoming[l.Target] = inDeg + 1;
             }
 
         // Reserve canvas margin for outside-placed labels so they don't clip
