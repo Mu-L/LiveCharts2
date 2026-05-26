@@ -124,6 +124,17 @@ public static class UIHelpersExtensions
             Assert.True(strokeHasContent || fillHasContent);
         }
 
+        public static void ChartIsLoaded(ITreemapChartView chartView)
+        {
+            // Treemap series manage tile visuals directly (no ChartPoint
+            // round-trip via DataFactory), so the generic IChartView overload's
+            // s.Fetch(...) path doesn't apply — it would throw on a HasMap
+            // lookup for hierarchical user types. Instead validate that
+            // the canvas accumulated geometries during the first measure.
+            Assert.True(chartView.CoreChart.IsLoaded);
+            Assert.True(chartView.CoreChart.Canvas.CountGeometries() > 0);
+        }
+
         public static void ChartIsLoaded(ISankeyChartView chartView)
         {
             // Sankey series manage node + ribbon visuals directly (no

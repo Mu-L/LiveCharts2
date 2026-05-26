@@ -161,7 +161,7 @@ public class SankeyChartEngine(
         InvokeOnUpdateStarted();
         _isFirstDraw = false;
 
-        if (IsLoaded) Canvas.Invalidate();
+        Canvas.Invalidate();
     }
 
     /// <inheritdoc cref="Chart.Unload"/>

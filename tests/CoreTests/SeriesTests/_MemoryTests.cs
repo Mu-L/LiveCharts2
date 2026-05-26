@@ -41,6 +41,10 @@ public class _MemoryTests
 
     [TestMethod] public void PieSeries_Releases() => AssertPieReleases();
     [TestMethod] public void PolarLineSeries_Releases() => AssertPolarReleases();
+    [TestMethod] public void TreemapSeries_Releases() => AssertTreemapReleases();
+    [TestMethod] public void TreemapSeries_Releases_Hierarchical() => AssertTreemapHierarchicalReleases();
+    [TestMethod] public void SankeySeries_Releases_Vertical() => AssertSankeyReleases(LiveChartsCore.Kernel.Sketches.SankeyLayoutKind.Vertical);
+    [TestMethod] public void SankeySeries_Releases_BipartiteArc() => AssertSankeyReleases(LiveChartsCore.Kernel.Sketches.SankeyLayoutKind.BipartiteArc);
 
     // --- Indexed-values path ---------------------------------------------------------
 
@@ -130,6 +134,140 @@ public class _MemoryTests
         };
         var refs = WireAndDetach(series, chart);
         AssertAllDead(refs, "polar");
+    }
+
+    // Treemap can't share WireAndDetach: its model contract is TreemapNode (not
+    // ObservableValue) and its retained-state shape is per-node visual/label
+    // dictionaries keyed by reference, not the ChartPoint round-trip. The shape
+    // of the assertion is the same — draw, detach, redraw, force GC, no survivors.
+    private static void AssertTreemapReleases()
+    {
+        var series = new TreemapSeries<TreemapNode>();
+        var chart = new SKTreemapChart
+        {
+            Series = [series],
+            Width = 300,
+            Height = 200
+        };
+        var refs = WireAndDetachTreemap(series, chart);
+        AssertAllDead(refs, "treemap");
+    }
+
+    private static List<WeakReference> WireAndDetachTreemap(
+        TreemapSeries<TreemapNode> series, SKTreemapChart chart)
+    {
+        var refs = new List<WeakReference>(PointCount);
+        var values = new TreemapNode[PointCount];
+        for (var i = 0; i < PointCount; i++)
+        {
+            values[i] = new TreemapNode(i + 1, $"N{i}");
+            refs.Add(new WeakReference(values[i]));
+        }
+        series.Values = values;
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        series.Values = Array.Empty<TreemapNode>();
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        return refs;
+    }
+
+    // Hierarchical variant: descendants reach _nodeVisuals via the recursive
+    // EmitTile → LayoutSiblings(children) path, not via the top-level Values
+    // foreach. If the reaper misses descendants, this would catch it.
+    private static void AssertTreemapHierarchicalReleases()
+    {
+        var series = new TreemapSeries<TreemapNode>();
+        var chart = new SKTreemapChart
+        {
+            Series = [series],
+            Width = 300,
+            Height = 200
+        };
+        var refs = WireAndDetachTreemapHierarchical(series, chart);
+        AssertAllDead(refs, "treemap-hierarchical");
+    }
+
+    private static List<WeakReference> WireAndDetachTreemapHierarchical(
+        TreemapSeries<TreemapNode> series, SKTreemapChart chart)
+    {
+        // One root with PointCount children → PointCount + 1 instances under
+        // weak references. The root has no own Value so the children-rollup
+        // path (ResolveValue → ChildrenMapper) is exercised too.
+        var children = new TreemapNode[PointCount];
+        var refs = new List<WeakReference>(PointCount + 1);
+        for (var i = 0; i < PointCount; i++)
+        {
+            children[i] = new TreemapNode(i + 1, $"N{i}");
+            refs.Add(new WeakReference(children[i]));
+        }
+        var root = new TreemapNode("Root", children);
+        refs.Add(new WeakReference(root));
+        series.Values = [root];
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        series.Values = Array.Empty<TreemapNode>();
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        return refs;
+    }
+
+    // Sankey can't share WireAndDetach: its data shape is two parallel
+    // collections (Values=nodes, Links=edges) and its retained state spans
+    // four reference-keyed dictionaries — _nodeVisuals + _linkVisuals for
+    // Vertical or _arcNodeVisuals + _chordLinkVisuals for BipartiteArc, plus
+    // _nodeLabels + _nodePoints. Run the same draw-detach-redraw dance,
+    // assert no node/link instance survives. Parameterized over layout so
+    // both reaper paths are exercised.
+    private static void AssertSankeyReleases(LiveChartsCore.Kernel.Sketches.SankeyLayoutKind layout)
+    {
+        var series = new SankeySeries<SankeyNode> { Layout = layout };
+        var chart = new SKSankeyChart
+        {
+            Series = [series],
+            Width = 300,
+            Height = 200
+        };
+        var refs = WireAndDetachSankey(series, chart);
+        AssertAllDead(refs, layout == LiveChartsCore.Kernel.Sketches.SankeyLayoutKind.BipartiteArc
+            ? "sankey-bipartiteArc"
+            : "sankey-vertical");
+    }
+
+    private static List<WeakReference> WireAndDetachSankey(
+        SankeySeries<SankeyNode> series, SKSankeyChart chart)
+    {
+        // Strict bipartite layout: first half of the nodes are sources, second
+        // half sinks — works for both Vertical (any column count) and
+        // BipartiteArc (rejects multi-column flows).
+        var nodes = new SankeyNode[PointCount];
+        var refs = new List<WeakReference>(PointCount + PointCount / 2);
+        for (var i = 0; i < PointCount; i++)
+        {
+            nodes[i] = new SankeyNode($"N{i}");
+            refs.Add(new WeakReference(nodes[i]));
+        }
+        var links = new SankeyLink<SankeyNode>[PointCount / 2];
+        for (var i = 0; i < links.Length; i++)
+        {
+            links[i] = new SankeyLink<SankeyNode>(nodes[i], nodes[PointCount / 2 + i], i + 1);
+            refs.Add(new WeakReference(links[i]));
+        }
+        series.Values = nodes;
+        series.Links = links;
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        series.Values = Array.Empty<SankeyNode>();
+        series.Links = Array.Empty<SankeyLink<SankeyNode>>();
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        return refs;
     }
 
     // Create N observables, render once so they become ChartPoints, then replace Values

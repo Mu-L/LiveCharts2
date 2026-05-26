@@ -30,7 +30,7 @@ namespace LiveChartsCore.SkiaSharpView;
 /// <summary>Defines a sankey series in the user interface.</summary>
 public class SankeySeries<TModel>
     : SankeySeries<TModel, ColoredRoundedRectangleGeometry, LabelGeometry>
-    where TModel : notnull
+    where TModel : class
 {
     /// <summary>Initializes a new instance of the <see cref="SankeySeries{TModel}"/> class.</summary>
     public SankeySeries() : base() { }
@@ -42,7 +42,7 @@ public class SankeySeries<TModel>
 /// <summary>Defines a sankey series in the user interface with a custom node visual.</summary>
 public class SankeySeries<TModel, TVisual>
     : SankeySeries<TModel, TVisual, LabelGeometry>
-    where TModel : notnull
+    where TModel : class
     where TVisual : BoundedDrawnGeometry, new()
 {
     /// <summary>Initializes a new instance of the <see cref="SankeySeries{TModel, TVisual}"/> class.</summary>
@@ -55,7 +55,7 @@ public class SankeySeries<TModel, TVisual>
 /// <summary>Defines a sankey series in the user interface with custom node visual and label.</summary>
 public class SankeySeries<TModel, TVisual, TLabel>
     : CoreSankeySeries<TModel, TVisual, TLabel>
-    where TModel : notnull
+    where TModel : class
     where TVisual : BoundedDrawnGeometry, new()
     where TLabel : BaseLabelGeometry, new()
 {

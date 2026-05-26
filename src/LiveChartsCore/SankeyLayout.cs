@@ -252,8 +252,12 @@ internal static class SankeyLayout
         foreach (var n in nodeList) columns[byNode[n].Depth].Add(n);
 
         // --- column X positions ------------------------------------------
+        // Clamp dx to 0 when nodeWidth >= availW — otherwise dx goes negative and
+        // later columns shift left of earlier ones, also breaking the SourceX <=
+        // TargetX invariant the ribbon geometry's Measure() relies on.
         var availW = rect.Size.Width;
         var dx = maxDepth > 0 ? (availW - nodeWidth) / maxDepth : 0;
+        if (dx < 0) dx = 0;
         for (var d = 0; d <= maxDepth; d++)
             foreach (var n in columns[d]) byNode[n].X = rect.Location.X + d * dx;
 

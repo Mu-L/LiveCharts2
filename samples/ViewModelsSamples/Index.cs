@@ -72,6 +72,8 @@ public static class Index
 
         "Heat/Basic",
 
+        "Treemaps/Basic",
+
         "StepLines/Basic",
         "StepLines/AutoUpdate",
         "StepLines/Properties",
