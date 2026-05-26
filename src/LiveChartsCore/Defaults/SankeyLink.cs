@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,40 +20,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace LiveChartsCore.Kernel.Sketches;
+namespace LiveChartsCore.Defaults;
 
 /// <summary>
-/// Defines a chart kind.
+/// A directed weighted edge in a sankey diagram. <typeparamref name="TNode"/>
+/// is the user's node type — <see cref="Source"/> and <see cref="Target"/> are
+/// references to actual node instances in the series's <c>Values</c>
+/// collection (link-by-reference, matching the d3-sankey mental model).
 /// </summary>
-public enum ChartKind
+/// <typeparam name="TNode">The user's node type.</typeparam>
+public class SankeyLink<TNode>
 {
-    /// <summary>
-    /// The cartesian chart.
-    /// </summary>
-    Cartesian,
+    /// <summary>Initializes a new instance of the <see cref="SankeyLink{TNode}"/> class.</summary>
+    public SankeyLink() { Source = default!; Target = default!; }
 
-    /// <summary>
-    /// The pie chart.
-    /// </summary>
-    Pie,
+    /// <summary>Initializes a new instance of the <see cref="SankeyLink{TNode}"/> class.</summary>
+    public SankeyLink(TNode source, TNode target, double weight)
+    {
+        Source = source;
+        Target = target;
+        Weight = weight;
+    }
 
-    /// <summary>
-    /// The polar chart.
-    /// </summary>
-    Polar,
+    /// <summary>The originating node.</summary>
+    public TNode Source { get; set; }
 
-    /// <summary>
-    /// The geo map chart.
-    /// </summary>
-    GeoMap,
+    /// <summary>The destination node.</summary>
+    public TNode Target { get; set; }
 
-    /// <summary>
-    /// The treemap chart.
-    /// </summary>
-    Treemap,
-
-    /// <summary>
-    /// The sankey diagram.
-    /// </summary>
-    Sankey
+    /// <summary>Flow magnitude; sets the ribbon's vertical thickness at both ends.</summary>
+    public double Weight { get; set; }
 }
