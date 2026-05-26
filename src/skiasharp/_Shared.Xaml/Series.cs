@@ -153,7 +153,17 @@ public partial class XamlStackedRowSeries<TModel, TVisual, TLabel> : XamlSeries,
     where TLabel : BaseLabelGeometry, new()
 { }
 
-[XamlClass(typeof(SankeySeries<,,>), TVisual = typeof(ColoredRoundedRectangleGeometry))]
+// TModel = typeof(SankeyNode) makes the non-generic short-form
+// <lvc:XamlSankeySeries/> default to TModel = SankeyNode. Required because
+// the Links property is typed IEnumerable<SankeyLink<TModel>>?, and
+// generic class type parameters are invariant — SankeyLink<SankeyNode> is
+// NOT castable to SankeyLink<object>, so the default System.Object TModel
+// would crash MapChangeToBaseType when the user binds the typed array.
+// (Treemap doesn't hit this because its TModel only appears as
+// IEnumerable<TModel> which is covariant via the out modifier.)
+// Users with custom node types declare the wrapper explicitly:
+// <lvc:XamlSankeySeries x:TypeArguments="MyNode">.
+[XamlClass(typeof(SankeySeries<,,>), TVisual = typeof(ColoredRoundedRectangleGeometry), TModel = typeof(SankeyNode))]
 public partial class XamlSankeySeries<TModel, TVisual, TLabel> : XamlSeries, ISankeySeries, IInternalSeries
     where TModel : class
     where TVisual : BoundedDrawnGeometry, new()
