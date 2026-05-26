@@ -51,6 +51,7 @@ jobs:
         env:
           RUN_ID: ${{ github.event.workflow_run.id }}
           RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         with:
@@ -63,6 +64,7 @@ jobs:
             const repo = context.repo.repo;
             const runId = Number(process.env.RUN_ID);
             const runNumber = process.env.RUN_NUMBER;
+            const runAttempt = Number(process.env.RUN_ATTEMPT);
 
             const { prNumber } = await lib.resolvePr({
               github, context,
@@ -94,7 +96,7 @@ jobs:
               : `#### Packing ${lib.emoji(packStatus)}\n\nNuGet packages were not produced.`;
 
             // ---- Tests (collapsed details, grouped by platform)
-            const testsBlock = lib.buildTestsBlock({ jobs, artifacts, runId, owner, repo });
+            const testsBlock = lib.buildTestsBlock({ jobs, artifacts, runId, runAttempt, owner, repo });
 
             // ---- Coverage (only when both core & snapshot passed and the artifact landed)
             let coverageBlock = '';

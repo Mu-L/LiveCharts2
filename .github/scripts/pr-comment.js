@@ -24,7 +24,9 @@ const SECTIONS = {
 
 // Platform groupings rendered inside the Tests <details>. Each entry must
 // match exactly one matrix variant from the LiveCharts workflow:
-//   - testId / jobName / tf -> the artifact name `test-results-{testId}-{jobName}-{tf}`
+//   - testId / jobName / tf -> the artifact name
+//     `test-results-{testId}-{jobName}-{tf}-attempt-{runAttempt}` (the
+//     run_attempt suffix is appended by buildTestsBlock at lookup time).
 //   - matrix -> values that must prefix-match the parenthesised matrix part of
 //     the corresponding job's display name (declaration order, id-first).
 const PLATFORMS = [
@@ -124,7 +126,7 @@ function artifactUrl(owner, repo, runId, artifact) {
   return `https://github.com/${owner}/${repo}/actions/runs/${runId}/artifacts/${artifact.id}`;
 }
 
-function buildTestsBlock({ jobs, artifacts, runId, owner, repo }) {
+function buildTestsBlock({ jobs, artifacts, runId, runAttempt, owner, repo }) {
   const groups = [];
   const overall = [];
   for (const platform of PLATFORMS) {
@@ -135,7 +137,7 @@ function buildTestsBlock({ jobs, artifacts, runId, owner, repo }) {
       const status = statusOf(job);
       if (status === 'missing') continue; // matrix entry was not included in this run
       groupStatuses.push(status);
-      const artifactName = `test-results-${e.testId}-${e.jobName}-${e.tf}`;
+      const artifactName = `test-results-${e.testId}-${e.jobName}-${e.tf}-attempt-${runAttempt}`;
       const artifact = artifacts.find(a => a.name === artifactName && !a.expired);
       const link = artifact ? `[trx](${artifactUrl(owner, repo, runId, artifact)})` : '_no trx_';
       lines.push(`  - ${e.label} ${emoji(status)} — ${link}`);

@@ -195,11 +195,13 @@ runs:
         path: "**/*.coverage"
         overwrite: true
 
+    # Suffix with run_attempt so re-runs upload to a fresh artifact instead of
+    # racing the previous attempt's blob during overwrite finalization. The
+    # PR Comment workflow looks up the matching attempt via workflow_run.run_attempt.
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v6.0.0
       with:
-          name: test-results-${{ inputs.test-id }}-${{ github.job }}-${{ inputs.target-framework }}
-          retention-days: 30
-          path: "**/*.trx"
-          overwrite: true
+        name: test-results-${{ inputs.test-id }}-${{ github.job }}-${{ inputs.target-framework }}-attempt-${{ github.run_attempt }}
+        retention-days: 30
+        path: "**/*.trx"
