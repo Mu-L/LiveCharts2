@@ -128,6 +128,13 @@ public class AnnularSectorHoverArea : HoverArea
         var anchorX = CenterX + (float)Math.Cos(midAngle) * OuterRadius;
         var anchorY = CenterY + (float)Math.Sin(midAngle) * OuterRadius;
 
+        // Sankey arc sectors don't carry a "less than pivot" notion (unlike
+        // bars whose value can be signed). Force false so AutoPopPupPlacement
+        // doesn't bias to Bottom on the first sector seen — RectangleHoverArea
+        // does the same dance (`AreAllLessThanPivot = LessThanPivot && …`),
+        // and with LessThanPivot defaulting false this collapses to `= false`.
+        ctx.AreAllLessThanPivot = false;
+
         if (anchorY < ctx.MostTop) ctx.MostTop = anchorY;
         if (anchorY > ctx.MostBottom) ctx.MostBottom = anchorY;
         if (anchorX > ctx.MostRight) ctx.MostRight = anchorX;
