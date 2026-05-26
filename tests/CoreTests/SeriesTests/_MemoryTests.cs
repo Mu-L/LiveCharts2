@@ -43,6 +43,8 @@ public class _MemoryTests
     [TestMethod] public void PolarLineSeries_Releases() => AssertPolarReleases();
     [TestMethod] public void TreemapSeries_Releases() => AssertTreemapReleases();
     [TestMethod] public void TreemapSeries_Releases_Hierarchical() => AssertTreemapHierarchicalReleases();
+    [TestMethod] public void SankeySeries_Releases_Vertical() => AssertSankeyReleases(LiveChartsCore.Kernel.Sketches.SankeyLayoutKind.Vertical);
+    [TestMethod] public void SankeySeries_Releases_BipartiteArc() => AssertSankeyReleases(LiveChartsCore.Kernel.Sketches.SankeyLayoutKind.BipartiteArc);
 
     // --- Indexed-values path ---------------------------------------------------------
 
@@ -208,6 +210,60 @@ public class _MemoryTests
         _ = ChangingPaintTasks.DrawChart(chart, animated: false);
 
         series.Values = Array.Empty<TreemapNode>();
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        return refs;
+    }
+
+    // Sankey can't share WireAndDetach: its data shape is two parallel
+    // collections (Values=nodes, Links=edges) and its retained state spans
+    // four reference-keyed dictionaries — _nodeVisuals + _linkVisuals for
+    // Vertical or _arcNodeVisuals + _chordLinkVisuals for BipartiteArc, plus
+    // _nodeLabels + _nodePoints. Run the same draw-detach-redraw dance,
+    // assert no node/link instance survives. Parameterized over layout so
+    // both reaper paths are exercised.
+    private static void AssertSankeyReleases(LiveChartsCore.Kernel.Sketches.SankeyLayoutKind layout)
+    {
+        var series = new SankeySeries<SankeyNode> { Layout = layout };
+        var chart = new SKSankeyChart
+        {
+            Series = [series],
+            Width = 300,
+            Height = 200
+        };
+        var refs = WireAndDetachSankey(series, chart);
+        AssertAllDead(refs, layout == LiveChartsCore.Kernel.Sketches.SankeyLayoutKind.BipartiteArc
+            ? "sankey-bipartiteArc"
+            : "sankey-vertical");
+    }
+
+    private static List<WeakReference> WireAndDetachSankey(
+        SankeySeries<SankeyNode> series, SKSankeyChart chart)
+    {
+        // Strict bipartite layout: first half of the nodes are sources, second
+        // half sinks — works for both Vertical (any column count) and
+        // BipartiteArc (rejects multi-column flows).
+        var nodes = new SankeyNode[PointCount];
+        var refs = new List<WeakReference>(PointCount + PointCount / 2);
+        for (var i = 0; i < PointCount; i++)
+        {
+            nodes[i] = new SankeyNode($"N{i}");
+            refs.Add(new WeakReference(nodes[i]));
+        }
+        var links = new SankeyLink<SankeyNode>[PointCount / 2];
+        for (var i = 0; i < links.Length; i++)
+        {
+            links[i] = new SankeyLink<SankeyNode>(nodes[i], nodes[PointCount / 2 + i], i + 1);
+            refs.Add(new WeakReference(links[i]));
+        }
+        series.Values = nodes;
+        series.Links = links;
+
+        _ = ChangingPaintTasks.DrawChart(chart, animated: false);
+
+        series.Values = Array.Empty<SankeyNode>();
+        series.Links = Array.Empty<SankeyLink<SankeyNode>>();
 
         _ = ChangingPaintTasks.DrawChart(chart, animated: false);
 
