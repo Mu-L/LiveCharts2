@@ -57,8 +57,13 @@ public class SeriesBoundsPaddingTests
         return new DimensionalBoundsView(b);
     }
 
-    private readonly record struct DimensionalBoundsView(LiveChartsCore.Measure.DimensionalBounds B)
+    // A plain struct rather than a `record struct` — positional records synthesize
+    // `init` accessors which require System.Runtime.CompilerServices.IsExternalInit,
+    // missing on net462.
+    private readonly struct DimensionalBoundsView(LiveChartsCore.Measure.DimensionalBounds b)
     {
+        public LiveChartsCore.Measure.DimensionalBounds B { get; } = b;
+
         // Universal: padding is symmetric on each axis, and the requested geometry
         // size is the same on both. The per-axis MAGNITUDES vary by series
         // (DataPadding differs, and bar series push the category gap through an
