@@ -341,7 +341,7 @@ public abstract class Chart
             strategy = Series.GetFindingStrategy();
 
         return Series.SelectMany(series =>
-            HitTestSeries(series, new(point), strategy, FindPointFor.HoverEvent));
+            HitTestSeries(series, new(point), strategy, findPointFor));
     }
 
     /// <inheritdoc cref="IChartView.GetVisualsAt(LvcPointD)"/>
@@ -633,9 +633,6 @@ public abstract class Chart
         _toDeleteElements = [.. _everMeasuredElements];
 
     /// <summary>
-    /// Adds a visual element to the chart.
-    /// </summary>
-    /// <summary>
     /// Hit-tests a series, giving a provider render override (e.g. a level-of-detail
     /// backend) the chance to answer from its decimated data instead of the per-point
     /// fetch. Falls back to the series' own hit-test.
@@ -646,6 +643,9 @@ public abstract class Chart
                ?.TryFindHitPoints(series, this, pointerPosition, strategy, findPointFor)
            ?? series.FindHitPoints(this, pointerPosition, strategy, findPointFor);
 
+    /// <summary>
+    /// Adds a visual element to the chart.
+    /// </summary>
     public void AddVisual(IChartElement element)
     {
         // A provider may supply a render override for a series (e.g. the batched
