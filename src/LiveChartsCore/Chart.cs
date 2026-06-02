@@ -341,7 +341,7 @@ public abstract class Chart
             strategy = Series.GetFindingStrategy();
 
         return Series.SelectMany(series =>
-            series.FindHitPoints(this, new(point), strategy, FindPointFor.HoverEvent));
+            HitTestSeries(series, new(point), strategy, FindPointFor.HoverEvent));
     }
 
     /// <inheritdoc cref="IChartView.GetVisualsAt(LvcPointD)"/>
@@ -422,14 +422,14 @@ public abstract class Chart
             {
                 if (!series.RequiresFindClosestOnPointerDown) continue;
 
-                var points = series.FindHitPoints(this, point, strategy, FindPointFor.PointerDownEvent);
+                var points = HitTestSeries(series, point, strategy, FindPointFor.PointerDownEvent);
                 if (!points.Any()) continue;
 
                 series.OnDataPointerDown(View, points, point);
             }
 
             // fire the chart event.
-            var iterablePoints = VisibleSeries.SelectMany(x => x.FindHitPoints(this, point, strategy, FindPointFor.PointerDownEvent));
+            var iterablePoints = VisibleSeries.SelectMany(x => HitTestSeries(x, point, strategy, FindPointFor.PointerDownEvent));
             View.OnDataPointerDown(iterablePoints, point);
 
             // fire the visual elements event.
@@ -635,9 +635,30 @@ public abstract class Chart
     /// <summary>
     /// Adds a visual element to the chart.
     /// </summary>
+    /// <summary>
+    /// Hit-tests a series, giving a provider render override (e.g. a level-of-detail
+    /// backend) the chance to answer from its decimated data instead of the per-point
+    /// fetch. Falls back to the series' own hit-test.
+    /// </summary>
+    internal IEnumerable<ChartPoint> HitTestSeries(
+        ISeries series, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor)
+        => LiveCharts.DefaultSettings.GetProvider().GetRenderOverride(series)
+               ?.TryFindHitPoints(series, this, pointerPosition, strategy, findPointFor)
+           ?? series.FindHitPoints(this, pointerPosition, strategy, findPointFor);
+
     public void AddVisual(IChartElement element)
     {
-        element.Invalidate(this);
+        // A provider may supply a render override for a series (e.g. the batched
+        // level-of-detail renderer in performance backends), taking over drawing
+        // and bypassing the per-point Invalidate. TryRender returns false when it
+        // declines (e.g. a density gate), in which case the series renders itself.
+        if (element is not ISeries s ||
+            LiveCharts.DefaultSettings.GetProvider().GetRenderOverride(s) is not { } renderOverride ||
+            !renderOverride.TryRender(s, this))
+        {
+            element.Invalidate(this);
+        }
+
         element.RemoveOldPaints(View);
         _ = _everMeasuredElements.Add(element);
         _ = _toDeleteElements.Remove(element);
@@ -721,6 +742,10 @@ public abstract class Chart
         {
             if (visual is ISeries series)
             {
+                // Let a provider render override release any resources it allocated
+                // for this series before the series itself is disposed.
+                LiveCharts.DefaultSettings.GetProvider().GetRenderOverride(series)?.OnRemoved(View, series);
+
                 // series delete softly and animate as they leave the UI.
                 // UPDATE
                 // actually series are not even removed sofly.. this is only disposing things

@@ -39,6 +39,14 @@ public abstract class ChartEngine
     public virtual DataFactory<TModel> GetDefaultDataFactory<TModel>() => new();
 
     /// <summary>
+    /// Optionally returns a renderer that takes over drawing the given
+    /// <paramref name="series"/> (bypassing its per-point Invalidate) — e.g. a
+    /// batched level-of-detail renderer. Returns <see langword="null"/> (the
+    /// default) to let the series render itself. Consulted once per measure pass.
+    /// </summary>
+    public virtual ISeriesRenderOverride? GetRenderOverride(ISeries series) => null;
+
+    /// <summary>
     /// Gets a new instance of the default map factory.
     /// </summary>
     /// <returns></returns>

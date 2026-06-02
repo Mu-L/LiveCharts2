@@ -113,11 +113,9 @@ public partial class SourceGenChart : IChartView
         FindingStrategy strategy = FindingStrategy.Automatic,
         FindPointFor findPointFor = FindPointFor.HoverEvent)
     {
-        if (strategy == FindingStrategy.Automatic)
-            strategy = CoreChart.Series.GetFindingStrategy();
-
-        return CoreChart.Series.SelectMany(series =>
-            series.FindHitPoints(CoreChart, new(point), strategy, FindPointFor.HoverEvent));
+        // Delegate to the core so a provider render override (e.g. transparent LOD)
+        // can hit-test from its decimated data instead of walking every point.
+        return CoreChart.GetPointsAt(point, strategy, findPointFor);
     }
 
     /// <inheritdoc cref="IChartView.GetVisualsAt(LvcPointD)"/>
