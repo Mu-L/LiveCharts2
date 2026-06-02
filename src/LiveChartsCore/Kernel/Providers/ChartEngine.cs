@@ -39,6 +39,20 @@ public abstract class ChartEngine
     public virtual DataFactory<TModel> GetDefaultDataFactory<TModel>() => new();
 
     /// <summary>
+    /// Optionally returns an override that takes over drawing, bounds and hit-testing
+    /// for the given <paramref name="series"/> (bypassing its per-point pipeline) —
+    /// e.g. a batched level-of-detail renderer. Returns <see langword="null"/> (the
+    /// default) to let the series handle itself.
+    /// <para>
+    /// Consulted frequently — once per measure pass for rendering and bounds, and
+    /// again on every pointer move/down for hit-testing, plus on series removal — and
+    /// not cached by the engine. Implementations should make this cheap (e.g. a
+    /// dictionary keyed by series) rather than allocating per call.
+    /// </para>
+    /// </summary>
+    public virtual ISeriesRenderOverride? GetRenderOverride(ISeries series) => null;
+
+    /// <summary>
     /// Gets a new instance of the default map factory.
     /// </summary>
     /// <returns></returns>
