@@ -84,12 +84,13 @@ public abstract class PathEffect(object key)
 
         var key = (from ?? to)!._key;
 
-        // use the default filter when the transition is to a null reference
-        // for example in the case of a shadow, the default filter is a transparent shadow
-        from ??= s_defaultEffects[key];
-        to ??= s_defaultEffects[key];
+        // Transition a null endpoint to/from the effect's registered no-op default (e.g. a dash
+        // fades to "no dash"). An effect without a registered default — e.g. a custom self-animating
+        // effect — falls back to the present endpoint instead of throwing.
+        from ??= s_defaultEffects.TryGetValue(key, out var dFrom) ? dFrom : to;
+        to ??= s_defaultEffects.TryGetValue(key, out var dTo) ? dTo : from;
 
-        return from.Transitionate(progress, to);
+        return from!.Transitionate(progress, to);
     }
 
     internal virtual void Dispose()

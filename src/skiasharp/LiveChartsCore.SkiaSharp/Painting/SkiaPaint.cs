@@ -131,12 +131,12 @@ public abstract class SkiaPaint(float strokeThickness = 1f, float strokeMiter = 
     private readonly ImageFilterMotionProperty _imageFilterMotion = new();
 
     /// <summary>
-    /// Gets or sets the image filer. Backed by a motion property (like <see cref="PathEffect"/>)
+    /// Gets or sets the image filter. Backed by a motion property (like <see cref="PathEffect"/>)
     /// so a self-animating filter (one carrying a looping <see cref="ImageFilters.ImageFilter.Animation"/>)
     /// animates on the rail; the paint just reads the current value each frame.
     /// </summary>
     /// <value>
-    /// The image filer.
+    /// The image filter.
     /// </value>
     public ImageFilter? ImageFilter
     {
@@ -234,6 +234,10 @@ public abstract class SkiaPaint(float strokeThickness = 1f, float strokeMiter = 
                 imageFilter.CreateFilter();
 
             paint.ImageFilter = imageFilter._sKImageFilter;
+        }
+        else
+        {
+            paint.ImageFilter = null; // filter removed → clear it from the cached/reused SKPaint
         }
 
         if (drawnElement is not null)

@@ -88,11 +88,12 @@ public abstract class ImageFilter(object key)
         var key = (from ?? to)!._key;
 
         // use the default filter when the transition is to a null reference
-        // for example in the case of a shadow, the default filter is a transparent shadow
-        from ??= s_defaultFilters[key];
-        to ??= s_defaultFilters[key];
+        // for example in the case of a shadow, the default filter is a transparent shadow.
+        // A filter without a registered default falls back to the present endpoint instead of throwing.
+        from ??= s_defaultFilters.TryGetValue(key, out var dFrom) ? dFrom : to;
+        to ??= s_defaultFilters.TryGetValue(key, out var dTo) ? dTo : from;
 
-        return from.Transitionate(progress, to);
+        return from!.Transitionate(progress, to!);
     }
 
     internal virtual void Dispose()

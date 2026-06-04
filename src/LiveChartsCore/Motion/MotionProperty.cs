@@ -135,11 +135,21 @@ public abstract class MotionProperty<T>(T defaultValue) : IMotionProperty
             (Animation.RepeatTimes == int.MaxValue || Animation.RepeatTimes > Animation.RepeatCount))
         {
             var cycles = (int)((globalTime - _startTime) / deltaTime); // floor (elapsed is positive)
-            Animation.RepeatCount += cycles;
+
+            if (Animation.RepeatTimes != int.MaxValue)
+            {
+                // Never fast-forward past the remaining repeats: a long frame stall must still
+                // complete on time, not run forever. (Infinite repeats skip the counter to avoid
+                // RepeatCount overflowing over a long-running animation.)
+                var remaining = Animation.RepeatTimes - Animation.RepeatCount;
+                if (cycles > remaining) cycles = remaining;
+                Animation.RepeatCount += cycles;
+            }
+
             _startTime += cycles * deltaTime;
             _endTime = _startTime + Animation.Duration;
             deltaTime = _endTime - _startTime;
-            p = (globalTime - _startTime) / deltaTime;
+            p = (globalTime - _startTime) / deltaTime; // > 1 if it should complete (cycles was clamped)
         }
 
         if (deltaTime <= 0 || p > 1)

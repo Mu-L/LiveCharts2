@@ -41,9 +41,8 @@ public class PathEffectMotionProperty(PathEffect? defaultValue = null)
     protected override bool CanTransitionate => (FromValue ?? ToValue) is not null;
 
     /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)"/>
-    protected override PathEffect? OnGetMovement(float progress)
-    {
-        var from = FromValue ?? ToValue;
-        return from?.Transitionate(progress, ToValue);
-    }
+    // Go through the assembly-internal static Transitionate (like ImageFilterMotionProperty) so the
+    // null-endpoint → default-effect handling is consistent across both rails.
+    protected override PathEffect? OnGetMovement(float progress) =>
+        PathEffect.Transitionate(FromValue ?? ToValue, ToValue, progress);
 }

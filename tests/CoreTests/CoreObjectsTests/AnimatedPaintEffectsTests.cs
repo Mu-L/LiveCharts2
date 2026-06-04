@@ -17,6 +17,11 @@ namespace CoreTests.CoreObjectsTests;
 [TestClass]
 public class AnimatedPaintEffectsTests
 {
+    // Guarantees the shared debug clock is restored even if an assertion throws, so a failure
+    // can't leak driven time into other tests.
+    [TestCleanup]
+    public void ResetClock() => CoreMotionCanvas.DebugElapsedMilliseconds = -1;
+
     // A minimal self-animating path effect: Transitionate maps progress straight to a "phase"
     // so the test can read the interpolated value. No native SKPathEffect needed (we don't draw).
     private sealed class TestEffect : PathEffect
