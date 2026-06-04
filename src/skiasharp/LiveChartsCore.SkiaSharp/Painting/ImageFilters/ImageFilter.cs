@@ -41,8 +41,14 @@ public abstract class ImageFilter(object key)
         { DropShadow.s_key, new DropShadow(0,0,0,0, SKColors.Transparent) },
         { Blur.s_key, new Blur(0,0) }
     };
-    // protected internal: the owning SkiaPaint (same assembly) reads it via internal, while an
-    // ImageFilter subclass in another assembly sets it from its CreateFilter override via protected.
+    /// <summary>
+    /// The native Skia image filter produced by <see cref="CreateFilter"/>.
+    /// </summary>
+    /// <remarks>
+    /// This field is <see langword="protected"/> <see langword="internal"/> so the owning
+    /// <see cref="SkiaPaint"/> can read it in this assembly, while an <see cref="ImageFilter"/>
+    /// subclass in another assembly can set it from its <see cref="CreateFilter"/> override.
+    /// </remarks>
     protected internal SKImageFilter? _sKImageFilter;
 
     /// <summary>

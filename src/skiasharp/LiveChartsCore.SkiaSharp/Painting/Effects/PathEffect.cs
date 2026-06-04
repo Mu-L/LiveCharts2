@@ -36,8 +36,14 @@ public abstract class PathEffect(object key)
     {
         { DashEffect.s_key, new DashEffect([1, 0], 0) }
     };
-    // protected internal: the owning SkiaPaint (same assembly) reads it via internal, while a
-    // PathEffect subclass in another assembly sets it from its CreateEffect override via protected.
+    /// <summary>
+    /// The native Skia path effect produced by <see cref="CreateEffect"/>.
+    /// </summary>
+    /// <remarks>
+    /// This field is <see langword="protected"/> <see langword="internal"/> so the owning
+    /// <see cref="SkiaPaint"/> can read it in this assembly, while a <see cref="PathEffect"/>
+    /// subclass in another assembly can set it from its <see cref="CreateEffect"/> override.
+    /// </remarks>
     protected internal SKPathEffect? _sKPathEffect;
 
     /// <summary>
