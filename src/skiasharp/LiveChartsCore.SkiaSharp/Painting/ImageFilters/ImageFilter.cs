@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using System.Collections.Generic;
+using LiveChartsCore.Drawing;
 using SkiaSharp;
 
 namespace LiveChartsCore.SkiaSharpView.Painting.ImageFilters;
@@ -40,7 +41,18 @@ public abstract class ImageFilter(object key)
         { DropShadow.s_key, new DropShadow(0,0,0,0, SKColors.Transparent) },
         { Blur.s_key, new Blur(0,0) }
     };
-    internal SKImageFilter? _sKImageFilter;
+    // protected internal: the owning SkiaPaint (same assembly) reads it via internal, while an
+    // ImageFilter subclass in another assembly sets it from its CreateFilter override via protected.
+    protected internal SKImageFilter? _sKImageFilter;
+
+    /// <summary>
+    /// An optional animation that drives this filter on the motion rail. <see langword="null"/>
+    /// (the default) means the filter is static — created once and cached, exactly as before. A
+    /// self-animating filter assigns one (e.g. <see cref="Animation.RepeatTimes"/> =
+    /// <see cref="int.MaxValue"/>) so it animates indefinitely; the looping lives in the filter,
+    /// not the paint — mirrors <see cref="Effects.PathEffect.Animation"/>.
+    /// </summary>
+    public Animation? Animation { get; set; }
 
     /// <summary>
     /// Creates the image filter.
