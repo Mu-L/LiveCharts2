@@ -20,14 +20,12 @@ namespace CoreTests.ChartTests;
 [TestClass]
 public class SeriesRenderOverrideTests
 {
-    private sealed class RecordingOverride : ISeriesRenderOverride
+    private class RecordingOverride : ISeriesRenderOverride
     {
         public bool RenderConsulted, BoundsConsulted, HitTestConsulted, Removed;
 
-        // Test knobs for the engage-cleanup behaviour.
+        // Test knob for the engage-cleanup behaviour.
         public bool Engage;                       // TryRender returns this
-        public bool Reuse;                        // ReusesSeriesPaints returns this
-        public bool ReusesSeriesPaints => Reuse;
 
         // Record then take over / decline per Engage. When declining the chart falls back to the
         // series, so it renders exactly like OSS while we assert the seam was wired.
@@ -50,6 +48,12 @@ public class SeriesRenderOverrideTests
         }
 
         public void OnRemoved(IChartView view, ISeries series) => Removed = true;
+    }
+
+    // Same recorder, but it declares it REUSES the overridden series' paints (marker interface).
+    // The chart must then KEEP the series' paints on engage instead of dropping them.
+    private sealed class ReusingRecordingOverride : RecordingOverride, IReusesSeriesPaints
+    {
     }
 
     private sealed class FakeEngine(RecordingOverride over) : SkiaSharpProvider
@@ -100,11 +104,8 @@ public class SeriesRenderOverrideTests
     [TestMethod]
     public void EngagingOverride_DropsTheSeriesOwnVisuals_UnlessItReusesThePaints()
     {
-        var over = new RecordingOverride();
         try
         {
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(over)));
-
             static SKCartesianChart NewChart() => new()
             {
                 Width = 600,
@@ -114,10 +115,9 @@ public class SeriesRenderOverrideTests
                 YAxes = [new Axis()],
             };
 
-            int Measure(SKCartesianChart chart, bool engage, bool reuse, bool firstDraw)
+            static int Measure(SKCartesianChart chart, RecordingOverride over, bool engage, bool firstDraw)
             {
                 over.Engage = engage;
-                over.Reuse = reuse;
                 var core = chart.CoreChart;
                 core.IsLoaded = true;
                 core._isFirstDraw = firstDraw;
@@ -127,18 +127,22 @@ public class SeriesRenderOverrideTests
                 return chart.CoreCanvas.CountPaintTasks();
             }
 
-            // Override engages, does NOT reuse → the chart drops the series' frozen visuals.
+            // Override engages, does NOT reuse (no marker) → the chart drops the series' frozen visuals.
+            var overA = new RecordingOverride();
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(overA)));
             var chartA = NewChart();
-            var ossTasks = Measure(chartA, engage: false, reuse: false, firstDraw: true); // OSS draws its paints
-            var droppedTasks = Measure(chartA, engage: true, reuse: false, firstDraw: false);
+            var ossTasks = Measure(chartA, overA, engage: false, firstDraw: true); // OSS draws its paints
+            var droppedTasks = Measure(chartA, overA, engage: true, firstDraw: false);
             Assert.IsTrue(droppedTasks < ossTasks,
                 $"a non-reusing engage must drop the series' own visuals (oss={ossTasks}, engaged={droppedTasks})");
 
-            // Fresh chart: override engages AND reuses → the chart keeps the series' paints (the
-            // override is responsible for them), so they are NOT dropped.
+            // Fresh chart: override engages AND reuses (marker) → the chart keeps the series' paints
+            // (the override is responsible for them), so they are NOT dropped.
+            var overB = new ReusingRecordingOverride();
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(overB)));
             var chartB = NewChart();
-            var ossTasks2 = Measure(chartB, engage: false, reuse: false, firstDraw: true);
-            var reusedTasks = Measure(chartB, engage: true, reuse: true, firstDraw: false);
+            var ossTasks2 = Measure(chartB, overB, engage: false, firstDraw: true);
+            var reusedTasks = Measure(chartB, overB, engage: true, firstDraw: false);
             Assert.AreEqual(ossTasks2, reusedTasks,
                 $"a reusing engage must keep the series' paints (oss={ossTasks2}, engaged={reusedTasks})");
         }

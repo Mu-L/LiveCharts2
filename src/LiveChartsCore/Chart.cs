@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Events;
+using LiveChartsCore.Kernel.Providers;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
@@ -667,7 +668,7 @@ public abstract class Chart
             // a later engage re-triggers the cleanup below.
             if (element is ISeries resumed) _ = _overriddenSeries.Remove(resumed);
         }
-        else if (!renderOverride.ReusesSeriesPaints && _overriddenSeries.Add(s))
+        else if (renderOverride is not IReusesSeriesPaints && _overriddenSeries.Add(s))
         {
             // The override fully took over this series' rendering and skipped its per-point Invalidate.
             // Drop the series' OWN visuals the first time that happens — otherwise the last per-point
