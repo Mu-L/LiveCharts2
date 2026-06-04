@@ -42,10 +42,13 @@ public abstract class ImageFilter(object key)
         { Blur.s_key, new Blur(0,0) }
     };
     /// <summary>
-    /// The native skia image filter produced by <see cref="CreateFilter"/>. protected internal: the
-    /// owning <see cref="SkiaPaint"/> (same assembly) reads it, while an <see cref="ImageFilter"/>
-    /// subclass in another assembly sets it from its <see cref="CreateFilter"/> override.
+    /// The native Skia image filter produced by <see cref="CreateFilter"/>.
     /// </summary>
+    /// <remarks>
+    /// This field is <see langword="protected"/> <see langword="internal"/> so the owning
+    /// <see cref="SkiaPaint"/> can read it in this assembly, while an <see cref="ImageFilter"/>
+    /// subclass in another assembly can set it from its <see cref="CreateFilter"/> override.
+    /// </remarks>
     protected internal SKImageFilter? _sKImageFilter;
 
     /// <summary>
