@@ -45,6 +45,10 @@ public abstract class Chart
 
     internal readonly HashSet<IChartElement> _everMeasuredElements = [];
     internal HashSet<IChartElement> _toDeleteElements = [];
+    // Series whose rendering is currently taken over by a provider render override (TryRender == true).
+    // Tracked so the series' OWN per-point visuals are dropped exactly once when the override engages
+    // and are not left frozen on the canvas underneath the override's output.
+    private readonly HashSet<ISeries> _overriddenSeries = [];
     internal bool _isToolTipOpen = false;
     internal bool _isPointerIn;
     internal LvcPoint _pointerPosition = new(-10, -10);
@@ -378,6 +382,7 @@ public abstract class Chart
         IsLoaded = false;
         _everMeasuredElements.Clear();
         _toDeleteElements.Clear();
+        _overriddenSeries.Clear();
         _activePoints.Clear();
         Canvas.Dispose();
     }
@@ -657,6 +662,22 @@ public abstract class Chart
             !renderOverride.TryRender(s, this))
         {
             element.Invalidate(this);
+
+            // OSS rendering is active again (no override, or it declined): forget the override flag so
+            // a later engage re-triggers the cleanup below.
+            if (element is ISeries resumed) _ = _overriddenSeries.Remove(resumed);
+        }
+        else if (!renderOverride.ReusesSeriesPaints && _overriddenSeries.Add(s))
+        {
+            // The override fully took over this series' rendering and skipped its per-point Invalidate.
+            // Drop the series' OWN visuals the first time that happens — otherwise the last per-point
+            // geometries (e.g. an animated line stroke) linger FROZEN on the canvas under the
+            // override's output. The series is re-measured normally once the override declines.
+            //
+            // Skipped when the override REUSES the series' paints (it hosts its batched geometry on the
+            // series' own Stroke/Fill): there we must NOT remove those paints — the override clears the
+            // series' frozen geometries itself and keeps the paints to draw through.
+            s.RemoveFromUI(this);
         }
 
         element.RemoveOldPaints(View);
@@ -672,6 +693,7 @@ public abstract class Chart
         element.RemoveFromUI(this);
         _ = _everMeasuredElements.Remove(element);
         _ = _toDeleteElements.Remove(element);
+        if (element is ISeries s) _ = _overriddenSeries.Remove(s);
     }
 
     /// <summary>

@@ -37,6 +37,16 @@ namespace LiveChartsCore.Kernel.Providers;
 public interface ISeriesRenderOverride
 {
     /// <summary>
+    /// When <see langword="true"/>, the override hosts its visuals on the overridden series' OWN
+    /// paint tasks (reusing them, so the series' gradient/effects apply) and manages clearing the
+    /// series' frozen per-point visuals itself. The chart then SKIPS its generic engage-cleanup
+    /// (which removes the series' paints) for this series, so it doesn't pull the reused paint out
+    /// from under the override. Default <see langword="false"/>: the override draws on its own paints
+    /// and the chart drops the overridden series' visuals.
+    /// </summary>
+    bool ReusesSeriesPaints => false;
+
+    /// <summary>
     /// Renders <paramref name="series"/> for the current measure pass. Return
     /// <see langword="true"/> if the override took over rendering; return
     /// <see langword="false"/> to fall back to the series' own
