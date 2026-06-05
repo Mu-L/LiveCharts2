@@ -444,14 +444,12 @@ public class CartesianChartEngine(
             var xAxis = GetXAxis(series);
             var yAxis = GetYAxis(series);
 
-            // A provider render override may also supply bounds without the per-point
-            // fetch (e.g. a level-of-detail backend reads them from a pyramid), which
-            // avoids the O(N) GetBounds walk that would otherwise dominate at scale.
             var seriesBounds =
                 LiveCharts.DefaultSettings.GetProvider().GetRenderOverride(series) is { } boundsOverride &&
                 boundsOverride.TryGetBounds(series, this, xAxis, yAxis, out var overrideBounds)
                     ? overrideBounds.Bounds
                     : series.GetBounds(this, xAxis, yAxis).Bounds;
+
             if (seriesBounds.IsEmpty)
             {
                 ce._isInternalSet = false;

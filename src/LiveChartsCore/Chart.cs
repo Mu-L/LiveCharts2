@@ -46,10 +46,6 @@ public abstract class Chart
 
     internal readonly HashSet<IChartElement> _everMeasuredElements = [];
     internal HashSet<IChartElement> _toDeleteElements = [];
-    // Series whose rendering is currently taken over by a provider render override (TryRender == true).
-    // Tracked so the series' OWN per-point visuals are dropped exactly once when the override engages
-    // and are not left frozen on the canvas underneath the override's output.
-    private readonly HashSet<ISeries> _overriddenSeries = [];
     internal bool _isToolTipOpen = false;
     internal bool _isPointerIn;
     internal LvcPoint _pointerPosition = new(-10, -10);
@@ -383,7 +379,6 @@ public abstract class Chart
         IsLoaded = false;
         _everMeasuredElements.Clear();
         _toDeleteElements.Clear();
-        _overriddenSeries.Clear();
         _activePoints.Clear();
         Canvas.Dispose();
     }
@@ -639,9 +634,8 @@ public abstract class Chart
         _toDeleteElements = [.. _everMeasuredElements];
 
     /// <summary>
-    /// Hit-tests a series, giving a provider render override (e.g. a level-of-detail
-    /// backend) the chance to answer from its decimated data instead of the per-point
-    /// fetch. Falls back to the series' own hit-test.
+    /// Hit-tests a series, giving a provider render override the chance to answer instead
+    /// of the per-point fetch. Falls back to the series' own hit-test.
     /// </summary>
     internal IEnumerable<ChartPoint> HitTestSeries(
         ISeries series, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor)
@@ -654,32 +648,13 @@ public abstract class Chart
     /// </summary>
     public void AddVisual(IChartElement element)
     {
-        // A provider may supply a render override for a series (e.g. the batched
-        // level-of-detail renderer in performance backends), taking over drawing
-        // and bypassing the per-point Invalidate. TryRender returns false when it
-        // declines (e.g. a density gate), in which case the series renders itself.
         if (element is not ISeries s ||
             LiveCharts.DefaultSettings.GetProvider().GetRenderOverride(s) is not { } renderOverride ||
             !renderOverride.TryRender(s, this))
         {
             element.Invalidate(this);
-
-            // OSS rendering is active again (no override, or it declined): forget the override flag so
-            // a later engage re-triggers the cleanup below.
-            if (element is ISeries resumed) _ = _overriddenSeries.Remove(resumed);
         }
-        else if (renderOverride is not IReusesSeriesPaints && _overriddenSeries.Add(s))
-        {
-            // The override fully took over this series' rendering and skipped its per-point Invalidate.
-            // Drop the series' OWN visuals the first time that happens — otherwise the last per-point
-            // geometries (e.g. an animated line stroke) linger FROZEN on the canvas under the
-            // override's output. The series is re-measured normally once the override declines.
-            //
-            // Skipped when the override REUSES the series' paints (it hosts its batched geometry on the
-            // series' own Stroke/Fill): there we must NOT remove those paints — the override clears the
-            // series' frozen geometries itself and keeps the paints to draw through.
-            s.RemoveFromUI(this);
-        }
+        // else: the override took over rendering this series and owns its visuals.
 
         element.RemoveOldPaints(View);
         _ = _everMeasuredElements.Add(element);
@@ -694,7 +669,6 @@ public abstract class Chart
         element.RemoveFromUI(this);
         _ = _everMeasuredElements.Remove(element);
         _ = _toDeleteElements.Remove(element);
-        if (element is ISeries s) _ = _overriddenSeries.Remove(s);
     }
 
     /// <summary>

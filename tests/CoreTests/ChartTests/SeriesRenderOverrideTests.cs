@@ -50,12 +50,6 @@ public class SeriesRenderOverrideTests
         public void OnRemoved(IChartView view, ISeries series) => Removed = true;
     }
 
-    // Same recorder, but it declares it REUSES the overridden series' paints (marker interface).
-    // The chart must then KEEP the series' paints on engage instead of dropping them.
-    private sealed class ReusingRecordingOverride : RecordingOverride, IReusesSeriesPaints
-    {
-    }
-
     private sealed class FakeEngine(RecordingOverride over) : SkiaSharpProvider
     {
         // Passthrough SkiaSharp engine that only adds the override (for any series),
@@ -97,12 +91,13 @@ public class SeriesRenderOverrideTests
         }
     }
 
-    // When an override ENGAGES it bypasses the series' per-point Invalidate, so the series' last
-    // drawn visuals would linger frozen on the canvas. The chart drops them — UNLESS the override
-    // declares it REUSES the series' own paints (then it manages them itself and the chart keeps
-    // them). Drives two measures on a loaded chart so there ARE prior OSS visuals to drop.
+    // When an override ENGAGES (TryRender returns true) the chart must bypass the series'
+    // per-point Invalidate entirely — the override owns the drawing and any cleanup of the
+    // series' own visuals. A fresh chart whose override engages and draws nothing therefore
+    // produces NO series paint tasks, whereas the same chart with a declining override renders
+    // the series normally. (Axes are stripped of paints so the count reflects series paints only.)
     [TestMethod]
-    public void EngagingOverride_DropsTheSeriesOwnVisuals_UnlessItReusesThePaints()
+    public void EngagingOverride_BypassesTheSeriesPerPointInvalidate()
     {
         try
         {
@@ -111,44 +106,49 @@ public class SeriesRenderOverrideTests
                 Width = 600,
                 Height = 400,
                 Series = [new LineSeries<double> { Values = [1, 2, 3, 4], GeometrySize = 0 }],
-                XAxes = [new Axis()],
-                YAxes = [new Axis()],
+                XAxes = [BareAxis()],
+                YAxes = [BareAxis()],
             };
 
-            static int Measure(SKCartesianChart chart, RecordingOverride over, bool engage, bool firstDraw)
+            static int Measure(SKCartesianChart chart, RecordingOverride over, bool engage)
             {
                 over.Engage = engage;
                 var core = chart.CoreChart;
                 core.IsLoaded = true;
-                core._isFirstDraw = firstDraw;
+                core._isFirstDraw = true;
                 core.Measure();
                 using var surface = SKSurface.Create(new SKImageInfo(10, 10));
                 chart.CoreCanvas.DrawFrame(new SkiaSharpDrawingContext(chart.CoreCanvas, surface.Canvas, SKColor.Empty));
                 return chart.CoreCanvas.CountPaintTasks();
             }
 
-            // Override engages, does NOT reuse (no marker) → the chart drops the series' frozen visuals.
-            var overA = new RecordingOverride();
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(overA)));
-            var chartA = NewChart();
-            var ossTasks = Measure(chartA, overA, engage: false, firstDraw: true); // OSS draws its paints
-            var droppedTasks = Measure(chartA, overA, engage: true, firstDraw: false);
-            Assert.IsTrue(droppedTasks < ossTasks,
-                $"a non-reusing engage must drop the series' own visuals (oss={ossTasks}, engaged={droppedTasks})");
+            // Declining override → the series renders its own paints.
+            var declining = new RecordingOverride();
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(declining)));
+            var declined = Measure(NewChart(), declining, engage: false);
 
-            // Fresh chart: override engages AND reuses (marker) → the chart keeps the series' paints
-            // (the override is responsible for them), so they are NOT dropped.
-            var overB = new ReusingRecordingOverride();
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(overB)));
-            var chartB = NewChart();
-            var ossTasks2 = Measure(chartB, overB, engage: false, firstDraw: true);
-            var reusedTasks = Measure(chartB, overB, engage: true, firstDraw: false);
-            Assert.AreEqual(ossTasks2, reusedTasks,
-                $"a reusing engage must keep the series' paints (oss={ossTasks2}, engaged={reusedTasks})");
+            // Engaging override that draws nothing → the series' Invalidate is skipped → no series paints.
+            var engaging = new RecordingOverride();
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(engaging)));
+            var engaged = Measure(NewChart(), engaging, engage: true);
+
+            Assert.IsTrue(declined > 0, "a declining override must let the series render its own paints");
+            Assert.IsTrue(engaged < declined,
+                $"an engaging override must bypass the series' per-point Invalidate (declined={declined}, engaged={engaged})");
         }
         finally
         {
             LiveCharts.Configure(s => s.AddSkiaSharp());
         }
     }
+
+    // Axes stripped of painted parts so CountPaintTasks reflects only the series geometries.
+    private static Axis BareAxis() => new()
+    {
+        LabelsPaint = null,
+        SeparatorsPaint = null,
+        SubseparatorsPaint = null,
+        TicksPaint = null,
+        SubticksPaint = null,
+    };
 }

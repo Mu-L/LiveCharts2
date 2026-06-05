@@ -40,9 +40,8 @@ public abstract class ChartEngine
 
     /// <summary>
     /// Optionally returns an override that takes over drawing, bounds and hit-testing
-    /// for the given <paramref name="series"/> (bypassing its per-point pipeline) —
-    /// e.g. a batched level-of-detail renderer. Returns <see langword="null"/> (the
-    /// default) to let the series handle itself.
+    /// for the given <paramref name="series"/> (bypassing its per-point pipeline). Returns
+    /// <see langword="null"/> (the default) to let the series handle itself.
     /// <para>
     /// Consulted frequently — once per measure pass for rendering and bounds, and
     /// again on every pointer move/down for hit-testing, plus on series removal — and
