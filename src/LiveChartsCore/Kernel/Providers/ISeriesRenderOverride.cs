@@ -28,11 +28,11 @@ using LiveChartsCore.Measure;
 namespace LiveChartsCore.Kernel.Providers;
 
 /// <summary>
-/// An optional hook a <see cref="ChartEngine"/> can supply to take over the
-/// rendering of a series, bypassing its per-point <see cref="IChartElement.Invalidate(Chart)"/>.
-/// High-performance backends (e.g. a batched level-of-detail renderer) use this to
-/// swap in a faster draw path with no user code change. The default OSS engine
-/// returns none, so the series renders itself.
+/// An optional hook a <see cref="ChartEngine"/> can supply to take over the rendering of a
+/// series, bypassing its per-point <see cref="IChartElement.Invalidate(Chart)"/>. An override
+/// that takes over owns the series' visuals while engaged — it clears the series' own per-point
+/// visuals on engage and releases them on removal. The default engine returns none, so the
+/// series renders itself.
 /// </summary>
 public interface ISeriesRenderOverride
 {
@@ -40,27 +40,23 @@ public interface ISeriesRenderOverride
     /// Renders <paramref name="series"/> for the current measure pass. Return
     /// <see langword="true"/> if the override took over rendering; return
     /// <see langword="false"/> to fall back to the series' own
-    /// <see cref="IChartElement.Invalidate(Chart)"/> (e.g. when a density gate
-    /// decides the series is small enough to draw normally).
+    /// <see cref="IChartElement.Invalidate(Chart)"/>.
     /// </summary>
     bool TryRender(ISeries series, Chart chart);
 
     /// <summary>
-    /// Optionally supplies the series' bounds without the per-point fetch — e.g. a
-    /// level-of-detail backend reads them from an aggregation pyramid in O(budget)
-    /// instead of walking every point. Return <see langword="true"/> with
-    /// <paramref name="bounds"/> set to take over; <see langword="false"/> to let the
-    /// series compute its own <see cref="ICartesianSeries.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>.
+    /// Optionally supplies the series' bounds without the per-point fetch. Return
+    /// <see langword="true"/> with <paramref name="bounds"/> set to take over;
+    /// <see langword="false"/> to let the series compute its own
+    /// <see cref="ICartesianSeries.GetBounds(Chart, ICartesianAxis, ICartesianAxis)"/>.
     /// </summary>
     bool TryGetBounds(
         ISeries series, Chart chart, ICartesianAxis secondaryAxis, ICartesianAxis primaryAxis,
         out SeriesBounds bounds);
 
     /// <summary>
-    /// Optionally hit-tests the series without the per-point fetch — a level-of-detail
-    /// backend finds the nearest decimated point in O(budget) instead of walking every
-    /// point on each pointer move. Return the hit points to take over; return
-    /// <see langword="null"/> to fall back to
+    /// Optionally hit-tests the series without the per-point fetch. Return the hit points
+    /// to take over; return <see langword="null"/> to fall back to
     /// <see cref="ISeries.FindHitPoints(Chart, LvcPoint, FindingStrategy, FindPointFor)"/>.
     /// </summary>
     IEnumerable<ChartPoint>? TryFindHitPoints(

@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Events;
+using LiveChartsCore.Kernel.Providers;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
@@ -633,9 +634,8 @@ public abstract class Chart
         _toDeleteElements = [.. _everMeasuredElements];
 
     /// <summary>
-    /// Hit-tests a series, giving a provider render override (e.g. a level-of-detail
-    /// backend) the chance to answer from its decimated data instead of the per-point
-    /// fetch. Falls back to the series' own hit-test.
+    /// Hit-tests a series, giving a provider render override the chance to answer instead
+    /// of the per-point fetch. Falls back to the series' own hit-test.
     /// </summary>
     internal IEnumerable<ChartPoint> HitTestSeries(
         ISeries series, LvcPoint pointerPosition, FindingStrategy strategy, FindPointFor findPointFor)
@@ -648,16 +648,13 @@ public abstract class Chart
     /// </summary>
     public void AddVisual(IChartElement element)
     {
-        // A provider may supply a render override for a series (e.g. the batched
-        // level-of-detail renderer in performance backends), taking over drawing
-        // and bypassing the per-point Invalidate. TryRender returns false when it
-        // declines (e.g. a density gate), in which case the series renders itself.
         if (element is not ISeries s ||
             LiveCharts.DefaultSettings.GetProvider().GetRenderOverride(s) is not { } renderOverride ||
             !renderOverride.TryRender(s, this))
         {
             element.Invalidate(this);
         }
+        // else: the override took over rendering this series and owns its visuals.
 
         element.RemoveOldPaints(View);
         _ = _everMeasuredElements.Add(element);
