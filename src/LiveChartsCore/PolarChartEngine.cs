@@ -478,7 +478,7 @@ public class PolarChartEngine(
                 Margin.IsAuto(rm.Right) ? m.Right : rm.Right,
                 Margin.IsAuto(rm.Bottom) ? m.Bottom : rm.Bottom);
 
-            SetDrawMargin(ControlSize, m);
+            SetDrawMargin(ControlSize, actualMargin);
         }
 
         // invalid dimensions, probably the chart is too small or it is initializing in the UI and
