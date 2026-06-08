@@ -1284,19 +1284,6 @@ public class CartesianChartEngine(
         Canvas.Zones[CanvasZone.YCrosshair].Clip = new(new(0, y), new(size.Width, h));
     }
 
-    // Hides every zone that holds plot content (series + axis separators/crosshairs) by clipping it
-    // to a zero-area rectangle. Used when the draw margin collapses so the last, now-invalid frame
-    // is not left painted. A constructed (location, size) rectangle is NOT LvcRectangle.Empty — Empty
-    // means "no clip / draw everywhere" — so even at the origin this reliably clips out all pixels.
-    // The legend/tooltip/title live in NoClip and are intentionally left visible.
-    private void HidePlotZones()
-    {
-        var hidden = new LvcRectangle(new LvcPoint(), new LvcSize(0, 0));
-        Canvas.Zones[CanvasZone.DrawMargin].Clip = hidden;
-        Canvas.Zones[CanvasZone.XCrosshair].Clip = hidden;
-        Canvas.Zones[CanvasZone.YCrosshair].Clip = hidden;
-    }
-
     private double GetThreshold(ICartesianAxis axis, Scaler scale)
     {
         var bouncingDistancePixels = axis.Orientation == AxisOrientation.X

@@ -152,7 +152,18 @@ public class TreemapChartEngine(
 
         SetDrawMargin(ControlSize, actualMargin);
 
-        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0) return;
+        // invalid dimensions (too small, or initializing with no size yet). Don't just return — the
+        // canvas would keep painting the previous frame's geometry at its old transform. Hide the
+        // plot instead; a resize back to a valid size resets the clips below and re-measures.
+        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0)
+        {
+            HidePlotZones();
+            Canvas.Invalidate();
+            return;
+        }
+
+        // treemap doesn't clip its plot zone, so undo a previous collapse-hide before drawing.
+        ResetPlotZoneClips();
 
         if (View.Title is not null) AddTitleToChart();
 

@@ -564,6 +564,36 @@ public abstract class Chart
     }
 
     /// <summary>
+    /// Hides the plot content by clipping the draw-margin and crosshair zones to a zero-area
+    /// rectangle. Used by every chart engine when the draw margin collapses (the reserved margins
+    /// exceed the control), so the previous, now-invalid frame is not left painted at its old
+    /// transform. A constructed (location, size) rectangle is NOT <see cref="LvcRectangle.Empty"/> —
+    /// Empty means "no clip / draw everywhere" — so even at the origin this reliably clips out all
+    /// pixels. The legend, title and labels live in the NoClip zone and are intentionally untouched.
+    /// </summary>
+    protected void HidePlotZones()
+    {
+        var hidden = new LvcRectangle(new LvcPoint(), new LvcSize(0, 0));
+        Canvas.Zones[CanvasZone.DrawMargin].Clip = hidden;
+        Canvas.Zones[CanvasZone.XCrosshair].Clip = hidden;
+        Canvas.Zones[CanvasZone.YCrosshair].Clip = hidden;
+    }
+
+    /// <summary>
+    /// Resets the plot zone clips back to <see cref="LvcRectangle.Empty"/> (no clip). Engines that do
+    /// not otherwise manage their clips (pie, polar, treemap, sankey) call this on a valid measure so
+    /// a previous <see cref="HidePlotZones"/> is undone and the plot becomes visible again. Engines
+    /// that set real clips on every valid measure (cartesian via RegisterClipZones, geo map) restore
+    /// themselves and don't need it.
+    /// </summary>
+    protected void ResetPlotZoneClips()
+    {
+        Canvas.Zones[CanvasZone.DrawMargin].Clip = LvcRectangle.Empty;
+        Canvas.Zones[CanvasZone.XCrosshair].Clip = LvcRectangle.Empty;
+        Canvas.Zones[CanvasZone.YCrosshair].Clip = LvcRectangle.Empty;
+    }
+
+    /// <summary>
     /// Saves the previous size of the chart.
     /// </summary>
     protected void SetPreviousSize() => _previousSize = ControlSize;
