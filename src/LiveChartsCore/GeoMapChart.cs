@@ -561,10 +561,12 @@ public class GeoMapChart : Chart
 
         if (View.Title is not null) AddTitleToChart();
 
-        // Bail when the chart is too small for a map after reservations
-        // (matches cartesian behavior).
+        // Bail when the chart is too small for a map after reservations (matches cartesian behavior).
+        // Hide the plot zone first so the previous, now-invalid map isn't left painted at its old
+        // transform; the valid path below re-sets the draw-margin clip, so recovery is automatic.
         if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0)
         {
+            HidePlotZones();
             Canvas.Invalidate();
             return;
         }

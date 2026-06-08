@@ -735,8 +735,19 @@ public class CartesianChartEngine(
         SetDrawMargin(ControlSize, actualMargin);
 
         // invalid dimensions, probably the chart is too small
-        // or it is initializing in the UI and has no dimensions yet
-        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0) return;
+        // or it is initializing in the UI and has no dimensions yet.
+        // We can't lay the chart out, but we must NOT just return: the canvas keeps painting the
+        // last frame's geometry at its previous transform, so the series looks "stuck" at the old
+        // size. Instead clip the plot zones to nothing so the stale series/separators are hidden,
+        // then repaint. Nothing is disposed — a resize back to a valid size re-measures and
+        // RegisterClipZones() restores the real clip, so the chart returns instantly with no
+        // animation restart.
+        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0)
+        {
+            HidePlotZones();
+            Canvas.Invalidate();
+            return;
+        }
 
         DrawMarginDefined?.Invoke(this);
 

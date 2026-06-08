@@ -481,9 +481,19 @@ public class PolarChartEngine(
             SetDrawMargin(ControlSize, m);
         }
 
-        // invalid dimensions, probably the chart is too small
-        // or it is initializing in the UI and has no dimensions yet
-        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0) return;
+        // invalid dimensions, probably the chart is too small or it is initializing in the UI and
+        // has no dimensions yet. Don't just return — the canvas would keep painting the previous
+        // frame's geometry at its old transform (the series looks frozen at the prior size). Hide the
+        // plot instead; a resize back to a valid size resets the clips below and re-measures.
+        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0)
+        {
+            HidePlotZones();
+            Canvas.Invalidate();
+            return;
+        }
+
+        // polar doesn't clip its plot zone, so undo a previous collapse-hide before drawing.
+        ResetPlotZoneClips();
 
         if (View.Title is not null) AddTitleToChart();
 
