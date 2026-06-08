@@ -737,8 +737,19 @@ public class CartesianChartEngine(
         SetDrawMargin(ControlSize, actualMargin);
 
         // invalid dimensions, probably the chart is too small
-        // or it is initializing in the UI and has no dimensions yet
-        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0) return;
+        // or it is initializing in the UI and has no dimensions yet.
+        // We can't lay the chart out, but we must NOT just return: the canvas keeps painting the
+        // last frame's geometry at its previous transform, so the series looks "stuck" at the old
+        // size. Instead clip the plot zones to nothing so the stale series/separators are hidden,
+        // then repaint. Nothing is disposed — a resize back to a valid size re-measures and
+        // RegisterClipZones() restores the real clip, so the chart returns instantly with no
+        // animation restart.
+        if (DrawMarginSize.Width <= 0 || DrawMarginSize.Height <= 0)
+        {
+            HidePlotZones();
+            Canvas.Invalidate();
+            return;
+        }
 
         DrawMarginDefined?.Invoke(this);
 
@@ -1271,6 +1282,19 @@ public class CartesianChartEngine(
         Canvas.Zones[CanvasZone.DrawMargin].Clip = new(new(x, y), new(w, h));
         Canvas.Zones[CanvasZone.XCrosshair].Clip = new(new(x, 0), new(w, size.Height));
         Canvas.Zones[CanvasZone.YCrosshair].Clip = new(new(0, y), new(size.Width, h));
+    }
+
+    // Hides every zone that holds plot content (series + axis separators/crosshairs) by clipping it
+    // to a zero-area rectangle. Used when the draw margin collapses so the last, now-invalid frame
+    // is not left painted. A constructed (location, size) rectangle is NOT LvcRectangle.Empty — Empty
+    // means "no clip / draw everywhere" — so even at the origin this reliably clips out all pixels.
+    // The legend/tooltip/title live in NoClip and are intentionally left visible.
+    private void HidePlotZones()
+    {
+        var hidden = new LvcRectangle(new LvcPoint(), new LvcSize(0, 0));
+        Canvas.Zones[CanvasZone.DrawMargin].Clip = hidden;
+        Canvas.Zones[CanvasZone.XCrosshair].Clip = hidden;
+        Canvas.Zones[CanvasZone.YCrosshair].Clip = hidden;
     }
 
     private double GetThreshold(ICartesianAxis axis, Scaler scale)
