@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using LiveChartsCore;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Providers;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SkiaSharp;
 
 namespace CoreTests.ChartTests;
 
@@ -162,6 +166,49 @@ public class AxisRenderOverrideTests
             _ = NewChart(NewDateTimeAxis(groupTimeUnits: false)).GetImage();
 
             Assert.IsFalse(grouper.Consulted, "the override must NOT be consulted when GroupTimeUnits is false");
+        }
+        finally
+        {
+            LiveCharts.Configure(s => s.AddSkiaSharp());
+        }
+    }
+
+    [TestMethod]
+    public void GroupedLabels_CenterTheirLines_AndResetWhenNotGrouped()
+    {
+        // Grouped labels are multi-line blocks centered on their tick; left-aligned lines would
+        // shift the narrow line toward the previous tick (the "18:0000:00" collision). Ungrouped
+        // axes must keep the default Start alignment so existing layouts don't move.
+        var grouper = new RecordingGrouper();
+        try
+        {
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+
+            var groupedPaint = new SolidColorPaint(SKColors.Black);
+            var groupedAxis = NewDateTimeAxis(groupTimeUnits: true);
+            groupedAxis.LabelsPaint = groupedPaint;
+            var groupedChart = NewChart(groupedAxis);
+            _ = CoreObjectsTests.ChangingPaintTasks.DrawChart(groupedChart);
+
+            var groupedLabels = groupedPaint.GetGeometries(groupedChart.CoreCanvas)
+                .Cast<BaseLabelGeometry>().ToArray();
+            Assert.IsTrue(groupedLabels.Length > 0, "expected drawn axis labels");
+            Assert.IsTrue(
+                groupedLabels.All(l => l.LinesAlignment == Align.Middle),
+                "grouped multi-line labels must center their lines on the tick");
+
+            var plainPaint = new SolidColorPaint(SKColors.Black);
+            var plainAxis = NewDateTimeAxis(groupTimeUnits: false);
+            plainAxis.LabelsPaint = plainPaint;
+            var plainChart = NewChart(plainAxis);
+            _ = CoreObjectsTests.ChangingPaintTasks.DrawChart(plainChart);
+
+            var plainLabels = plainPaint.GetGeometries(plainChart.CoreCanvas)
+                .Cast<BaseLabelGeometry>().ToArray();
+            Assert.IsTrue(plainLabels.Length > 0, "expected drawn axis labels");
+            Assert.IsTrue(
+                plainLabels.All(l => l.LinesAlignment == Align.Start),
+                "ungrouped labels must keep the default Start alignment");
         }
         finally
         {
