@@ -1551,6 +1551,11 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         var actualRotatation = r;
         const double toRadians = Math.PI / 180;
 
+        // Grouped labels are multi-line blocks centered on their tick (fine unit on one line,
+        // coarse context on another); left-aligned lines would shift the narrow line toward the
+        // previous tick. Reset when grouping turns off so the default layout returns.
+        label.LinesAlignment = _groupedLabeler is not null ? Align.Middle : Align.Start;
+
         if (_orientation == AxisOrientation.Y)
         {
             actualRotatation %= 180;

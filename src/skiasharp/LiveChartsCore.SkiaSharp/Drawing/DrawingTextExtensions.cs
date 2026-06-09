@@ -87,8 +87,7 @@ internal static class DrawingTextExtensions
             canvas.DrawRect(rax, ray, size.Width, size.Height, bgPaint);
         }
 
-        var horizontalPadding = label.Padding.Left + label.Padding.Right;
-        var lao = 0f;
+        var contentWidth = size.Width - label.Padding.Left - label.Padding.Right;
 
         foreach (var pb in blobArray.Blobs)
         {
@@ -97,9 +96,15 @@ internal static class DrawingTextExtensions
 
             var blobPosition = pb.Position;
 
-            // line alignmen offset.
-            if (blobArray.IsRTL)
-                lao = size.Width - horizontalPadding - blobArray.LineWidths[pb.Line];
+            // line alignment offset.
+            var lao = blobArray.IsRTL
+                ? contentWidth - blobArray.LineWidths[pb.Line]
+                : label.LinesAlignment switch
+                {
+                    Align.Middle => (contentWidth - blobArray.LineWidths[pb.Line]) * 0.5f,
+                    Align.End => contentWidth - blobArray.LineWidths[pb.Line],
+                    _ => 0f
+                };
 
             canvas.DrawText(
                 pb.Blob,
