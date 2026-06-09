@@ -110,6 +110,29 @@ public class AxisRenderOverrideTests
     }
 
     [TestMethod]
+    public void GroupTimeUnits_True_OnTimeSpanAxis_ConsultsOverride()
+    {
+        var grouper = new RecordingGrouper();
+        try
+        {
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+            _ = NewChart(new TimeSpanAxis(TimeSpan.FromTicks(1), span => span.Ticks.ToString())
+            {
+                GroupTimeUnits = true,
+                MinLimit = 0,
+                MaxLimit = 100
+            }).GetImage();
+
+            Assert.IsTrue(grouper.Consulted, "the override must be consulted when GroupTimeUnits is true");
+            Assert.IsTrue(grouper.LabelerUsed, "the override's labeler must be used to draw the labels");
+        }
+        finally
+        {
+            LiveCharts.Configure(s => s.AddSkiaSharp());
+        }
+    }
+
+    [TestMethod]
     public void GroupedSeparators_SingleUseIterator_AreMaterialized()
     {
         var grouper = new SingleUseGrouper();
@@ -139,6 +162,23 @@ public class AxisRenderOverrideTests
             _ = NewChart(NewDateTimeAxis(groupTimeUnits: false)).GetImage();
 
             Assert.IsFalse(grouper.Consulted, "the override must NOT be consulted when GroupTimeUnits is false");
+        }
+        finally
+        {
+            LiveCharts.Configure(s => s.AddSkiaSharp());
+        }
+    }
+
+    [TestMethod]
+    public void PlainAxis_DoesNotConsultOverride()
+    {
+        var grouper = new RecordingGrouper();
+        try
+        {
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+            _ = NewChart(new Axis { MinLimit = 0, MaxLimit = 100 }).GetImage();
+
+            Assert.IsFalse(grouper.Consulted, "the override must NOT be consulted for axes the engine does not match");
         }
         finally
         {
