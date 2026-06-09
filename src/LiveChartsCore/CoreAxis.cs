@@ -77,7 +77,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     internal DoubleMotionProperty? _animatableMin;
     internal DoubleMotionProperty? _animatableMax;
 
-    // Per-measure date-grouping state supplied by an IAxisRenderOverride (when GroupDates is set).
+    // Per-measure grouping state supplied by the provider's IAxisRenderOverride (when any).
     // Computed once per visible range and cached by it, so re-measuring at the same zoom does not
     // re-consult the provider — and so we never mutate the axis' own CustomSeparators/Labeler, which
     // would notify a property change every frame and loop the measure forever.
@@ -210,9 +210,6 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
 
     /// <inheritdoc cref="ICartesianAxis.SeparatorsAtCenter"/>
     public bool SeparatorsAtCenter { get; set => SetProperty(ref field, value); } = true;
-
-    /// <inheritdoc cref="ICartesianAxis.GroupDates"/>
-    public bool GroupDates { get; set => SetProperty(ref field, value); }
 
     /// <inheritdoc cref="ICartesianAxis.TicksAtCenter"/>
     public bool TicksAtCenter { get; set => SetProperty(ref field, value); } = true;
@@ -1168,13 +1165,15 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         [SeparatorsPaint, LabelsPaint, NamePaint, ZeroPaint, TicksPaint, SubticksPaint, SubseparatorsPaint];
 
     // Asks the provider's IAxisRenderOverride (if any) to supply grouped separators + labeler for the
-    // current visible range when GroupDates is on. Cached by (min, max) so the same zoom does not
-    // re-consult; the results are read transiently by GetActualLabeler / EnumerateSeparators (the axis'
-    // own CustomSeparators / Labeler are never written). Called at the start of both size and draw
-    // passes so two-line grouped labels reserve the right margin AND draw consistently.
+    // current visible range. The engine decides whether the axis is overridden (e.g. by the axis'
+    // concrete type and its own opt-in flags) — when it returns null the axis lays itself out as
+    // usual. Cached by (min, max) so the same zoom does not re-consult; the results are read
+    // transiently by GetActualLabeler / EnumerateSeparators (the axis' own CustomSeparators / Labeler
+    // are never written). Called at the start of both size and draw passes so two-line grouped labels
+    // reserve the right margin AND draw consistently.
     private void EnsureGrouped(Chart chart)
     {
-        if (!GroupDates)
+        if (LiveCharts.DefaultSettings.GetProvider().GetAxisRenderOverride(this) is not { } axisOverride)
         {
             if (_groupedSeparators is not null || _groupedLabeler is not null)
                 _possibleMaxLabelsSize = null; // labels are no longer grouped → recompute the size
@@ -1198,8 +1197,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         // cached label size so it is recomputed with the new labeler.
         _possibleMaxLabelsSize = null;
 
-        if (LiveCharts.DefaultSettings.GetProvider().GetAxisRenderOverride(this) is { } axisOverride &&
-            axisOverride.TryGroup(this, chart, min, max, out var separators, out var labeler))
+        if (axisOverride.TryGroup(this, chart, min, max, out var separators, out var labeler))
         {
             // Materialize: the separators are re-enumerated in both the size and draw passes, so a
             // single-use iterator from the override would yield nothing the second time.
