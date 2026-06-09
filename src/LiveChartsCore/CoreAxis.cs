@@ -27,6 +27,7 @@ using System.Linq;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Helpers;
+using LiveChartsCore.Kernel.Providers;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Motion;
@@ -84,6 +85,10 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     private IEnumerable<double>? _groupedSeparators;
     private Func<double, string>? _groupedLabeler;
     private (double Min, double Max)? _groupedSignature;
+
+    // Band rectangles supplied by the provider's IAxisBandsOverride (when any), keyed per chart
+    // by the band start value so zoom/pan moves the same instance instead of recreating it.
+    private readonly Dictionary<Chart, Dictionary<string, BoundedDrawnGeometry>> _activeBands = [];
 
     // Shared by every geometry this axis animates. Mutated in-place on each Invalidate so
     // AnimationsSpeed/EasingFunction changes reach already-created visuals — every MotionProperty
@@ -747,11 +752,117 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         EnsureTicksPath(in ctx);
 
         var measured = new HashSet<AxisVisualSeprator>();
+        var separatorValues = new List<double>();
 
         foreach (var i in EnumerateSeparators(ctx.Start, ctx.Max, ctx.Step))
+        {
+            separatorValues.Add(i);
             MeasureSeparatorAtValue(i, separators, measured, in ctx);
+        }
 
         CollectOrphanSeparators(separators, measured, in ctx);
+        EnsureBands(in ctx, separatorValues);
+    }
+
+    // Draws the bands supplied by the provider's IAxisBandsOverride (when any) as rectangles in
+    // the draw margin, behind the series. The axis owns the geometry lifecycle — bands are keyed
+    // by their start value so zoom/pan animates the same instance, new bands fade in and bands
+    // leaving the range animate out — while the override only decides the ranges and the paint.
+    private void EnsureBands(in AxisMeasureContext ctx, IReadOnlyList<double> separatorValues)
+    {
+        var chart = ctx.Chart;
+        var axisOverride =
+            LiveCharts.DefaultSettings.GetProvider().GetAxisRenderOverride(this) as IAxisBandsOverride;
+
+        IEnumerable<AxisBand>? bands = null;
+        Paint? bandsPaint = null;
+        var hasBands =
+            axisOverride is not null &&
+            axisOverride.TryGetBands(this, chart, ctx.Min, ctx.Max, separatorValues, out bands, out bandsPaint) &&
+            bands is not null && bandsPaint is not null;
+
+        var hasActive = _activeBands.TryGetValue(chart, out var active);
+
+        if (!hasBands)
+        {
+            if (!hasActive) return;
+            foreach (var band in active!.Values)
+                SetUpdateMode(band, UpdateMode.UpdateAndRemove);
+            _ = _activeBands.Remove(chart);
+            return;
+        }
+
+        if (!hasActive)
+        {
+            active = [];
+            _activeBands[chart] = active;
+        }
+
+        // The paint comes from the override, not from an axis property setter, so nothing stamped
+        // its style — an Undefined style draws neither fill nor stroke. Bands are fills.
+        if (bandsPaint!.PaintStyle == PaintStyle.Undefined) bandsPaint.PaintStyle = PaintStyle.Fill;
+        if (bandsPaint.ZIndex == 0) bandsPaint.ZIndex = PaintConstants.AxisBandsPaintZIndex;
+        chart.Canvas.AddDrawableTask(bandsPaint, zone: CanvasZone.DrawMargin);
+
+        var measuredBands = new HashSet<string>();
+
+        foreach (var band in bands!)
+        {
+            var key = band.Start.ToString("R");
+            if (!measuredBands.Add(key)) continue;
+
+            // Stamp position with the current scaler, target with the next one — same source →
+            // target convention the separators use, so bands slide along with them on zoom/pan.
+            GetBandRect(in ctx, band, ctx.ActualScale, out var xc, out var yc, out var wc, out var hc);
+            GetBandRect(in ctx, band, ctx.Scale, out var x, out var y, out var w, out var h);
+
+            if (!active!.TryGetValue(key, out var rect))
+            {
+                rect = axisOverride!.CreateBandGeometry();
+                rect.X = xc; rect.Y = yc; rect.Width = wc; rect.Height = hc;
+                rect.Animate(GetAnimation(chart));
+                SetUpdateMode(rect, UpdateMode.UpdateAndComplete);
+                active[key] = rect;
+            }
+
+            bandsPaint.AddGeometryToPaintTask(chart.Canvas, rect);
+
+            rect.X = x; rect.Y = y; rect.Width = w; rect.Height = h;
+            rect.RemoveOnCompleted = false;
+            SetUpdateMode(rect, UpdateMode.Update);
+        }
+
+        // Sweep bands whose range is gone; they animate out and detach on completion.
+        foreach (var pair in active!.ToArray())
+        {
+            if (measuredBands.Contains(pair.Key)) continue;
+            SetUpdateMode(pair.Value, UpdateMode.UpdateAndRemove);
+            _ = active.Remove(pair.Key);
+        }
+    }
+
+    private static void GetBandRect(
+        in AxisMeasureContext ctx, AxisBand band, Scaler scaler,
+        out float x, out float y, out float w, out float h)
+    {
+        if (ctx.Orientation == AxisOrientation.X)
+        {
+            var x0 = scaler.ToPixels(band.Start);
+            var x1 = scaler.ToPixels(band.End);
+            x = Math.Min(x0, x1);
+            w = Math.Abs(x1 - x0);
+            y = ctx.TopY;
+            h = ctx.BottomY - ctx.TopY;
+        }
+        else
+        {
+            var y0 = scaler.ToPixels(band.Start);
+            var y1 = scaler.ToPixels(band.End);
+            y = Math.Min(y0, y1);
+            h = Math.Abs(y1 - y0);
+            x = ctx.LeftX;
+            w = ctx.RightX - ctx.LeftX;
+        }
     }
 
     /// <inheritdoc cref="ICartesianAxis.InvalidateCrosshair(Chart, LvcPoint)"/>
@@ -1140,6 +1251,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         }
 
         _ = activeSeparators.Remove(chart);
+        _ = _activeBands.Remove(chart);
     }
 
     /// <inheritdoc cref="IChartElement.RemoveFromUI(Chart)"/>
@@ -1147,6 +1259,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     {
         base.RemoveFromUI(chart);
         _ = activeSeparators.Remove(chart);
+        _ = _activeBands.Remove(chart);
     }
 
     /// <summary>
