@@ -1186,9 +1186,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         var min = MinLimit ?? _visibleDataBounds.Min;
         AxisLimit.ValidateLimits(ref min, ref max, MinStep);
 
-        if (_groupedSignature is { } sig &&
-            Math.Abs(sig.Min - min) < double.Epsilon &&
-            Math.Abs(sig.Max - max) < double.Epsilon) return;
+        if (_groupedSignature is { } sig && sig.Min == min && sig.Max == max) return;
         _groupedSignature = (min, max);
 
         if (LiveCharts.DefaultSettings.GetProvider().GetAxisRenderOverride(this) is { } axisOverride &&
