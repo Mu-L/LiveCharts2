@@ -109,7 +109,7 @@ public interface ICartesianAxis : IPlane, INotifyPropertyChanged
     /// Gets or sets a value indicating whether the axis should group dates into adaptive, multi-level
     /// labels (e.g. a fine unit on the first line and a coarser context on the second, updating as you
     /// zoom). Default is false. Requires a provider that supplies an
-    /// <see cref="Providers.IAxisRenderOverride"/> (otherwise the flag is ignored).
+    /// <see cref="LiveChartsCore.Kernel.Providers.IAxisRenderOverride"/> (otherwise the flag is ignored).
     /// </summary>
     bool GroupDates { get; set; }
 

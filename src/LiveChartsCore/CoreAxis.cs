@@ -1176,6 +1176,8 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     {
         if (!GroupDates)
         {
+            if (_groupedSeparators is not null || _groupedLabeler is not null)
+                _possibleMaxLabelsSize = null; // labels are no longer grouped → recompute the size
             _groupedSeparators = null;
             _groupedLabeler = null;
             _groupedSignature = null;
@@ -1186,13 +1188,24 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         var min = MinLimit ?? _visibleDataBounds.Min;
         AxisLimit.ValidateLimits(ref min, ref max, MinStep);
 
-        if (_groupedSignature is { } sig && sig.Min == min && sig.Max == max) return;
+        // Cache by the visible range: re-consulting (and re-allocating separators) is pointless while
+        // the zoom hasn't moved. .Equals avoids the float == operator while keeping an exact cache key
+        // (a miss just recomputes — no correctness impact).
+        if (_groupedSignature is { } sig && sig.Min.Equals(min) && sig.Max.Equals(max)) return;
         _groupedSignature = (min, max);
+
+        // The range changed, so the grouped labels (and their two-line height) change too: drop the
+        // cached label size so it is recomputed with the new labeler.
+        _possibleMaxLabelsSize = null;
 
         if (LiveCharts.DefaultSettings.GetProvider().GetAxisRenderOverride(this) is { } axisOverride &&
             axisOverride.TryGroup(this, chart, min, max, out var separators, out var labeler))
         {
-            _groupedSeparators = separators;
+            // Materialize: the separators are re-enumerated in both the size and draw passes, so a
+            // single-use iterator from the override would yield nothing the second time.
+            _groupedSeparators = separators is null
+                ? null
+                : separators as IReadOnlyList<double> ?? [.. separators];
             _groupedLabeler = labeler;
         }
         else

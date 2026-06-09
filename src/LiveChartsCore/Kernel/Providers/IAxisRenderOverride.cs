@@ -28,9 +28,10 @@ namespace LiveChartsCore.Kernel.Providers;
 
 /// <summary>
 /// An optional hook a <see cref="ChartEngine"/> can supply to take over how a cartesian axis lays out
-/// its separators and labels. It is consulted on every measure (so it can adapt to zoom/pan) when the
-/// axis opts in via <see cref="ICartesianAxis.GroupDates"/>. The default engine returns none, so the
-/// axis lays itself out as usual.
+/// its separators and labels. It is consulted while measuring the axis when it opts in via
+/// <see cref="ICartesianAxis.GroupDates"/> — the axis caches the result by the visible range, so
+/// <see cref="TryGroup"/> re-runs when you zoom or pan but is skipped while the range is unchanged.
+/// The default engine returns none, so the axis lays itself out as usual.
 /// </summary>
 public interface IAxisRenderOverride
 {
