@@ -52,6 +52,15 @@ public abstract class ChartEngine
     public virtual ISeriesRenderOverride? GetRenderOverride(ISeries series) => null;
 
     /// <summary>
+    /// Gets the render override for the given cartesian axis, if any. The override takes over how the
+    /// axis lays out its separators and labels when the axis opts in via
+    /// <see cref="ICartesianAxis.GroupDates"/> (consulted while measuring; the axis caches the result
+    /// by the visible range, so it re-runs on zoom/pan but is skipped while the range is unchanged).
+    /// Return <see langword="null"/> (the default) to let the axis lay itself out as usual.
+    /// </summary>
+    public virtual IAxisRenderOverride? GetAxisRenderOverride(ICartesianAxis axis) => null;
+
+    /// <summary>
     /// Gets a new instance of the default map factory.
     /// </summary>
     /// <returns></returns>

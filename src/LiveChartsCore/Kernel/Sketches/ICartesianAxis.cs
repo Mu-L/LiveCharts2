@@ -106,6 +106,14 @@ public interface ICartesianAxis : IPlane, INotifyPropertyChanged
     bool SeparatorsAtCenter { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the axis should group dates into adaptive, multi-level
+    /// labels (e.g. a fine unit on the first line and a coarser context on the second, updating as you
+    /// zoom). Default is false. Requires a provider that supplies an
+    /// <see cref="LiveChartsCore.Kernel.Providers.IAxisRenderOverride"/> (otherwise the flag is ignored).
+    /// </summary>
+    bool GroupDates { get; set; }
+
+    /// <summary>
     /// Gets or sets the reserved area for the labels.
     /// </summary>
     LvcRectangle LabelsDesiredSize { get; set; }

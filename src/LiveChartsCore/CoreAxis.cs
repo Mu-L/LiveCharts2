@@ -77,6 +77,14 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     internal DoubleMotionProperty? _animatableMin;
     internal DoubleMotionProperty? _animatableMax;
 
+    // Per-measure date-grouping state supplied by an IAxisRenderOverride (when GroupDates is set).
+    // Computed once per visible range and cached by it, so re-measuring at the same zoom does not
+    // re-consult the provider — and so we never mutate the axis' own CustomSeparators/Labeler, which
+    // would notify a property change every frame and loop the measure forever.
+    private IEnumerable<double>? _groupedSeparators;
+    private Func<double, string>? _groupedLabeler;
+    private (double Min, double Max)? _groupedSignature;
+
     // Shared by every geometry this axis animates. Mutated in-place on each Invalidate so
     // AnimationsSpeed/EasingFunction changes reach already-created visuals — every MotionProperty
     // holds a reference to this same instance, not a copy.
@@ -202,6 +210,9 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
 
     /// <inheritdoc cref="ICartesianAxis.SeparatorsAtCenter"/>
     public bool SeparatorsAtCenter { get; set => SetProperty(ref field, value); } = true;
+
+    /// <inheritdoc cref="ICartesianAxis.GroupDates"/>
+    public bool GroupDates { get; set => SetProperty(ref field, value); }
 
     /// <inheritdoc cref="ICartesianAxis.TicksAtCenter"/>
     public bool TicksAtCenter { get; set => SetProperty(ref field, value); } = true;
@@ -331,6 +342,8 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     /// </summary>
     protected virtual AxisMeasureContext BeginMeasure(CartesianChartEngine chart)
     {
+        EnsureGrouped(chart);
+
         var animation = GetAnimation(chart);
 
         var controlSize = chart.ControlSize;
@@ -888,9 +901,12 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
 
     private IEnumerable<double> EnumerateSeparators(double start, double end, double step)
     {
-        if (CustomSeparators is not null)
+        // Grouped separators (from an IAxisRenderOverride) take priority, then the user's
+        // CustomSeparators, then the evenly-stepped default.
+        var custom = _groupedSeparators ?? CustomSeparators;
+        if (custom is not null)
         {
-            foreach (var s in CustomSeparators)
+            foreach (var s in custom)
                 yield return s;
 
             yield break;
@@ -956,6 +972,8 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     {
         if (_dataBounds is null) throw new Exception("DataBounds not found");
         if (LabelsPaint is null) return new LvcSize(0f, 0f);
+
+        EnsureGrouped(chart);
 
         var ts = (float)TextSize;
         var labeler = GetActualLabeler();
@@ -1149,8 +1167,58 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     protected internal override Paint?[] GetPaintTasks() =>
         [SeparatorsPaint, LabelsPaint, NamePaint, ZeroPaint, TicksPaint, SubticksPaint, SubseparatorsPaint];
 
+    // Asks the provider's IAxisRenderOverride (if any) to supply grouped separators + labeler for the
+    // current visible range when GroupDates is on. Cached by (min, max) so the same zoom does not
+    // re-consult; the results are read transiently by GetActualLabeler / EnumerateSeparators (the axis'
+    // own CustomSeparators / Labeler are never written). Called at the start of both size and draw
+    // passes so two-line grouped labels reserve the right margin AND draw consistently.
+    private void EnsureGrouped(Chart chart)
+    {
+        if (!GroupDates)
+        {
+            if (_groupedSeparators is not null || _groupedLabeler is not null)
+                _possibleMaxLabelsSize = null; // labels are no longer grouped → recompute the size
+            _groupedSeparators = null;
+            _groupedLabeler = null;
+            _groupedSignature = null;
+            return;
+        }
+
+        var max = MaxLimit ?? _visibleDataBounds.Max;
+        var min = MinLimit ?? _visibleDataBounds.Min;
+        AxisLimit.ValidateLimits(ref min, ref max, MinStep);
+
+        // Cache by the visible range: re-consulting (and re-allocating separators) is pointless while
+        // the zoom hasn't moved. .Equals avoids the float == operator while keeping an exact cache key
+        // (a miss just recomputes — no correctness impact).
+        if (_groupedSignature is { } sig && sig.Min.Equals(min) && sig.Max.Equals(max)) return;
+        _groupedSignature = (min, max);
+
+        // The range changed, so the grouped labels (and their two-line height) change too: drop the
+        // cached label size so it is recomputed with the new labeler.
+        _possibleMaxLabelsSize = null;
+
+        if (LiveCharts.DefaultSettings.GetProvider().GetAxisRenderOverride(this) is { } axisOverride &&
+            axisOverride.TryGroup(this, chart, min, max, out var separators, out var labeler))
+        {
+            // Materialize: the separators are re-enumerated in both the size and draw passes, so a
+            // single-use iterator from the override would yield nothing the second time.
+            _groupedSeparators = separators is null
+                ? null
+                : separators as IReadOnlyList<double> ?? [.. separators];
+            _groupedLabeler = labeler;
+        }
+        else
+        {
+            _groupedSeparators = null;
+            _groupedLabeler = null;
+        }
+    }
+
     private Func<double, string> GetActualLabeler()
     {
+        if (_groupedLabeler is not null) return _groupedLabeler;
+
         var labeler = Labeler;
 
         if (Labels is not null)
