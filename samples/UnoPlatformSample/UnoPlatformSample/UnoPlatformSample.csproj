@@ -35,8 +35,14 @@
             Localization;
             Navigation;
             ThemeService;
-            SkiaRenderer;
         </UnoFeatures>
+
+        <!--
+        Build with -p:LvcUnoNativeRenderer=true to exercise Uno's NATIVE renderer
+        instead of the Skia renderer — the #2020/#2333 scenario. Delete bin/obj
+        when switching renderers, stale Uno assets otherwise break the app at runtime.
+        -->
+        <UnoFeatures Condition="'$(LvcUnoNativeRenderer)' != 'true'">$(UnoFeatures);SkiaRenderer;</UnoFeatures>
 
         <NoWarn>$(NoWarn);MSB4240</NoWarn>
     </PropertyGroup>
