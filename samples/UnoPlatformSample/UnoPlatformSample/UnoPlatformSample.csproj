@@ -63,6 +63,14 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\ViewModelsSamples\ViewModelsSamples.csproj" />
+        <!--
+        The sample views reach ViewModelsSamples only through reflection bindings
+        ({Binding ...} with no x:Bind / compiled metadata), so the IL trimmer in a
+        wasm publish strips the property getters the binding engine needs — charts
+        inside DataTemplates silently disappear. Root the assembly so published
+        samples keep working.
+        -->
+        <TrimmerRootAssembly Include="ViewModelsSamples" />
     </ItemGroup>
 
     <ItemGroup Condition="$(UseNuGetForSamples)">
