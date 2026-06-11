@@ -21,6 +21,8 @@
 // SOFTWARE.
 
 using System;
+using System.Collections.Generic;
+using LiveChartsCore.Kernel;
 
 namespace LiveChartsCore.SkiaSharpView;
 
@@ -48,9 +50,30 @@ public class DateTimeAxis : Axis
 
     /// <summary>
     /// Gets or sets a value indicating whether the axis should group its time units into adaptive,
-    /// multi-level labels (e.g. a fine unit on the first line and a coarser context on the second,
-    /// updating as you zoom). Default is false. Requires a chart engine that supplies an axis render
-    /// override for this axis (otherwise the flag is ignored).
+    /// multi-level labels: a fine unit on the first line (seconds, minutes, hours, days, months or
+    /// years — whichever fits the visible range) and a coarser context on the second, re-tiering as
+    /// you zoom. Default is false.
     /// </summary>
     public bool GroupTimeUnits { get; set => SetProperty(ref field, value); }
+
+    /// <inheritdoc cref="CoreAxis{TTextGeometry, TLineGeometry}.GroupsSeparators"/>
+    protected override bool GroupsSeparators => GroupTimeUnits;
+
+    /// <inheritdoc cref="CoreAxis{TTextGeometry, TLineGeometry}.TryGroupSeparators"/>
+    protected override bool TryGroupSeparators(
+        Chart chart, double min, double max,
+        out IEnumerable<double>? separators, out Func<double, string>? labeler)
+    {
+        if (GroupTimeUnits) return DateTimeGrouping.TryGroup(min, max, out separators, out labeler);
+
+        separators = null;
+        labeler = null;
+        return false;
+    }
+
+    /// <inheritdoc cref="CoreAxis{TTextGeometry, TLineGeometry}.GetBandParityAnchor"/>
+    protected override long GetBandParityAnchor(double min, double max, IReadOnlyList<double> separators) =>
+        GroupTimeUnits
+            ? DateTimeGrouping.GetCellOrdinal(min, max, separators[0])
+            : base.GetBandParityAnchor(min, max, separators);
 }

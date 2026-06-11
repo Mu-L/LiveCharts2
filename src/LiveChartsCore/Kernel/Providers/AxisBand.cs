@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,20 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Drawing;
-using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.SkiaSharpView.Drawing.Geometries;
+namespace LiveChartsCore.Kernel.Providers;
 
-namespace LiveChartsCore.SkiaSharpView;
-
-/// <inheritdoc cref="ICartesianAxis" />
-public class Axis : CoreAxis<LabelGeometry, LineGeometry>
+/// <summary>
+/// A filled band over the axis range, expressed in axis units; drawn by the axis as a
+/// rectangle spanning the draw margin on the other dimension (see
+/// <c>ICartesianAxis.AlternatingBandsPaint</c>).
+/// </summary>
+/// <param name="start">The band start, in axis units.</param>
+/// <param name="end">The band end, in axis units.</param>
+internal readonly struct AxisBand(double start, double end)
 {
-    static Axis()
-    {
-        LiveChartsSkiaSharp.EnsureInitialized();
-    }
+    /// <summary>
+    /// Gets the band start, in axis units.
+    /// </summary>
+    public double Start { get; } = start;
 
-    /// <inheritdoc cref="CoreAxis{TTextGeometry, TLineGeometry}.CreateBandGeometry"/>
-    protected override BoundedDrawnGeometry? CreateBandGeometry() => new RectangleGeometry();
+    /// <summary>
+    /// Gets the band end, in axis units.
+    /// </summary>
+    public double End { get; } = end;
 }

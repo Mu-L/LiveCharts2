@@ -153,6 +153,16 @@ public interface ICartesianAxis : IPlane, INotifyPropertyChanged
     Paint? SubseparatorsPaint { get; set; }
 
     /// <summary>
+    /// Gets or sets the paint that fills the axis' alternating (zebra) bands: every other gap
+    /// between the axis separators is filled with a rectangle behind the series — for a Y axis
+    /// a draw-margin-wide stripe one step tall, for an X axis a draw-margin-tall stripe one
+    /// step wide. The bands follow the axis' active separators, so on a grouping axis (e.g. a
+    /// DateTimeAxis with GroupTimeUnits) they re-tier with the zoom, animating through the
+    /// transition. Null (the default) draws no bands.
+    /// </summary>
+    Paint? AlternatingBandsPaint { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of subseparators to draw.
     /// </summary>
     int SubseparatorsCount { get; set; }
