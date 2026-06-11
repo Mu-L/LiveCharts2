@@ -25,11 +25,11 @@ namespace LiveChartsCore.Kernel.Providers;
 /// <summary>
 /// A filled band over the axis range, expressed in axis units; drawn by the axis as a
 /// rectangle spanning the draw margin on the other dimension (see
-/// <see cref="IAxisBandsOverride"/>).
+/// <c>ICartesianAxis.AlternatingBandsPaint</c>).
 /// </summary>
 /// <param name="start">The band start, in axis units.</param>
 /// <param name="end">The band end, in axis units.</param>
-public readonly struct AxisBand(double start, double end)
+internal readonly struct AxisBand(double start, double end)
 {
     /// <summary>
     /// Gets the band start, in axis units.
