@@ -112,6 +112,25 @@ public class CollectionDeepObserverSkipTests
     }
 
     [TestMethod]
+    public void DefaultCtorWalk_NeverSubscribesInpcStructs()
+    {
+        // Defense in depth: even when the walk runs with tracking ON (the default 3-arg
+        // ctor — non-generic callers can't use the static gate), an INPC STRUCT must not
+        // be subscribed: the handler would attach to the enumeration's temporary box and
+        // root it in the observer.
+        InpcValue.Subscriptions = 0;
+        var observer = new CollectionDeepObserver(() => { });
+
+        var collection = new ObservableCollection<InpcValue> { new(), new() };
+        observer.Initialize(collection);
+        collection.Add(new InpcValue());
+
+        Assert.AreEqual(0, InpcValue.Subscriptions, "boxed-copy subscriptions can never fire — none may be made");
+
+        observer.Dispose();
+    }
+
+    [TestMethod]
     public void CallbackWalk_WithTrackingOff_DoesNotSubscribeInpc()
     {
         // The walk can be forced by per-item callbacks while property tracking is off
