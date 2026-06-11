@@ -91,6 +91,10 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
     // start value so zoom/pan moves the same instance instead of recreating it.
     private readonly Dictionary<Chart, Dictionary<string, BoundedDrawnGeometry>> _activeBands = [];
 
+    // Whether CreateBandGeometry supplies a geometry — probed once (constant per axis type);
+    // a platform without one has the bands disabled regardless of the paint.
+    private bool? _createsBandGeometries;
+
     // Shared by every geometry this axis animates. Mutated in-place on each Invalidate so
     // AnimationsSpeed/EasingFunction changes reach already-created visuals — every MotionProperty
     // holds a reference to this same instance, not a copy.
@@ -786,6 +790,15 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
             ? null
             : ComputeAlternatingBands(ctx.Min, ctx.Max, separatorValues);
 
+        if (bands is { Count: > 0 })
+        {
+            // A platform that supplies no band geometry cannot draw bands — same as having
+            // none, INCLUDING sweeping out any active ones, so the disabled state is always
+            // consistent. Probed once: the factory is constant for the axis type.
+            _createsBandGeometries ??= CreateBandGeometry() is not null;
+            if (_createsBandGeometries == false) bands = null;
+        }
+
         var hasActive = _activeBands.TryGetValue(chart, out var active);
 
         if (bands is not { Count: > 0 })
@@ -820,8 +833,9 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
 
             if (!active!.TryGetValue(key, out var rect))
             {
-                var newRect = CreateBandGeometry();
-                if (newRect is null) return; // the platform did not supply a band geometry
+                // Non-null by the probe above; a pathological override that alternates null
+                // just skips this band — no state was touched for it.
+                if (CreateBandGeometry() is not { } newRect) continue;
                 rect = newRect;
                 rect.X = xc; rect.Y = yc; rect.Width = wc; rect.Height = hc;
                 rect.Animate(GetAnimation(chart));
