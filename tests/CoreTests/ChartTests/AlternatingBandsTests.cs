@@ -129,6 +129,28 @@ public class AlternatingBandsTests
         Assert.IsTrue(second.GetGeometries(chart.CoreCanvas).Any(), "the bands ride the new paint");
     }
 
+    private sealed class NoBandGeometryAxis : Axis
+    {
+        protected override LiveChartsCore.Drawing.BoundedDrawnGeometry? CreateBandGeometry() => null;
+    }
+
+    [TestMethod]
+    public void PlatformWithoutBandGeometry_DisablesBandsCleanly()
+    {
+        // CreateBandGeometry returning null means "this platform draws no bands": with the
+        // paint set, nothing renders and no state is touched — the documented disable
+        // contract, exercised through a full measure.
+        var paint = new SolidColorPaint(SKColors.LightGray);
+        var xAxis = new NoBandGeometryAxis { MinLimit = 0, MaxLimit = 100, AlternatingBandsPaint = paint };
+
+        var chart = NewChart(xAxis);
+        _ = CoreObjectsTests.ChangingPaintTasks.DrawChart(chart);
+
+        Assert.AreEqual(
+            0, paint.GetGeometries(chart.CoreCanvas).Count(),
+            "a platform without a band geometry draws no bands, consistently");
+    }
+
     // ------------------------------------------------ the zebra computation (internal)
 
     [TestMethod]
