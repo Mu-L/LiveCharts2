@@ -203,11 +203,15 @@ public class CollectionDeepObserver : IObserver
         _onChange();
     }
 
+    // The `is not ValueType` guard: enumerating through the non-generic IEnumerable BOXES
+    // every struct, so an INPC-struct subscription would attach to that temporary box — a
+    // handler that can never fire — and root it in _itemsListening (mutated items then miss
+    // the value-equality Remove and leak past Dispose). Untrackable by nature, every ctor.
     private void OnItemsAdded(IEnumerable newItems)
     {
         foreach (var item in newItems)
         {
-            if (_tracksItemProperties && item is INotifyPropertyChanged inpcItem)
+            if (_tracksItemProperties && item is INotifyPropertyChanged inpcItem && item is not ValueType)
             {
                 if (_itemsListening.Add(inpcItem))
                 {
@@ -223,7 +227,8 @@ public class CollectionDeepObserver : IObserver
     {
         foreach (var item in oldItems)
         {
-            if (_tracksItemProperties && item is INotifyPropertyChanged inpcItem && _itemsListening.Remove(inpcItem))
+            if (_tracksItemProperties && item is INotifyPropertyChanged inpcItem && item is not ValueType
+                && _itemsListening.Remove(inpcItem))
             {
                 inpcItem.PropertyChanged -= OnItemPropertyChanged;
             }
