@@ -803,7 +803,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
             _activeBands[chart] = active;
         }
 
-        if (bandsPaint!.ZIndex == 0) bandsPaint.ZIndex = PaintConstants.AxisBandsPaintZIndex;
+        if (Math.Abs(bandsPaint!.ZIndex) < double.Epsilon) bandsPaint.ZIndex = PaintConstants.AxisBandsPaintZIndex;
         chart.Canvas.AddDrawableTask(bandsPaint, zone: CanvasZone.DrawMargin);
 
         var measuredBands = new HashSet<string>();
@@ -837,9 +837,8 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         }
 
         // Sweep bands whose range is gone; they animate out and detach on completion.
-        foreach (var pair in active!.ToArray())
+        foreach (var pair in active!.ToArray().Where(pair => !measuredBands.Contains(pair.Key)))
         {
-            if (measuredBands.Contains(pair.Key)) continue;
             SetUpdateMode(pair.Value, UpdateMode.UpdateAndRemove);
             _ = active.Remove(pair.Key);
         }

@@ -93,7 +93,9 @@ internal static class DateTimeGrouping
         separators = null;
         labeler = null;
 
-        if (!(max > min)) return false;
+        // NaN-safe decline: a NaN range must fall through to "lay the axis out as usual"
+        // (note `max <= min` alone would let NaN ranges continue).
+        if (double.IsNaN(min) || double.IsNaN(max) || max <= min) return false;
         if (min < DateTime.MinValue.Ticks || max > DateTime.MaxValue.Ticks) return false;
 
         var tier = PickTier(max - min);

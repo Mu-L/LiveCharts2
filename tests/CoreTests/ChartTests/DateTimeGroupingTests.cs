@@ -111,9 +111,8 @@ public class DateTimeGroupingTests
         // A decade has no coarser tier than the year, so labels stay single-line.
         var (ticks, labeler) = Group(new DateTime(2010, 1, 1), new DateTime(2020, 1, 1));
 
-        foreach (var t in ticks)
+        foreach (var label in ticks.Select(labeler))
         {
-            var label = labeler(t);
             Assert.IsFalse(label.Contains('\n'), "year tier labels are single-line");
             Assert.IsTrue(int.TryParse(label, out _), $"a year label should be a plain year, got '{label}'");
         }
