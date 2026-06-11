@@ -14,10 +14,11 @@ using SkiaSharp;
 
 namespace CoreTests.ChartTests;
 
-// Guards the IAxisRenderOverride provider seam: the engine decides which axes are overridden (here,
-// like the real engines, by the concrete axis type plus its GroupTimeUnits flag); when the engine
-// returns an override it is consulted on measure and the separators/labeler it returns are used; when
-// the engine returns null the override is never consulted and the axis lays itself out normally.
+// Guards the IAxisRenderOverride provider seam: the engine decides which axes are overridden;
+// when the engine returns an override it is consulted on measure and the separators/labeler it
+// returns are used; when the engine returns null — or the axis' own BUILT-IN grouping (e.g.
+// DateTimeAxis.GroupTimeUnits) already took over — the override is not consulted and the axis
+// lays itself out from its own pipeline.
 [TestClass]
 public class AxisRenderOverrideTests
 {
@@ -39,17 +40,25 @@ public class AxisRenderOverrideTests
         }
     }
 
-    // Mirrors how a real engine is expected to gate the seam: by the concrete axis type and its own
-    // opt-in flag — core no longer carries any grouping flag.
+    // Mirrors how a real engine is expected to gate the seam: by whatever criteria the engine
+    // owns — an explicit Target instance here, or a concrete axis type + opt-in flag (the
+    // TimeSpanAxis form, which has no built-in grouping yet).
     private sealed class FakeEngine(IAxisRenderOverride grouper) : SkiaSharpProvider
     {
-        public override IAxisRenderOverride? GetAxisRenderOverride(ICartesianAxis axis) =>
-            axis switch
+        public ICartesianAxis? Target;
+        public bool MatchOptedInAxes;
+
+        public override IAxisRenderOverride? GetAxisRenderOverride(ICartesianAxis axis)
+        {
+            if (Target is not null) return ReferenceEquals(axis, Target) ? grouper : null;
+            if (!MatchOptedInAxes) return null;
+            return axis switch
             {
                 DateTimeAxis { GroupTimeUnits: true } => grouper,
                 TimeSpanAxis { GroupTimeUnits: true } => grouper,
                 _ => null
             };
+        }
     }
 
     // Yields its items once, then throws if enumerated a second time — proves CoreAxis materializes the
@@ -94,15 +103,16 @@ public class AxisRenderOverrideTests
         };
 
     [TestMethod]
-    public void GroupTimeUnits_True_ConsultsOverride_AndUsesItsLabeler()
+    public void MatchedAxis_ConsultsOverride_AndUsesItsLabeler()
     {
         var grouper = new RecordingGrouper();
         try
         {
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
-            _ = NewChart(NewDateTimeAxis(groupTimeUnits: true)).GetImage();
+            var xAxis = new Axis { MinLimit = 0, MaxLimit = 100 };
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper) { Target = xAxis }));
+            _ = NewChart(xAxis).GetImage();
 
-            Assert.IsTrue(grouper.Consulted, "the override must be consulted when GroupTimeUnits is true");
+            Assert.IsTrue(grouper.Consulted, "the override must be consulted for the matched axis");
             Assert.IsTrue(grouper.LabelerUsed, "the override's labeler must be used to draw the labels");
             Assert.AreEqual(0d, grouper.SeenMin, 1e-6, "the override must receive the visible min");
             Assert.AreEqual(100d, grouper.SeenMax, 1e-6, "the override must receive the visible max");
@@ -116,10 +126,13 @@ public class AxisRenderOverrideTests
     [TestMethod]
     public void GroupTimeUnits_True_OnTimeSpanAxis_ConsultsOverride()
     {
+        // TimeSpanAxis carries the GroupTimeUnits flag but has no built-in grouping yet (a
+        // duration tier table is its own design) — the provider seam is how an engine can
+        // supply one, so the flag must reach the override.
         var grouper = new RecordingGrouper();
         try
         {
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper) { MatchOptedInAxes = true }));
             _ = NewChart(new TimeSpanAxis(TimeSpan.FromTicks(1), span => span.Ticks.ToString())
             {
                 GroupTimeUnits = true,
@@ -137,16 +150,49 @@ public class AxisRenderOverrideTests
     }
 
     [TestMethod]
+    public void BuiltInGrouping_WinsOverTheProviderOverride()
+    {
+        // A DateTimeAxis with GroupTimeUnits groups ITSELF (the built-in pipeline); an engine
+        // override for the same axis must not be consulted — built-in first, seam second.
+        var grouper = new RecordingGrouper();
+        try
+        {
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper) { MatchOptedInAxes = true }));
+
+            var labelsPaint = new SolidColorPaint(SKColors.Black);
+            var axis = new DateTimeAxis(TimeSpan.FromDays(1), d => d.ToString("d"))
+            {
+                GroupTimeUnits = true,
+                LabelsPaint = labelsPaint,
+                MinLimit = new DateTime(2020, 1, 1).Ticks,
+                MaxLimit = new DateTime(2021, 12, 31).Ticks,
+            };
+            var chart = NewChart(axis);
+            _ = CoreObjectsTests.ChangingPaintTasks.DrawChart(chart);
+
+            Assert.IsFalse(grouper.Consulted, "the built-in grouping takes the range, so the seam is not consulted");
+            Assert.IsTrue(
+                labelsPaint.GetGeometries(chart.CoreCanvas).Cast<BaseLabelGeometry>().Any(),
+                "the built-in grouping drew the labels");
+        }
+        finally
+        {
+            LiveCharts.Configure(s => s.AddSkiaSharp());
+        }
+    }
+
+    [TestMethod]
     public void GroupedSeparators_SingleUseIterator_AreMaterialized()
     {
         var grouper = new SingleUseGrouper();
         try
         {
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+            var xAxis = new Axis { MinLimit = 0, MaxLimit = 100 };
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper) { Target = xAxis }));
 
             // Re-enumerating a single-use iterator (size pass + draw pass) would throw; materializing
             // it once must not. The labeler running proves the separators reached the draw pass.
-            _ = NewChart(NewDateTimeAxis(groupTimeUnits: true)).GetImage();
+            _ = NewChart(xAxis).GetImage();
 
             Assert.IsTrue(grouper.LabelerUsed, "the grouped labeler must run, so the separators were used in the draw pass");
         }
@@ -162,7 +208,7 @@ public class AxisRenderOverrideTests
         var grouper = new RecordingGrouper();
         try
         {
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper) { MatchOptedInAxes = true }));
             _ = NewChart(NewDateTimeAxis(groupTimeUnits: false)).GetImage();
 
             Assert.IsFalse(grouper.Consulted, "the override must NOT be consulted when GroupTimeUnits is false");
@@ -182,7 +228,7 @@ public class AxisRenderOverrideTests
         var grouper = new RecordingGrouper();
         try
         {
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper) { MatchOptedInAxes = true }));
 
             var groupedPaint = new SolidColorPaint(SKColors.Black);
             var groupedAxis = NewDateTimeAxis(groupTimeUnits: true);
@@ -222,7 +268,7 @@ public class AxisRenderOverrideTests
         var grouper = new RecordingGrouper();
         try
         {
-            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper)));
+            LiveCharts.Configure(s => s.HasProvider(new FakeEngine(grouper) { MatchOptedInAxes = true }));
             _ = NewChart(new Axis { MinLimit = 0, MaxLimit = 100 }).GetImage();
 
             Assert.IsFalse(grouper.Consulted, "the override must NOT be consulted for axes the engine does not match");
