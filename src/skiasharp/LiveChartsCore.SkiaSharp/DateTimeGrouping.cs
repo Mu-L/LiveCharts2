@@ -118,7 +118,7 @@ internal static class DateTimeGrouping
     public static long GetCellOrdinal(double min, double max, double value)
     {
         var tier = PickTier(max - min);
-        var dt = value.AsDate();
+        var dt = FromTicksClamped(value);
 
         return tier.Fine switch
         {
@@ -152,10 +152,20 @@ internal static class DateTimeGrouping
         _ => TimeSpan.TicksPerDay * 365.25,
     };
 
+    // Axis values are DateTime ticks carried as doubles, and tick magnitudes (~3.15e18 at
+    // DateTime.MaxValue) exceed double's exact-integer range (2^53) — a value at the upper
+    // bound can round ABOVE MaxValue.Ticks and overflow the DateTime constructor. Clamp.
+    private static DateTime FromTicksClamped(double value) =>
+        value >= DateTime.MaxValue.Ticks
+            ? DateTime.MaxValue
+            : value <= DateTime.MinValue.Ticks
+                ? DateTime.MinValue
+                : new DateTime((long)value);
+
     private static List<double> Generate(double min, double max, Tier tier)
     {
-        var minDate = min.AsDate();
-        var maxDate = max.AsDate();
+        var minDate = FromTicksClamped(min);
+        var maxDate = FromTicksClamped(max);
         var result = new List<double>();
 
         if (tier.Fine == Unit.Day)
@@ -176,7 +186,11 @@ internal static class DateTimeGrouping
                     var dt = new DateTime(month.Year, month.Month, d);
                     if (dt >= minDate && dt <= maxDate) result.Add(dt.Ticks);
                 }
-                month = month.AddMonths(1);
+
+                // The last month of year 9999 has no successor — a valid range reaching
+                // DateTime.MaxValue must terminate cleanly, not throw out of AddMonths.
+                try { month = month.AddMonths(1); }
+                catch (ArgumentOutOfRangeException) { break; }
             }
             return result;
         }
@@ -185,9 +199,26 @@ internal static class DateTimeGrouping
         while (cur <= maxDate && result.Count < MaxSeparators)
         {
             if (cur >= minDate) result.Add(cur.Ticks);
-            cur = Advance(cur, tier);
+            if (!TryAdvance(cur, tier, out cur)) break;
         }
         return result;
+    }
+
+    // Advancing past the last tick can overflow DateTime.MaxValue (e.g. a 1000-year tier
+    // stepping from year 9500, or the final hours of year 9999) — the range itself is
+    // valid, so generation must terminate cleanly instead of throwing.
+    private static bool TryAdvance(DateTime dt, Tier tier, out DateTime next)
+    {
+        try
+        {
+            next = Advance(dt, tier);
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            next = dt;
+            return false;
+        }
     }
 
     private static DateTime AlignFloor(DateTime dt, Tier tier) => tier.Fine switch
@@ -215,7 +246,7 @@ internal static class DateTimeGrouping
     // without a coarse unit (years) stay single-line.
     private static string Format(double value, Tier tier)
     {
-        var dt = value.AsDate();
+        var dt = FromTicksClamped(value);
         var top = FineLabel(dt, tier.Fine);
 
         if (tier.Coarse is null) return top;
