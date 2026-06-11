@@ -801,7 +801,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
 
         var hasActive = _activeBands.TryGetValue(chart, out var active);
 
-        if (bands is not { Count: > 0 })
+        if (bandsPaint is null || bands is not { Count: > 0 })
         {
             if (!hasActive) return;
             foreach (var band in active!.Values)
@@ -816,7 +816,7 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
             _activeBands[chart] = active;
         }
 
-        if (Math.Abs(bandsPaint!.ZIndex) < double.Epsilon) bandsPaint.ZIndex = PaintConstants.AxisBandsPaintZIndex;
+        if (Math.Abs(bandsPaint.ZIndex) < double.Epsilon) bandsPaint.ZIndex = PaintConstants.AxisBandsPaintZIndex;
         chart.Canvas.AddDrawableTask(bandsPaint, zone: CanvasZone.DrawMargin);
 
         var measuredBands = new HashSet<string>();
