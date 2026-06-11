@@ -20,9 +20,12 @@ public class CollectionDeepObserverSkipTests
     {
         public static int Subscriptions;
 
+        private static void IncrementSubscriptions() =>
+            _ = System.Threading.Interlocked.Increment(ref Subscriptions);
+
         public event PropertyChangedEventHandler? PropertyChanged
         {
-            add => Subscriptions++;
+            add => IncrementSubscriptions();
             remove { }
         }
     }
@@ -104,6 +107,30 @@ public class CollectionDeepObserverSkipTests
 
         collection.Add(4);
         Assert.AreEqual(4, seen.Count, "changes raise the callback per added item");
+
+        observer.Dispose();
+    }
+
+    [TestMethod]
+    public void CallbackWalk_WithTrackingOff_DoesNotSubscribeInpc()
+    {
+        // The walk can be forced by per-item callbacks while property tracking is off
+        // (untrackable element types): the callbacks must fire per item, but no
+        // PropertyChanged subscription may be made — for value types that subscription
+        // would land on the enumeration's temporary box and root it.
+        InpcValue.Subscriptions = 0;
+        var seen = new List<object>();
+        var observer = new CollectionDeepObserver(
+            () => { }, onItemAdded: seen.Add, onItemRemoved: null, trackItemProperties: false);
+
+        var collection = new ObservableCollection<InpcValue> { new(), new() };
+        observer.Initialize(collection);
+        Assert.AreEqual(2, seen.Count, "the callback walk still runs");
+        Assert.AreEqual(0, InpcValue.Subscriptions, "no PropertyChanged subscription on a walked box");
+
+        collection.Add(new InpcValue());
+        Assert.AreEqual(3, seen.Count);
+        Assert.AreEqual(0, InpcValue.Subscriptions, "per-change items are not subscribed either");
 
         observer.Dispose();
     }
