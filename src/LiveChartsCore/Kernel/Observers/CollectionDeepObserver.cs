@@ -25,15 +25,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-#if NET462
 using System.Linq;
-#endif
 
 namespace LiveChartsCore.Kernel.Observers;
 
 /// <summary>
-/// A Class that tracks both, <see cref="INotifyCollectionChanged.CollectionChanged"/> event and
-/// the <see cref="INotifyPropertyChanged.PropertyChanged"/> event of each element in the collection.
+/// A Class that tracks the <see cref="INotifyCollectionChanged.CollectionChanged"/> event of a
+/// collection and, when item tracking applies (it can be disabled for element types that can
+/// never be tracked — see <see cref="MayContainTrackableItems{T}"/> — and never applies to
+/// value-type items, whose subscription would attach to a temporary box), the
+/// <see cref="INotifyPropertyChanged.PropertyChanged"/> event of each element in the collection.
 /// </summary>
 public class CollectionDeepObserver : IObserver
 {
@@ -182,11 +183,10 @@ public class CollectionDeepObserver : IObserver
 
             case NotifyCollectionChangedAction.Reset:
 
-#if NET462
+                // Snapshot: OnItemsRemoved removes from _itemsListening while this iterates
+                // it — only .NET Core 3.0+ hash sets tolerate that, and this assembly also
+                // runs on older runtimes through the netstandard2.0 asset.
                 OnItemsRemoved(_itemsListening.ToArray());
-#else
-                OnItemsRemoved(_itemsListening);
-#endif
                 _itemsListening.Clear();
 
                 if (sender is IEnumerable enumerable)
