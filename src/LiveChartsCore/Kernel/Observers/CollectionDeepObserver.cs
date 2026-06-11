@@ -57,6 +57,7 @@ public class CollectionDeepObserver(
 {
     private readonly HashSet<INotifyPropertyChanged> _itemsListening = [];
     private IEnumerable? _trackedCollection;
+    private bool _walksItems;
 
     /// <inheritdoc cref="IObserver.Initialize(object?)"/>
     public void Initialize(object? instance)
@@ -72,7 +73,15 @@ public class CollectionDeepObserver(
         if (instance is INotifyCollectionChanged incc)
             incc.CollectionChanged += OnCollectionChanged;
 
-        OnItemsAdded(enumerable);
+        // The per-item walk exists to subscribe INotifyPropertyChanged items and to raise
+        // the per-item callbacks. When neither can ever apply — no callbacks registered
+        // and the element type provably has no trackable instances — skip it entirely:
+        // the walk is O(N) and boxes every struct, which at large-data scale (a multi-
+        // million-point double[] or struct[] assigned to Series.Values) measures in
+        // SECONDS of pure overhead on every assignment.
+        _walksItems = onItemAdded is not null || onItemRemoved is not null || MayContainTrackableItems(enumerable);
+        if (_walksItems)
+            OnItemsAdded(enumerable);
 
         _trackedCollection = enumerable;
     }
@@ -85,13 +94,57 @@ public class CollectionDeepObserver(
         if (_trackedCollection is INotifyCollectionChanged incc)
             incc.CollectionChanged -= OnCollectionChanged;
 
-        OnItemsRemoved(_trackedCollection);
+        if (_walksItems)
+            OnItemsRemoved(_trackedCollection);
 
         _trackedCollection = null;
     }
 
+    // Whether any instance in the collection could ever need PropertyChanged tracking,
+    // decided from the collection's IEnumerable<T> element type(s):
+    //
+    //   - A VALUE TYPE never can — even one implementing INPC: enumerating through the
+    //     non-generic IEnumerable boxes each item, so the subscription would attach to a
+    //     temporary box the collection does not hold (the handler can never fire) while
+    //     _itemsListening roots that box. Skipping is both faster and more correct.
+    //   - A SEALED reference type that does not implement INPC has no INPC instances.
+    //   - Anything else (an INPC type, an open hierarchy, a non-generic collection)
+    //     may contain trackable items — walk as always.
+    private static bool MayContainTrackableItems(IEnumerable enumerable)
+    {
+        var foundElementType = false;
+
+        foreach (var i in enumerable.GetType().GetInterfaces())
+        {
+            if (!i.IsGenericType || i.GetGenericTypeDefinition() != typeof(IEnumerable<>))
+                continue;
+
+            var elementType = i.GetGenericArguments()[0];
+
+            if (elementType.IsValueType ||
+                (elementType.IsSealed && !typeof(INotifyPropertyChanged).IsAssignableFrom(elementType)))
+            {
+                foundElementType = true;
+                continue;
+            }
+
+            return true;
+        }
+
+        // Walk unless every element type was provably untrackable (a non-generic
+        // collection exposes no element type to prove anything about).
+        return !foundElementType;
+    }
+
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (!_walksItems)
+        {
+            // Untrackable items and no per-item callbacks: any change is just "redraw".
+            onChange();
+            return;
+        }
+
         switch (e.Action)
         {
             case NotifyCollectionChangedAction.Add:
