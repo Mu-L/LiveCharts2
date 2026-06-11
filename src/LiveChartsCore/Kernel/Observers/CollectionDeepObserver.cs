@@ -41,6 +41,7 @@ public class CollectionDeepObserver : IObserver
     private readonly Action<object>? _onItemAdded;
     private readonly Action<object>? _onItemRemoved;
     private readonly bool _walksItems;
+    private readonly bool _tracksItemProperties;
     private readonly HashSet<INotifyPropertyChanged> _itemsListening = [];
     private IEnumerable? _trackedCollection;
 
@@ -55,7 +56,7 @@ public class CollectionDeepObserver : IObserver
     /// This action is also called for each item when the collection is initialized.
     /// </param>
     /// <param name="onItemRemoved">
-    /// if specified, this acction is called each time an item is removed in the collection.
+    /// if specified, this action is called each time an item is removed in the collection.
     /// This action is also called for each item when the collection is disposed.
     /// </param>
     public CollectionDeepObserver(
@@ -85,6 +86,10 @@ public class CollectionDeepObserver : IObserver
         _onChange = onChange;
         _onItemAdded = onItemAdded;
         _onItemRemoved = onItemRemoved;
+        // Per-item callbacks need the walk even when property tracking is off; the
+        // PropertyChanged subscription itself stays gated on _tracksItemProperties so a
+        // callback-driven walk over untrackable items never attaches handlers to boxes.
+        _tracksItemProperties = trackItemProperties;
         _walksItems = onItemAdded is not null || onItemRemoved is not null || trackItemProperties;
     }
 
@@ -202,7 +207,7 @@ public class CollectionDeepObserver : IObserver
     {
         foreach (var item in newItems)
         {
-            if (item is INotifyPropertyChanged inpcItem)
+            if (_tracksItemProperties && item is INotifyPropertyChanged inpcItem)
             {
                 if (_itemsListening.Add(inpcItem))
                 {
@@ -218,7 +223,7 @@ public class CollectionDeepObserver : IObserver
     {
         foreach (var item in oldItems)
         {
-            if (item is INotifyPropertyChanged inpcItem && _itemsListening.Remove(inpcItem))
+            if (_tracksItemProperties && item is INotifyPropertyChanged inpcItem && _itemsListening.Remove(inpcItem))
             {
                 inpcItem.PropertyChanged -= OnItemPropertyChanged;
             }
