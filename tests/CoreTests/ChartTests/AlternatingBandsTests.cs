@@ -106,6 +106,29 @@ public class AlternatingBandsTests
             "bands must detach once the paint is removed");
     }
 
+    [TestMethod]
+    public void SwappingThePaint_MovesTheBands_AndDropsTheOldTask()
+    {
+        // Swapping the paint instance (a theme change) must ride the standard paint
+        // lifecycle: the old paint's task leaves the canvas (no double-rendered bands, no
+        // orphan task) and the cached band geometries re-attach to the new paint.
+        var first = new SolidColorPaint(SKColors.LightGray);
+        var xAxis = new Axis { MinLimit = 0, MaxLimit = 100, AlternatingBandsPaint = first };
+
+        var chart = NewChart(xAxis);
+        _ = CoreObjectsTests.ChangingPaintTasks.DrawChart(chart);
+        Assert.IsTrue(first.GetGeometries(chart.CoreCanvas).Any(), "bands drawn on the first paint");
+
+        var second = new SolidColorPaint(SKColors.Gray);
+        xAxis.AlternatingBandsPaint = second;
+        _ = CoreObjectsTests.ChangingPaintTasks.DrawChart(chart);
+
+        Assert.AreEqual(
+            0, first.GetGeometries(chart.CoreCanvas).Count(),
+            "the old paint task must leave the canvas — bands would otherwise render twice");
+        Assert.IsTrue(second.GetGeometries(chart.CoreCanvas).Any(), "the bands ride the new paint");
+    }
+
     // ------------------------------------------------ the zebra computation (internal)
 
     [TestMethod]
