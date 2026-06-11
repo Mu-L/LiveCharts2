@@ -89,7 +89,7 @@ public class AlternatingBandsTests
     }
 
     [TestMethod]
-    public void Bands_AnimateOut_WhenThePaintIsRemoved()
+    public void Bands_Detach_WhenThePaintIsRemoved()
     {
         var paint = new SolidColorPaint(SKColors.LightGray);
         var xAxis = new Axis { MinLimit = 0, MaxLimit = 100, AlternatingBandsPaint = paint };

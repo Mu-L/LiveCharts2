@@ -164,6 +164,31 @@ public class DateTimeGroupingTests
         StringAssert.Contains(oneDay(new DateTime(2020, 6, 1, 6, 0, 0).Ticks), ":", "one day -> time fine unit");
     }
 
+    // Ranges that reach DateTime.MaxValue are valid inputs, but ADVANCING past the last
+    // tick overflows DateTime arithmetic — generation must terminate cleanly per tier
+    // instead of throwing out of AddMonths/AddYears/Add*.
+    [TestMethod]
+    public void RangesReachingDateTimeMaxValue_DoNotThrow()
+    {
+        var max = DateTime.MaxValue;
+
+        // Year tier: AlignFloor lands on a step multiple; the next AddYears overflows.
+        var (yearTicks, _) = Group(max.AddYears(-10), max);
+        Assert.IsTrue(yearTicks.Count > 0, "the year tier terminates at the bound");
+
+        // Month tier: the last AddMonths from 9999-12 overflows.
+        var (monthTicks, _) = Group(new DateTime(9999, 6, 1), max);
+        Assert.IsTrue(monthTicks.Count > 0, "the month tier terminates at the bound");
+
+        // Day tier (the per-month walk): advancing past month 9999-12 overflows.
+        var (dayTicks, _) = Group(new DateTime(9999, 10, 1), new DateTime(9999, 12, 28));
+        Assert.IsTrue(dayTicks.Count > 0, "the day tier's month walk terminates at the bound");
+
+        // Hour tier: the fine-unit Advance overflows in the final hours of year 9999.
+        var (hourTicks, _) = Group(max.AddDays(-1), max);
+        Assert.IsTrue(hourTicks.Count > 0, "the time tiers terminate at the bound");
+    }
+
     [TestMethod]
     public void GroupTimeUnits_IsBuiltIntoTheAxis_NoEngineRequired()
     {
