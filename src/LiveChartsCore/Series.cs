@@ -115,7 +115,11 @@ public abstract class Series<TModel, TVisual, TLabel>
         if (typeof(IVariableSvgPath).IsAssignableFrom(typeof(TVisual)))
             SeriesProperties |= SeriesProperties.IsSVGPath;
 
-        _observer = new CollectionDeepObserver(NotifySubscribers);
+        // The per-item INPC walk is skipped statically when no TModel instance could ever
+        // be tracked (value types, sealed non-INPC classes) — at large-data scale the walk
+        // is seconds of boxing per Values assignment, for nothing.
+        _observer = new CollectionDeepObserver(
+            NotifySubscribers, null, null, CollectionDeepObserver.MayContainTrackableItems<TModel>());
 
         Values = values;
     }
