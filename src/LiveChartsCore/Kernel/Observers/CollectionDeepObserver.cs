@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -32,32 +32,79 @@ using System.Linq;
 namespace LiveChartsCore.Kernel.Observers;
 
 /// <summary>
-/// A Class that tracks both, <see cref="INotifyCollectionChanged.CollectionChanged"/> event and 
+/// A Class that tracks both, <see cref="INotifyCollectionChanged.CollectionChanged"/> event and
 /// the <see cref="INotifyPropertyChanged.PropertyChanged"/> event of each element in the collection.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="CollectionDeepObserver"/> class.
-/// </remarks>
-/// <param name="onChange">
-/// An action that is called when the collection items or a property in an item in the collection change.
-/// </param>
-/// <param name="onItemAdded">
-/// if specified, this action is called for each new item in the collection.
-/// This action is also called for each item when the collection is initialized.
-/// </param>
-/// <param name="onItemRemoved">
-/// if specified, this acction is called each time an item is removed in the collection.
-/// This action is also called for each item when the collection is disposed.
-/// </param>
-public class CollectionDeepObserver(
-    Action onChange,
-    Action<object>? onItemAdded = null,
-    Action<object>? onItemRemoved = null)
-        : IObserver
+public class CollectionDeepObserver : IObserver
 {
+    private readonly Action _onChange;
+    private readonly Action<object>? _onItemAdded;
+    private readonly Action<object>? _onItemRemoved;
+    private readonly bool _walksItems;
     private readonly HashSet<INotifyPropertyChanged> _itemsListening = [];
     private IEnumerable? _trackedCollection;
-    private bool _walksItems;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CollectionDeepObserver"/> class.
+    /// </summary>
+    /// <param name="onChange">
+    /// An action that is called when the collection items or a property in an item in the collection change.
+    /// </param>
+    /// <param name="onItemAdded">
+    /// if specified, this action is called for each new item in the collection.
+    /// This action is also called for each item when the collection is initialized.
+    /// </param>
+    /// <param name="onItemRemoved">
+    /// if specified, this acction is called each time an item is removed in the collection.
+    /// This action is also called for each item when the collection is disposed.
+    /// </param>
+    public CollectionDeepObserver(
+        Action onChange,
+        Action<object>? onItemAdded = null,
+        Action<object>? onItemRemoved = null)
+            : this(onChange, onItemAdded, onItemRemoved, trackItemProperties: true)
+    { }
+
+    /// <inheritdoc cref="CollectionDeepObserver(Action, Action{object}?, Action{object}?)"/>
+    /// <param name="onChange">See the other overload.</param>
+    /// <param name="onItemAdded">See the other overload.</param>
+    /// <param name="onItemRemoved">See the other overload.</param>
+    /// <param name="trackItemProperties">
+    /// Whether items could need <see cref="INotifyPropertyChanged"/> tracking — generic callers
+    /// decide statically via <see cref="MayContainTrackableItems{T}"/>. When <c>false</c> and no
+    /// per-item callbacks are registered, the per-item walk is skipped entirely: it is O(N) and
+    /// boxes every struct, which at large-data scale (a multi-million-point <c>double[]</c> or
+    /// struct collection assigned to a series) measures in SECONDS of pure overhead per assignment.
+    /// </param>
+    public CollectionDeepObserver(
+        Action onChange,
+        Action<object>? onItemAdded,
+        Action<object>? onItemRemoved,
+        bool trackItemProperties)
+    {
+        _onChange = onChange;
+        _onItemAdded = onItemAdded;
+        _onItemRemoved = onItemRemoved;
+        _walksItems = onItemAdded is not null || onItemRemoved is not null || trackItemProperties;
+    }
+
+    /// <summary>
+    /// Whether any instance of <typeparamref name="T"/> could ever need
+    /// <see cref="INotifyPropertyChanged"/> tracking:
+    /// <list type="bullet">
+    /// <item>A VALUE TYPE never can — even one implementing INPC: enumerating through the
+    /// non-generic <see cref="IEnumerable"/> boxes each item, so the subscription would attach
+    /// to a temporary box the collection does not hold (the handler can never fire) while the
+    /// observer roots that box. Skipping is both faster and more correct.</item>
+    /// <item>A SEALED reference type that does not implement INPC has no INPC instances.</item>
+    /// <item>Anything else (an INPC type, an open hierarchy) may contain trackable items.</item>
+    /// </list>
+    /// Evaluated on the statically-known type only — AOT/trimmer safe, no reflection over
+    /// the collection instance.
+    /// </summary>
+    public static bool MayContainTrackableItems<T>() =>
+        !typeof(T).IsValueType &&
+        (!typeof(T).IsSealed || typeof(INotifyPropertyChanged).IsAssignableFrom(typeof(T)));
 
     /// <inheritdoc cref="IObserver.Initialize(object?)"/>
     public void Initialize(object? instance)
@@ -73,13 +120,6 @@ public class CollectionDeepObserver(
         if (instance is INotifyCollectionChanged incc)
             incc.CollectionChanged += OnCollectionChanged;
 
-        // The per-item walk exists to subscribe INotifyPropertyChanged items and to raise
-        // the per-item callbacks. When neither can ever apply — no callbacks registered
-        // and the element type provably has no trackable instances — skip it entirely:
-        // the walk is O(N) and boxes every struct, which at large-data scale (a multi-
-        // million-point double[] or struct[] assigned to Series.Values) measures in
-        // SECONDS of pure overhead on every assignment.
-        _walksItems = onItemAdded is not null || onItemRemoved is not null || MayContainTrackableItems(enumerable);
         if (_walksItems)
             OnItemsAdded(enumerable);
 
@@ -100,48 +140,12 @@ public class CollectionDeepObserver(
         _trackedCollection = null;
     }
 
-    // Whether any instance in the collection could ever need PropertyChanged tracking,
-    // decided from the collection's IEnumerable<T> element type(s):
-    //
-    //   - A VALUE TYPE never can — even one implementing INPC: enumerating through the
-    //     non-generic IEnumerable boxes each item, so the subscription would attach to a
-    //     temporary box the collection does not hold (the handler can never fire) while
-    //     _itemsListening roots that box. Skipping is both faster and more correct.
-    //   - A SEALED reference type that does not implement INPC has no INPC instances.
-    //   - Anything else (an INPC type, an open hierarchy, a non-generic collection)
-    //     may contain trackable items — walk as always.
-    private static bool MayContainTrackableItems(IEnumerable enumerable)
-    {
-        var foundElementType = false;
-
-        foreach (var i in enumerable.GetType().GetInterfaces())
-        {
-            if (!i.IsGenericType || i.GetGenericTypeDefinition() != typeof(IEnumerable<>))
-                continue;
-
-            var elementType = i.GetGenericArguments()[0];
-
-            if (elementType.IsValueType ||
-                (elementType.IsSealed && !typeof(INotifyPropertyChanged).IsAssignableFrom(elementType)))
-            {
-                foundElementType = true;
-                continue;
-            }
-
-            return true;
-        }
-
-        // Walk unless every element type was provably untrackable (a non-generic
-        // collection exposes no element type to prove anything about).
-        return !foundElementType;
-    }
-
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (!_walksItems)
         {
             // Untrackable items and no per-item callbacks: any change is just "redraw".
-            onChange();
+            _onChange();
             return;
         }
 
@@ -191,7 +195,7 @@ public class CollectionDeepObserver(
                 break;
         }
 
-        onChange();
+        _onChange();
     }
 
     private void OnItemsAdded(IEnumerable newItems)
@@ -206,7 +210,7 @@ public class CollectionDeepObserver(
                 }
             }
 
-            onItemAdded?.Invoke(item);
+            _onItemAdded?.Invoke(item);
         }
     }
 
@@ -219,9 +223,9 @@ public class CollectionDeepObserver(
                 inpcItem.PropertyChanged -= OnItemPropertyChanged;
             }
 
-            onItemRemoved?.Invoke(item);
+            _onItemRemoved?.Invoke(item);
         }
     }
 
-    private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e) => onChange();
+    private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e) => _onChange();
 }
