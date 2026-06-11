@@ -7,11 +7,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CoreTests.CoreObjectsTests;
 
-// The observer's per-item walk (subscribe INotifyPropertyChanged on every item) is
-// skipped when no instance could ever need it: value-type elements (enumeration boxes
-// each item, so a subscription would attach to a temporary box the collection does not
-// hold) and sealed non-INPC elements. Collection-level notifications still redraw, and
-// per-item callbacks (the chart-level Series/Axes observers) always force the walk.
+// The observer's per-item walk (subscribe INotifyPropertyChanged on every item) is gated
+// STATICALLY by the generic caller on the element type — no reflection over the collection
+// instance, AOT/trimmer safe. Value types never walk (enumeration boxes each item, so a
+// subscription would attach to a temporary box the collection does not hold), sealed
+// non-INPC classes never walk; collection-level notifications still redraw, and per-item
+// callbacks (the chart-level Series/Axes observers) always force the walk.
 [TestClass]
 public class CollectionDeepObserverSkipTests
 {
@@ -24,6 +25,26 @@ public class CollectionDeepObserverSkipTests
             add => Subscriptions++;
             remove { }
         }
+    }
+
+    private sealed class SealedPlain { }
+    private sealed class SealedInpc : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler? PropertyChanged { add { } remove { } }
+    }
+    private class OpenPlain { }
+
+    [TestMethod]
+    public void StaticGate_DecidesByElementType()
+    {
+        Assert.IsFalse(CollectionDeepObserver.MayContainTrackableItems<int>(), "primitives never need tracking");
+        Assert.IsFalse(CollectionDeepObserver.MayContainTrackableItems<InpcValue>(), "an INPC STRUCT subscription lands on a dead box — untrackable");
+        Assert.IsFalse(CollectionDeepObserver.MayContainTrackableItems<SealedPlain>(), "a sealed non-INPC class has no INPC instances");
+
+        Assert.IsTrue(CollectionDeepObserver.MayContainTrackableItems<SealedInpc>(), "a sealed INPC class is tracked");
+        Assert.IsTrue(CollectionDeepObserver.MayContainTrackableItems<OpenPlain>(), "an open hierarchy may hold INPC-derived instances");
+        Assert.IsTrue(CollectionDeepObserver.MayContainTrackableItems<object>(), "object may hold anything");
+        Assert.IsTrue(CollectionDeepObserver.MayContainTrackableItems<INotifyPropertyChanged>(), "the interface itself is trackable");
     }
 
     [TestMethod]
@@ -72,9 +93,10 @@ public class CollectionDeepObserverSkipTests
     public void PerItemCallbacks_ForceTheWalk()
     {
         // The chart-level observers (Series/Axes/Sections) rely on per-item add/remove
-        // callbacks — those must keep walking even for value-type elements.
+        // callbacks — those must keep walking even for untrackable element types.
         var seen = new List<object>();
-        var observer = new CollectionDeepObserver(() => { }, onItemAdded: seen.Add);
+        var observer = new CollectionDeepObserver(
+            () => { }, onItemAdded: seen.Add, onItemRemoved: null, trackItemProperties: false);
 
         var collection = new ObservableCollection<int> { 1, 2, 3 };
         observer.Initialize(collection);

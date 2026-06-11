@@ -10,7 +10,10 @@ public class TestObserver<T> : IDisposable
 
     public TestObserver()
     {
-        _observerer = new CollectionDeepObserver(() => ChangesCount++);
+        // Mirrors Series<TModel>: the per-item INPC walk is gated statically on the
+        // element type (value types and sealed non-INPC classes never walk).
+        _observerer = new CollectionDeepObserver(
+            () => ChangesCount++, null, null, CollectionDeepObserver.MayContainTrackableItems<T>());
     }
 
     public IEnumerable<T> MyCollection
