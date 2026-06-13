@@ -1,4 +1,4 @@
-﻿<Project Sdk="Uno.Sdk/6.5.31">
+﻿<Project Sdk="Uno.Sdk/6.5.36">
     <PropertyGroup>
         <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-windows10.0.19041.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
 
@@ -22,21 +22,22 @@
           https://aka.platform.uno/singleproject-features
         -->
 
-        <UnoFeatures>
-            Material;
-            Dsp;
-            Hosting;
-            Toolkit;
-            Logging;
-            MVUX;
-            Configuration;
-            HttpKiota;
-            Serialization;
-            Localization;
-            Navigation;
-            ThemeService;
+        <!-- WASM AOT showcase stays lean: SkiaRenderer only. UI-test builds (UITesting=true)
+             additionally pull in the Uno.Extensions Hosting + Navigation features that Factos.Uno
+             requires to mount its FactosShell (see App.xaml.cs / Shell.xaml). The AOT WASM *publish*
+             never sets UITesting, so the published showcase is byte-for-byte unaffected. -->
+        <UnoFeatures Condition="'$(UITesting)' != 'true'">
             SkiaRenderer;
         </UnoFeatures>
+        <UnoFeatures Condition="'$(UITesting)' == 'true'">
+            SkiaRenderer;
+            Hosting;
+            Navigation;
+        </UnoFeatures>
+
+        <!-- Drop the implicit OpenSans + Roboto font families (~2.4 MB of variants the charts don't
+             use); SkiaRenderer falls back to an embedded font for the remaining text. -->
+        <UnoDefaultFont>None</UnoDefaultFont>
 
         <NoWarn>$(NoWarn);MSB4240</NoWarn>
     </PropertyGroup>
@@ -53,6 +54,13 @@
             <Link>LiveChartsSamples\%(RecursiveDir)%(Filename)%(Extension)</Link>
             <DependentUpon>%(Filename).xaml</DependentUpon>
         </Compile>
+    </ItemGroup>
+
+    <!-- The navigation Shell exists only for Factos UI-test builds; keep it out of the lean
+         (incl. AOT WASM) builds, where the Hosting/Navigation features aren't referenced. -->
+    <ItemGroup Condition="'$(UITesting)' != 'true'">
+        <Page Remove="Shell.xaml" />
+        <Compile Remove="Shell.xaml.cs" />
     </ItemGroup>
 
     <ItemGroup>
