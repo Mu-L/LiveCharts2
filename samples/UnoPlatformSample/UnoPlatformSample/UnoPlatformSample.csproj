@@ -1,4 +1,4 @@
-﻿<Project Sdk="Uno.Sdk/6.5.31">
+﻿<Project Sdk="Uno.Sdk/6.5.36">
     <PropertyGroup>
         <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-windows10.0.19041.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
 
@@ -23,20 +23,12 @@
         -->
 
         <UnoFeatures>
-            Material;
-            Dsp;
-            Hosting;
-            Toolkit;
-            Logging;
-            MVUX;
-            Configuration;
-            HttpKiota;
-            Serialization;
-            Localization;
-            Navigation;
-            ThemeService;
             SkiaRenderer;
         </UnoFeatures>
+
+        <!-- Drop the implicit OpenSans + Roboto font families (~2.4 MB of variants the charts don't
+             use); SkiaRenderer falls back to an embedded font for the remaining text. -->
+        <UnoDefaultFont>None</UnoDefaultFont>
 
         <NoWarn>$(NoWarn);MSB4240</NoWarn>
     </PropertyGroup>
