@@ -22,8 +22,17 @@
           https://aka.platform.uno/singleproject-features
         -->
 
-        <UnoFeatures>
+        <!-- WASM AOT showcase stays lean: SkiaRenderer only. UI-test builds (UITesting=true)
+             additionally pull in the Uno.Extensions Hosting + Navigation features that Factos.Uno
+             requires to mount its FactosShell (see App.xaml.cs / Shell.xaml). The AOT WASM *publish*
+             never sets UITesting, so the published showcase is byte-for-byte unaffected. -->
+        <UnoFeatures Condition="'$(UITesting)' != 'true'">
             SkiaRenderer;
+        </UnoFeatures>
+        <UnoFeatures Condition="'$(UITesting)' == 'true'">
+            SkiaRenderer;
+            Hosting;
+            Navigation;
         </UnoFeatures>
 
         <!-- Drop the implicit OpenSans + Roboto font families (~2.4 MB of variants the charts don't
@@ -45,6 +54,13 @@
             <Link>LiveChartsSamples\%(RecursiveDir)%(Filename)%(Extension)</Link>
             <DependentUpon>%(Filename).xaml</DependentUpon>
         </Compile>
+    </ItemGroup>
+
+    <!-- The navigation Shell exists only for Factos UI-test builds; keep it out of the lean
+         (incl. AOT WASM) builds, where the Hosting/Navigation features aren't referenced. -->
+    <ItemGroup Condition="'$(UITesting)' != 'true'">
+        <Page Remove="Shell.xaml" />
+        <Compile Remove="Shell.xaml.cs" />
     </ItemGroup>
 
     <ItemGroup>
