@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,37 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System;
-
-namespace LiveChartsCore.SkiaSharpView;
+namespace LiveChartsCore.Kernel.Providers;
 
 /// <summary>
-/// Defines a TimeSpan axis.
+/// A filled band over the axis range, expressed in axis units; drawn by the axis as a
+/// rectangle spanning the draw margin on the other dimension (see
+/// <c>ICartesianAxis.AlternatingBandsPaint</c>).
 /// </summary>
-public class TimeSpanAxis : Axis
+/// <param name="start">The band start, in axis units.</param>
+/// <param name="end">The band end, in axis units.</param>
+internal readonly struct AxisBand(double start, double end)
 {
-    static TimeSpanAxis()
-    {
-        LiveChartsSkiaSharp.EnsureInitialized();
-    }
+    /// <summary>
+    /// Gets the band start, in axis units.
+    /// </summary>
+    public double Start { get; } = start;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DateTimeAxis"/> class.
+    /// Gets the band end, in axis units.
     /// </summary>
-    /// <param name="unit">The unit of the axis (hours, days, months, years).</param>
-    /// <param name="formatter">The labels formatter.</param>
-    public TimeSpanAxis(TimeSpan unit, Func<TimeSpan, string> formatter)
-    {
-        UnitWidth = unit.Ticks;
-        Labeler = value => formatter(value.AsTimeSpan());
-        MinStep = unit.Ticks;
-    }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the axis should group its time units into adaptive,
-    /// multi-level labels (e.g. a fine unit on the first line and a coarser context on the second,
-    /// updating as you zoom). Default is false. Requires a chart engine that supplies an axis render
-    /// override for this axis (otherwise the flag is ignored).
-    /// </summary>
-    public bool GroupTimeUnits { get; set => SetProperty(ref field, value); }
+    public double End { get; } = end;
 }

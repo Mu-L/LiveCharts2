@@ -1,4 +1,4 @@
-﻿<Project Sdk="Uno.Sdk/6.5.31">
+﻿<Project Sdk="Uno.Sdk/6.5.36">
     <PropertyGroup>
         <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-windows10.0.19041.0;net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
 
@@ -22,25 +22,24 @@
           https://aka.platform.uno/singleproject-features
         -->
 
-        <UnoFeatures>
-            Material;
-            Dsp;
+        <!-- WASM AOT showcase stays lean: SkiaRenderer only (appended below unless the native
+             renderer is selected). UI-test builds (UITesting=true) additionally pull in the
+             Uno.Extensions Hosting + Navigation features that Factos.Uno requires to mount its
+             FactosShell (see App.xaml.cs / Shell.xaml). The AOT WASM *publish* never sets
+             UITesting, so the published showcase is byte-for-byte unaffected. -->
+        <UnoFeatures Condition="'$(UITesting)' == 'true'">
             Hosting;
-            Toolkit;
-            Logging;
-            MVUX;
-            Configuration;
-            HttpKiota;
-            Serialization;
-            Localization;
             Navigation;
-            ThemeService;
         </UnoFeatures>
 
+        <!-- Drop the implicit OpenSans + Roboto font families (~2.4 MB of variants the charts don't
+             use); SkiaRenderer falls back to an embedded font for the remaining text. -->
+        <UnoDefaultFont>None</UnoDefaultFont>
+
         <!--
-        Build with -p:LvcUnoNativeRenderer=true to exercise Uno's NATIVE renderer
-        instead of the Skia renderer — the #2020/#2333 scenario. Delete bin/obj
-        when switching renderers, stale Uno assets otherwise break the app at runtime.
+        SkiaRenderer is the default. Build with -p:LvcUnoNativeRenderer=true to exercise Uno's
+        NATIVE renderer instead — the #2020/#2333 scenario. Delete bin/obj when switching
+        renderers, stale Uno assets otherwise break the app at runtime.
         -->
         <UnoFeatures Condition="'$(LvcUnoNativeRenderer)' != 'true'">$(UnoFeatures);SkiaRenderer;</UnoFeatures>
 
@@ -61,21 +60,18 @@
         </Compile>
     </ItemGroup>
 
+    <!-- The navigation Shell exists only for Factos UI-test builds; keep it out of the lean
+         (incl. AOT WASM) builds, where the Hosting/Navigation features aren't referenced. -->
+    <ItemGroup Condition="'$(UITesting)' != 'true'">
+        <Page Remove="Shell.xaml" />
+        <Compile Remove="Shell.xaml.cs" />
+    </ItemGroup>
+
     <ItemGroup>
+        <!-- ViewModelsSamples is reached only through reflection bindings ({Binding ...}, no
+             x:Bind), so the wasm trimmer would strip the bound property getters and leave charts
+             inside DataTemplates blank. It is preserved by Platforms/WebAssembly/LinkerConfig.xml. -->
         <ProjectReference Include="..\..\ViewModelsSamples\ViewModelsSamples.csproj" />
-        <!--
-        The sample views reach ViewModelsSamples only through reflection bindings
-        ({Binding ...} with no x:Bind / compiled metadata), so the IL trimmer in a
-        wasm publish strips the property getters the binding engine needs — charts
-        inside DataTemplates silently disappear. Root the assembly so published
-        samples keep working. Scoped to browserwasm: it is the only target that
-        fully trims user assemblies here, and the unscoped item broke the Android
-        build (its ILLink targets batch on %(RootMode), MSB4096) and its AOT step.
-        -->
-        <TrimmerRootAssembly
-            Condition="$(TargetFramework.Contains('-browserwasm'))"
-            Include="ViewModelsSamples"
-            RootMode="All" />
     </ItemGroup>
 
     <ItemGroup Condition="$(UseNuGetForSamples)">

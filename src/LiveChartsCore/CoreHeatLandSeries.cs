@@ -58,7 +58,8 @@ public abstract class CoreHeatLandSeries<TModel> : IGeoSeries, IHeatLegendSource
     public CoreHeatLandSeries(ICollection<TModel>? lands)
     {
         Lands = lands;
-        _observer = new CollectionDeepObserver(NotifySubscribers);
+        _observer = new CollectionDeepObserver(
+            NotifySubscribers, null, null, CollectionDeepObserver.MayContainTrackableItems<TModel>());
     }
 
     /// <summary>
