@@ -22,15 +22,12 @@
           https://aka.platform.uno/singleproject-features
         -->
 
-        <!-- WASM AOT showcase stays lean: SkiaRenderer only. UI-test builds (UITesting=true)
-             additionally pull in the Uno.Extensions Hosting + Navigation features that Factos.Uno
-             requires to mount its FactosShell (see App.xaml.cs / Shell.xaml). The AOT WASM *publish*
-             never sets UITesting, so the published showcase is byte-for-byte unaffected. -->
-        <UnoFeatures Condition="'$(UITesting)' != 'true'">
-            SkiaRenderer;
-        </UnoFeatures>
+        <!-- WASM AOT showcase stays lean: SkiaRenderer only (appended below unless the native
+             renderer is selected). UI-test builds (UITesting=true) additionally pull in the
+             Uno.Extensions Hosting + Navigation features that Factos.Uno requires to mount its
+             FactosShell (see App.xaml.cs / Shell.xaml). The AOT WASM *publish* never sets
+             UITesting, so the published showcase is byte-for-byte unaffected. -->
         <UnoFeatures Condition="'$(UITesting)' == 'true'">
-            SkiaRenderer;
             Hosting;
             Navigation;
         </UnoFeatures>
@@ -38,6 +35,13 @@
         <!-- Drop the implicit OpenSans + Roboto font families (~2.4 MB of variants the charts don't
              use); SkiaRenderer falls back to an embedded font for the remaining text. -->
         <UnoDefaultFont>None</UnoDefaultFont>
+
+        <!--
+        SkiaRenderer is the default. Build with -p:LvcUnoNativeRenderer=true to exercise Uno's
+        NATIVE renderer instead — the #2020/#2333 scenario. Delete bin/obj when switching
+        renderers, stale Uno assets otherwise break the app at runtime.
+        -->
+        <UnoFeatures Condition="'$(LvcUnoNativeRenderer)' != 'true'">$(UnoFeatures);SkiaRenderer;</UnoFeatures>
 
         <NoWarn>$(NoWarn);MSB4240</NoWarn>
     </PropertyGroup>
@@ -64,6 +68,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- ViewModelsSamples is reached only through reflection bindings ({Binding ...}, no
+             x:Bind), so the wasm trimmer would strip the bound property getters and leave charts
+             inside DataTemplates blank. It is preserved by Platforms/WebAssembly/LinkerConfig.xml. -->
         <ProjectReference Include="..\..\ViewModelsSamples\ViewModelsSamples.csproj" />
     </ItemGroup>
 

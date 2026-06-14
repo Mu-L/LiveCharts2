@@ -374,10 +374,17 @@ jobs:
             workloads: wasm-tools
           - id: avalonia-browser
             workloads: wasm-tools
-          # ToDo: find why not running.
-          # - id: uno
-          #   tf: net10.0-browserwasm
-          #   workloads: wasm-tools android
+          # uno-browser (not the plain `uno` uid): browserwasm needs the
+          # HeadlessChrome app host — the Auto host only starts the dev server
+          # and nothing ever loads the page, so the run idles to the connection
+          # timeout. See tests/UITests/Program.cs.
+          - id: uno-browser
+            tf: net10.0-browserwasm
+            workloads: wasm-tools android
+          # same app on Uno's NATIVE renderer — the #2020/#2333 scenario.
+          - id: uno-browser-native
+            tf: net10.0-browserwasm
+            workloads: wasm-tools android
     needs: [pack, prepare]
     steps:
       - name: Checkout

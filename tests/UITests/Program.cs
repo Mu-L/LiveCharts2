@@ -102,6 +102,17 @@ TestRecord[] toTest = [
     new($"{root}/MauiSample",                   "maui-ios",             [..iphoneBuild, tf_var, new("RuntimeIdentifier", "iossimulator-arm64")]),
 
     new($"{root}/{unoDir}",                     "uno",                  [..msBuildArgs, tf_var]),
+    // browserwasm needs a browser host: AppHost.Auto only `dotnet run`s the dev
+    // server and nothing ever loads the page, so the app never connects and the
+    // run idles until the connection timeout — the reason the uno browser CI job
+    // was disabled. A separate uid because the `uno` record is shared by the
+    // desktop/windows/android target frameworks, which need the Auto host.
+    new($"{root}/{unoDir}",                     "uno-browser",          [..msBuildArgs, tf_var],                AppHost.HeadlessChrome),
+    // same app on Uno's NATIVE renderer (no SkiaRenderer UnoFeature) — the
+    // #2020/#2333 scenario, charts render through SKXamlCanvas instead of
+    // SKCanvasElement. Needs a clean bin/obj when alternating with uno-browser
+    // locally; stale Uno assets from the other renderer break the app at runtime.
+    new($"{root}/{unoDir}",                     "uno-browser-native",   [..msBuildArgs, tf_var, new("LvcUnoNativeRenderer", "true")], AppHost.HeadlessChrome),
 
     new($"{root}/WinUISample/WinUISample",      "winui",                winUIArgs),
     new($"{root}/EtoFormsSample",               "eto",                  msBuildArgs),
