@@ -29,7 +29,6 @@
 // but by design this file is separated so in the future if there are any uno specific changes
 
 using LiveChartsCore.Motion;
-using Microsoft.UI.Xaml.Media;
 
 namespace LiveChartsCore.Native;
 
@@ -44,28 +43,32 @@ internal partial class NativeFrameTicker : IFrameTicker
         _renderMode = renderMode;
 
         _canvas.Invalidated += OnCoreInvalidated;
-        CompositionTarget.Rendering += OnCompositonTargetRendering;
+        _canvas.FrameRendered += OnFrameRendered;
 
-        CoreMotionCanvas.s_tickerName = "CompositionTarget.Rendering WinUI";
+        CoreMotionCanvas.s_tickerName = "SKCanvasElement self-paced (Uno)";
+
+        if (!_canvas.IsValid) OnCoreInvalidated(_canvas);
     }
 
     private void OnCoreInvalidated(CoreMotionCanvas obj) =>
-        _renderMode.InvalidateRenderer();
+        _renderMode?.InvalidateRenderer();
 
-    private void OnCompositonTargetRendering(object? sender, object e)
+    private void OnFrameRendered(CoreMotionCanvas obj)
     {
-        if (_canvas is null || _canvas.IsValid) return;
-        _renderMode.InvalidateRenderer();
+        if (_canvas is not null && !_canvas.IsValid)
+            _renderMode.InvalidateRenderer();
     }
 
     public void DisposeTicker()
     {
-        CompositionTarget.Rendering -= OnCompositonTargetRendering;
-
         // _canvas can be null when DisposeTicker is called without a prior
         // InitializeTicker, or twice in a row — same #2216 contract violation
         // guarded in the WPF CompositionTargetTicker.
-        if (_canvas is not null) _canvas.Invalidated -= OnCoreInvalidated;
+        if (_canvas is not null)
+        {
+            _canvas.Invalidated -= OnCoreInvalidated;
+            _canvas.FrameRendered -= OnFrameRendered;
+        }
 
         _canvas = null!;
         _renderMode = null!;

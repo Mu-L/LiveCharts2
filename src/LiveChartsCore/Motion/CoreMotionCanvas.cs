@@ -114,6 +114,14 @@ public class CoreMotionCanvas : IDisposable
     public event Action<CoreMotionCanvas>? Validated;
 
     /// <summary>
+    /// Occurs after a frame has been drawn (once <see cref="IsValid"/> has been updated
+    /// for that frame), whether or not the canvas is now valid. A frame ticker can use
+    /// this to drive a self-paced loop: request another frame while the canvas is still
+    /// invalid, and stop once it becomes valid.
+    /// </summary>
+    public event Action<CoreMotionCanvas>? FrameRendered;
+
+    /// <summary>
     /// Returns true if the visual is valid.
     /// </summary>
     /// <value>
@@ -284,6 +292,10 @@ public class CoreMotionCanvas : IDisposable
 
             _nextFrameDelay = frameDelay;
         }
+
+        // IsValid (and, for the non-vsync path, _nextFrameDelay) are now finalized for
+        // this frame, so it is safe for a ticker to decide whether to request another.
+        FrameRendered?.Invoke(this);
     }
 
     /// <summary>
