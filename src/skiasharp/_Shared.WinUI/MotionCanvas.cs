@@ -58,9 +58,9 @@ public partial class MotionCanvas : Canvas
 
                     if (Uno.WinUI.Graphics2DSK.SKCanvasElement.IsSupportedOnCurrentPlatform())
                     {
-                        // At this point, Uno has full control of the frame peacing.
+                        // At this point, Uno has full control of the frame pacing.
                         // SkiaRenderMode inherits from SKCanvasElement, it integrates with Uno's skia renderer and will draw when and how Uno needs.
-                        // NativeFrameTicker is a dummy ticker at this point, instead the frames are peaced by Uno's skia renderer.
+                        // NativeFrameTicker is a dummy ticker at this point, instead the frames are paced by Uno's skia renderer.
                         renderMode = new SkiaRenderMode();
                         ticker = new NativeFrameTicker();
                     }

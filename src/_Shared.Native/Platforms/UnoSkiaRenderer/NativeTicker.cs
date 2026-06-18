@@ -26,7 +26,7 @@
 // HAS_OS_LVC is true when the target framework contains any of the following:
 // -windows, -android, -ios, -maccatalyst, -tizen
 // This is a dummy class, when Uno SkiaRenderer is used, we don't need a ticker, the control itself
-// can (and should) peace frame requests. This class is needed for compatibility with Native implementations that use
+// can (and should) pace frame requests. This class is needed for compatibility with Native implementations that use
 // the ticker to request frames, like CAD display link on iOS, Choreographer on Android or CompositionTarget.Rendering on Windows.
 
 using LiveChartsCore.Motion;

@@ -75,7 +75,7 @@ internal partial class SkiaRenderMode : Grid, IRenderMode
             IsHitTestVisible = true;
 
             _canvas = canvas;
-            CoreMotionCanvas.s_externalRenderer = $"{nameof(SkiaRenderMode)} via {nameof(SKCanvasElement)} (Uno self-peaced)";
+            CoreMotionCanvas.s_externalRenderer = $"{nameof(SkiaRenderMode)} via {nameof(SKCanvasElement)} (Uno self-paced)";
 
             _canvas.Invalidated += OnCanvasCoreInvalidated;
         }
