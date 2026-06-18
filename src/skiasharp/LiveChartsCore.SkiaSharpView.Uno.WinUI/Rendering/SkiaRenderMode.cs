@@ -56,8 +56,13 @@ internal partial class SkiaRenderMode : Grid, IRenderMode
     public void InitializeRenderMode(CoreMotionCanvas canvas) =>
         _renderMode.InitializeRenderMode(canvas);
 
-    public void DisposeRenderMode() =>
+    public void DisposeRenderMode()
+    {
+        // delegate to the nested render mode so the canvas invalidation
+        // subscription is removed, then release the native element.
+        _renderMode.DisposeRenderMode();
         _renderMode.Dispose();
+    }
 
     public void InvalidateRenderer() =>
         _renderMode.InvalidateRenderer();
@@ -88,6 +93,9 @@ internal partial class SkiaRenderMode : Grid, IRenderMode
 
         public void DisposeRenderMode()
         {
+            // guard against double-dispose or dispose-before-initialize.
+            if (_canvas is null) return;
+
             _canvas.Invalidated -= OnCanvasCoreInvalidated;
             _canvas = null!;
         }
@@ -97,11 +105,15 @@ internal partial class SkiaRenderMode : Grid, IRenderMode
 
         protected override void RenderOverride(SKCanvas canvas, Size area)
         {
+            // nothing to draw once the render mode has been disposed; bailing out
+            // also avoids re-invalidating in an endless loop after disposal.
+            if (_canvas is null) return;
+
             FrameRequest?.Invoke(
                 new SkiaSharpDrawingContext(
                     _canvas, canvas, GetBackground(), clearCanvasOnNewFrame: false));
 
-            if (_canvas is not null && _canvas.IsValid) return;
+            if (_canvas.IsValid) return;
             Invalidate();
         }
 

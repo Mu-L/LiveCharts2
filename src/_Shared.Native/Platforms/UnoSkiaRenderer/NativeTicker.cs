@@ -35,8 +35,10 @@ namespace LiveChartsCore.Native;
 
 internal partial class NativeFrameTicker : IFrameTicker
 {
-    public void InitializeTicker(CoreMotionCanvas canvas, IRenderMode renderMode)
-    { }
+    public void InitializeTicker(CoreMotionCanvas canvas, IRenderMode renderMode) =>
+        // no real ticker here: Uno's skia renderer paces the frames itself.
+        // still report a name so the FPS/debug overlay does not show an empty ticker.
+        CoreMotionCanvas.s_tickerName = "self-paced by Uno's skia renderer";
 
     public void DisposeTicker()
     { }
