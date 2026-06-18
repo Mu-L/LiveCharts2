@@ -75,14 +75,22 @@ internal partial class SkiaRenderMode : Grid, IRenderMode
             IsHitTestVisible = true;
 
             _canvas = canvas;
-            CoreMotionCanvas.s_externalRenderer = $"{nameof(SkiaRenderMode)} via {nameof(SKCanvasElement)}";
+            CoreMotionCanvas.s_externalRenderer = $"{nameof(SkiaRenderMode)} via {nameof(SKCanvasElement)} (Uno self-peaced)";
+
+            _canvas.Invalidated += OnCanvasCoreInvalidated;
         }
+
+        private void OnCanvasCoreInvalidated(CoreMotionCanvas obj) =>
+            InvalidateRenderer();
 
         private void SkiaRenderMode_PointerMoved(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e) =>
             Debug.WriteLine("skia sees pointer moved");
 
-        public void DisposeRenderMode() =>
+        public void DisposeRenderMode()
+        {
+            _canvas.Invalidated -= OnCanvasCoreInvalidated;
             _canvas = null!;
+        }
 
         public void InvalidateRenderer() =>
             Invalidate();
@@ -92,6 +100,9 @@ internal partial class SkiaRenderMode : Grid, IRenderMode
             FrameRequest?.Invoke(
                 new SkiaSharpDrawingContext(
                     _canvas, canvas, GetBackground(), clearCanvasOnNewFrame: false));
+
+            if (_canvas is not null && _canvas.IsValid) return;
+            Invalidate();
         }
 
         private SKColor GetBackground() =>
