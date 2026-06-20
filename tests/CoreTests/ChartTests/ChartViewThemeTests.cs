@@ -202,4 +202,52 @@ public class ChartViewThemeTests
             ResetTheme();
         }
     }
+
+    [TestMethod]
+    public void UserSetPropertyWinsOverChartThemeRule_OnInMemoryChart()
+    {
+        // The SK in-memory charts use the field-backed (non-XAML) generated setter, which
+        // now carries the same user-set-wins theme arbitration as the XAML dependency-
+        // property setters (a __userSet flag gated on _isApplyingTheme). A property the user
+        // set explicitly must survive a HasRuleForChart rule that targets the same property;
+        // a property the user did NOT set must still receive the themed value.
+        try
+        {
+            var theme = BuildThemeWith(t => t.HasRuleForChart(view =>
+            {
+                view.DrawMargin = new Margin(40);
+                view.TooltipTextSize = 41;
+            }));
+            ResetTheme();
+
+            var chart = new SKCartesianChart
+            {
+                Width = 300,
+                Height = 300,
+                Series = [new LineSeries<double> { Values = [1, 2, 3] }],
+                ChartTheme = theme,
+                DrawMargin = new Margin(10) // user set -> must beat the rule
+            };
+
+            _ = chart.GetImage();
+
+            var view = (IChartView)chart;
+            var core = view.CoreChart;
+
+            Assert.AreEqual(
+                10f, core.DrawMarginLocation.X, 0.5f,
+                "A user-set DrawMargin must win over a HasRuleForChart rule on in-memory / non-XAML charts.");
+            Assert.AreEqual(10f, core.DrawMarginLocation.Y, 0.5f);
+            Assert.AreEqual(280f, core.DrawMarginSize.Width, 0.5f);
+            Assert.AreEqual(280f, core.DrawMarginSize.Height, 0.5f);
+
+            Assert.AreEqual(
+                41d, view.TooltipTextSize,
+                "A property the user did NOT set must still receive the themed value on non-XAML charts.");
+        }
+        finally
+        {
+            ResetTheme();
+        }
+    }
 }

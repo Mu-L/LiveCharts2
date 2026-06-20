@@ -41,11 +41,12 @@ public class ThemeTests
     public AppController App => AppController.Current;
 
     // Chart-level theming (HasRuleForChart) styles the IChartView itself from the shared
-    // theme logic, across every platform. This runs on all UI platforms: the themed value
-    // must reach the view on all of them. The user-set-wins arbitration lives in the
-    // generated dependency-property setters, so that assertion is scoped to XAML platforms
-    // (WPF / Avalonia / WinUI / MAUI / Uno) where it is implemented; the non-XAML
-    // arbitration is a tracked follow-up.
+    // theme logic, across every platform. Two invariants hold on all of them: the themed
+    // value reaches the view (TooltipTextSize), and a value the user set wins over the rule
+    // (LegendTextSize). The user-set-wins arbitration lives in the generated property
+    // setters — XAML platforms read the dependency-property local value (ReadLocalValue /
+    // IsSet); the field-backed platforms (WinForms / Blazor / Eto) use a generated __userSet
+    // flag gated on _isApplyingTheme — so both assertions now run on every platform.
     [AppTestMethod]
     public async Task ChartLevelThemeAppliesAndRespectsUserSet()
     {
@@ -80,19 +81,19 @@ public class ThemeTests
 
             await view.InvokeOnUIThreadAsync(() =>
             {
-                // the theme reaches the view on every platform.
+                // the themed value reaches the view on every platform...
                 Assert.Equal(41d, view.TooltipTextSize, 3);
 
-#if XAML_UI_TESTING
-                // the theme must not overwrite a value the user set (DP-setter arbitration).
+                // ...and the theme must not overwrite a value the user set, on every platform
+                // (DP local-value on XAML, generated __userSet flag on WinForms / Blazor / Eto).
                 Assert.Equal(99d, view.LegendTextSize, 3);
-#endif
             });
         }
         finally
         {
-            // restore the default theme so the rule does not leak into other tests.
-            LiveCharts.Configure(c => c.AddSkiaSharp());
+            // restore the default theme so the rule does not leak into other tests;
+            // AddDefaultTheme rebuilds a fresh theme — AddSkiaSharp would leave the rule in place.
+            LiveCharts.Configure(c => c.AddDefaultTheme());
         }
     }
 
