@@ -22,6 +22,7 @@
 
 using LiveChartsCore;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.Measure;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.SKCharts;
 using LiveChartsCore.Themes;
@@ -125,6 +126,60 @@ public class ChartViewThemeTests
             Assert.AreEqual(
                 37d, ((IChartView)chart).TooltipTextSize,
                 "The chart must use the theme assigned to its ChartTheme property, not the global default.");
+        }
+        finally
+        {
+            LiveCharts.Configure(s => s.AddSkiaSharp());
+        }
+    }
+
+    [TestMethod]
+    public void ChartLevelRuleForDrawMarginHonoredInSameMeasurePass()
+    {
+        // Regression: the cartesian and polar engines read view.DrawMargin into a
+        // local BEFORE calling ApplyTheme, so a HasRuleForChart rule that set
+        // DrawMargin was ignored for that measure pass (GetImage measures exactly
+        // once). The pie / sankey / treemap engines already read it after ApplyTheme;
+        // this pins the same order for cartesian and polar. A 300x300 control with a
+        // themed 40px margin on every side must produce a (40,40) draw-margin origin
+        // and a 220x220 draw-margin size.
+        try
+        {
+            _ = BuildThemeWith(t => t.HasRuleForChart(view => view.DrawMargin = new Margin(40)));
+
+            var cartesian = new SKCartesianChart
+            {
+                Width = 300,
+                Height = 300,
+                Series = [new LineSeries<double> { Values = [1, 2, 3] }]
+            };
+
+            _ = cartesian.GetImage();
+
+            var cartesianCore = ((IChartView)cartesian).CoreChart;
+            Assert.AreEqual(
+                40f, cartesianCore.DrawMarginLocation.X, 0.5f,
+                "Cartesian: a HasRuleForChart DrawMargin must be honored in the same measure pass.");
+            Assert.AreEqual(40f, cartesianCore.DrawMarginLocation.Y, 0.5f);
+            Assert.AreEqual(220f, cartesianCore.DrawMarginSize.Width, 0.5f);
+            Assert.AreEqual(220f, cartesianCore.DrawMarginSize.Height, 0.5f);
+
+            var polar = new SKPolarChart
+            {
+                Width = 300,
+                Height = 300,
+                Series = [new PolarLineSeries<double> { Values = [1, 2, 3] }]
+            };
+
+            _ = polar.GetImage();
+
+            var polarCore = ((IChartView)polar).CoreChart;
+            Assert.AreEqual(
+                40f, polarCore.DrawMarginLocation.X, 0.5f,
+                "Polar: a HasRuleForChart DrawMargin must be honored in the same measure pass.");
+            Assert.AreEqual(40f, polarCore.DrawMarginLocation.Y, 0.5f);
+            Assert.AreEqual(220f, polarCore.DrawMarginSize.Width, 0.5f);
+            Assert.AreEqual(220f, polarCore.DrawMarginSize.Height, 0.5f);
         }
         finally
         {
