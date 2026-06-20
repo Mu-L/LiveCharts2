@@ -128,6 +128,10 @@ public class PieChartEngine(
 
         var theme = GetTheme();
 
+        // Apply chart-level theme rules to the view before reading its styling
+        // properties below, so themed values flow into this same measure pass.
+        view.ApplyTheme(theme);
+
         var viewDrawMargin = view.DrawMargin;
         ControlSize = view.ControlSize;
 

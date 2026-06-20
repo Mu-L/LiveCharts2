@@ -45,6 +45,21 @@ public static class LiveChartsthemeExtensions
     }
 
     /// <summary>
+    /// Defines a style builder for the <see cref="IChartView"/> itself, this lets the
+    /// shared theme logic set chart-level properties (legend/tooltip paints and sizes,
+    /// animations speed, draw margin, etc.) across every platform. Rules honor any
+    /// property the user set in XAML or code.
+    /// </summary>
+    /// <param name="theme">The theme.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <returns></returns>
+    public static Theme HasRuleForChart(this Theme theme, Action<IChartView> predicate)
+    {
+        theme.ChartBuilder.Add(predicate);
+        return theme;
+    }
+
+    /// <summary>
     /// Defines a style builder for <see cref="CoreDrawMarginFrame"/> objects.
     /// </summary>
     /// <param name="theme">The theme.</param>

@@ -105,6 +105,53 @@ public partial class SourceGenMapChart : IGeoMapView
     /// <inheritdoc cref="IChartView.ChartTheme" />
     public Theme? ChartTheme { get; set; }
 
+    /// <inheritdoc cref="IChartView.ApplyTheme(Theme)" />
+    public void ApplyTheme(Theme theme)
+    {
+        // Same shape as the cartesian/pie/etc. view: honor user-set / bound properties via
+        // the generated themed setters. The map exposes few chart-level styling properties
+        // and the default themes register no chart rules, so this is effectively inert today.
+        _isApplyingTheme = true;
+        try
+        {
+            theme.ApplyStyleToChart(this);
+        }
+        finally
+        {
+            _isApplyingTheme = false;
+        }
+    }
+
+    // Backing flag for the generated themed dependency-property setters (every IChartView
+    // gets them); see SetThemedValue below.
+    private protected bool _isApplyingTheme;
+
+#if WPF_LVC
+    private protected void SetThemedValue(global::System.Windows.DependencyProperty property, object? value)
+    {
+        if (ReadLocalValue(property) != global::System.Windows.DependencyProperty.UnsetValue) return;
+        SetCurrentValue(property, value);
+    }
+#elif WINUI_LVC
+    private protected void SetThemedValue(global::Microsoft.UI.Xaml.DependencyProperty property, object? value)
+    {
+        if (ReadLocalValue(property) != global::Microsoft.UI.Xaml.DependencyProperty.UnsetValue) return;
+        SetValue(property, value);
+    }
+#elif AVALONIA_LVC
+    private protected void SetThemedValue(global::Avalonia.AvaloniaProperty property, object? value)
+    {
+        if (IsSet(property)) return;
+        SetCurrentValue(property, value);
+    }
+#elif MAUI_LVC
+    private protected void SetThemedValue(global::Microsoft.Maui.Controls.BindableProperty property, object? value)
+    {
+        if (IsSet(property)) return;
+        SetValue(property, value);
+    }
+#endif
+
     // CoreCanvas / ControlSize / DesignerMode / IsDarkMode / InvokeOnUIThread
     // are inherited from SourceGenDrawnView. BackColor stays here because
     // WinForms' native BackColor name collides — explicit interface impl on

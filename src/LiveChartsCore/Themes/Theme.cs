@@ -330,6 +330,14 @@ public class Theme
     public List<Action<IBoxSeries>> BoxSeriesBuilder { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the chart view builder, these rules are applied to the
+    /// <see cref="IChartView"/> itself (e.g. the platform control) so chart-level
+    /// properties such as legend/tooltip paints or animations speed can be themed
+    /// from the shared theme logic. Rules honor user-set / bound properties.
+    /// </summary>
+    public List<Action<IChartView>> ChartBuilder { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the visual element builder.
     /// </summary>
     public Dictionary<Type, object> ChartElementElementBuilder { get; set; } = [];
@@ -363,6 +371,16 @@ public class Theme
     public void ApplyStyleToAxis(IPlane axis)
     {
         foreach (var rule in AxisBuilder) rule(axis);
+    }
+
+    /// <summary>
+    /// Applies the chart-level theme rules to the given view. The view is responsible
+    /// for honoring user-set / bound properties (see <see cref="IChartView.ApplyTheme(Theme)"/>).
+    /// </summary>
+    /// <param name="view">The chart view.</param>
+    public void ApplyStyleToChart(IChartView view)
+    {
+        foreach (var rule in ChartBuilder) rule(view);
     }
 
     /// <summary>

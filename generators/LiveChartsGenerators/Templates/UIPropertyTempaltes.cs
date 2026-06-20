@@ -187,6 +187,21 @@ namespace {baseTypeSymbol.ContainingNamespace};
             return __current;
         }}";
 
+        // Only chart views carry the theme arbitration machinery (_isApplyingTheme /
+        // SetThemedValue, declared in the shared SourceGenChart partial). Other UIProperty
+        // hosts — e.g. axis wrappers (XamlDateTimeAxis) — must keep the plain setter; their
+        // theming flows through the wrapped ChartElement instead.
+        var setter = ImplementsIChartView(target.DeclaringType)
+            ? @$"set
+        {{
+            // While a theme is being applied (IChartView.ApplyTheme), route the write
+            // through SetThemedValue so it never clobbers a value the user set in XAML /
+            // code. Normal user / binding writes take the plain SetValue path.
+            if (_isApplyingTheme) {{ SetThemedValue({propertyName}Property, value); return; }}
+            SetValue({propertyName}Property, value);
+        }}"
+            : $"set => SetValue({propertyName}Property, value);";
+
         return @$"
     /// <summary>
     ///    The <see cref=""{propertyName}""/> property definition.
@@ -197,9 +212,16 @@ namespace {baseTypeSymbol.ContainingNamespace};
     {docs}{converter}    public {propertyType} {propertyName}
     {{
         {getter}
-        set => SetValue({propertyName}Property, value);
+        {setter}
     }}";
     }
+
+    // True when the UIProperty host is a chart view (implements IChartView), the only
+    // types that carry the theme arbitration members in the shared SourceGenChart partial.
+    private static bool ImplementsIChartView(ITypeSymbol type) =>
+        type.AllInterfaces.Any(i =>
+            i.Name == "IChartView" &&
+            i.ContainingNamespace?.ToDisplayString() == "LiveChartsCore.Kernel.Sketches");
 
     private static string? GetLazyInitElementType(XamlProperty target)
     {
