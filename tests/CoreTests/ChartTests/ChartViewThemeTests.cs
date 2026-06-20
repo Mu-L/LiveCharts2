@@ -74,6 +74,35 @@ public class ChartViewThemeTests
     }
 
     [TestMethod]
+    public void ChartLevelRuleReachesGeoMap()
+    {
+        // Regression: GeoMapChart.Measure discarded GetTheme() and never called
+        // IChartView.ApplyTheme, so chart-level rules never reached geo map views.
+        try
+        {
+            _ = BuildThemeWith(t => t.HasRuleForChart(view => view.TooltipTextSize = 33));
+
+            var map = new SKGeoMap
+            {
+                Width = 300,
+                Height = 300,
+                ExplicitDisposing = true,
+                Series = [new HeatLandSeries { Lands = [new() { Name = "fra", Value = 10 }] }]
+            };
+
+            _ = map.GetImage();
+
+            Assert.AreEqual(
+                33d, ((IChartView)map).TooltipTextSize,
+                "HasRuleForChart must reach geo map views via GeoMapChart.Measure's ApplyTheme call.");
+        }
+        finally
+        {
+            LiveCharts.Configure(s => s.AddSkiaSharp());
+        }
+    }
+
+    [TestMethod]
     public void ChartThemePropertyIsHonored()
     {
         try
