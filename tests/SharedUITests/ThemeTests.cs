@@ -59,7 +59,12 @@ public class ThemeTests
                 })));
 
             var sut = await App.NavigateTo<Samples.General.FirstChart.View>();
-            await sut.Chart.WaitUntilChartRenders();
+            // WaitUntilChartLoadsAndRenders polls with a timeout; the unbounded
+            // WaitUntilChartRenders races UpdateStarted against its own subscription
+            // and hangs on Android when the forced, un-throttled update fires the
+            // event before the handler is attached — which stalls the whole Factos
+            // session, not just this test.
+            await sut.Chart.WaitUntilChartLoadsAndRenders();
 
             var view = (IChartView)sut.Chart;
 
@@ -70,7 +75,7 @@ public class ThemeTests
                 sut.Chart.CoreChart.Update();
             });
 
-            await sut.Chart.WaitUntilChartRenders();
+            await sut.Chart.WaitUntilChartLoadsAndRenders();
             await Task.Delay(500);
 
             await view.InvokeOnUIThreadAsync(() =>
