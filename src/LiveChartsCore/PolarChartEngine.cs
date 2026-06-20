@@ -169,6 +169,14 @@ public class PolarChartEngine(
 
         #region copy the current data in the view
 
+        var theme = GetTheme();
+
+        // Apply chart-level theme rules to the view BEFORE reading any of its
+        // styling properties below, so themed values (DrawMargin, legend and
+        // tooltip paints/size, ...) flow into this same measure pass. Mirrors
+        // the order used by the pie / sankey / treemap engines.
+        view.ApplyTheme(theme);
+
         var viewDrawMargin = view.DrawMargin;
         ControlSize = view.ControlSize;
 
@@ -189,12 +197,6 @@ public class PolarChartEngine(
 
         AngleAxes = [.. a.Select(x => x.ChartElementSource).Cast<IPolarAxis>()];
         RadiusAxes = [.. r.Select(x => x.ChartElementSource).Cast<IPolarAxis>()];
-
-        var theme = GetTheme();
-
-        // Apply chart-level theme rules to the view before reading its styling
-        // properties below, so themed values flow into this same measure pass.
-        view.ApplyTheme(theme);
 
         LegendPosition = view.LegendPosition;
         Legend = view.Legend;
