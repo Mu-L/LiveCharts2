@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using LiveChartsGenerators.Definitions;
+using LiveChartsGenerators.Templates;
 using Microsoft.CodeAnalysis;
 
 namespace LiveChartsGenerators.Frameworks;
@@ -66,18 +67,13 @@ public class BlazorTemplate(FrameworkTemplate.Context context) : FrameworkTempla
 ";
 
         return @$"
-    private {propertyType} {field}{(property.DefaultValueExpression is null ? string.Empty : $" = {property.DefaultValueExpression}")};
+    {UIPropertyTempaltes.FieldBackedBackingFields(property, field, propertyType)}
 
     {docs}    [Microsoft.AspNetCore.Components.Parameter]
     public {propertyType} {propertyName}
     {{
         get => {field};
-        set
-        {{
-            var oldValue = {field};
-            {field} = value;
-            {changeExpression}
-        }}
+        {UIPropertyTempaltes.FieldBackedSetter(property, field, changeExpression)}
     }}";
     }
 }

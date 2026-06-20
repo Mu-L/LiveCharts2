@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using LiveChartsGenerators.Definitions;
+using LiveChartsGenerators.Templates;
 using Microsoft.CodeAnalysis;
 
 namespace LiveChartsGenerators.Frameworks;
@@ -66,18 +67,13 @@ public class WinformsTemplate(FrameworkTemplate.Context context) : FrameworkTemp
 ";
 
         return @$"
-    private {propertyType} {field}{(property.DefaultValueExpression is null ? string.Empty : $" = {property.DefaultValueExpression}")};
+    {UIPropertyTempaltes.FieldBackedBackingFields(property, field, propertyType)}
 
     {docs}    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public {propertyType} {propertyName}
     {{
         get => {field};
-        set
-        {{
-            var oldValue = {field};
-            {field} = value;
-            {changeExpression}
-        }}
+        {UIPropertyTempaltes.FieldBackedSetter(property, field, changeExpression)}
     }}";
     }
 }
