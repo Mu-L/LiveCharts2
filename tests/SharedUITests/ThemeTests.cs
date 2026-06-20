@@ -21,7 +21,10 @@
 // SOFTWARE.
 
 using Factos;
+using LiveChartsCore;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.Themes;
 using SharedUITests.Helpers;
 using Xunit;
 
@@ -36,6 +39,57 @@ namespace SharedUITests;
 public class ThemeTests
 {
     public AppController App => AppController.Current;
+
+    // Chart-level theming (HasRuleForChart) styles the IChartView itself from the shared
+    // theme logic, across every platform. This runs on all UI platforms: the themed value
+    // must reach the view on all of them. The user-set-wins arbitration lives in the
+    // generated dependency-property setters, so that assertion is scoped to XAML platforms
+    // (WPF / Avalonia / WinUI / MAUI / Uno) where it is implemented; the non-XAML
+    // arbitration is a tracked follow-up.
+    [AppTestMethod]
+    public async Task ChartLevelThemeAppliesAndRespectsUserSet()
+    {
+        try
+        {
+            LiveCharts.Configure(c => c.AddDefaultTheme(theme => theme
+                .HasRuleForChart(view =>
+                {
+                    view.TooltipTextSize = 41;
+                    view.LegendTextSize = 7;
+                })));
+
+            var sut = await App.NavigateTo<Samples.General.FirstChart.View>();
+            await sut.Chart.WaitUntilChartRenders();
+
+            var view = (IChartView)sut.Chart;
+
+            // user explicitly sets LegendTextSize, then force another theme pass.
+            await view.InvokeOnUIThreadAsync(() =>
+            {
+                view.LegendTextSize = 99;
+                sut.Chart.CoreChart.Update();
+            });
+
+            await sut.Chart.WaitUntilChartRenders();
+            await Task.Delay(500);
+
+            await view.InvokeOnUIThreadAsync(() =>
+            {
+                // the theme reaches the view on every platform.
+                Assert.Equal(41d, view.TooltipTextSize, 3);
+
+#if XAML_UI_TESTING
+                // the theme must not overwrite a value the user set (DP-setter arbitration).
+                Assert.Equal(99d, view.LegendTextSize, 3);
+#endif
+            });
+        }
+        finally
+        {
+            // restore the default theme so the rule does not leak into other tests.
+            LiveCharts.Configure(c => c.AddSkiaSharp());
+        }
+    }
 
 #if WINUI_UI_TESTING || UNO_UI_TESTING
     // regression for https://github.com/Live-Charts/LiveCharts2/issues/2004

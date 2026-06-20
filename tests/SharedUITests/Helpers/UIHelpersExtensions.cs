@@ -49,6 +49,29 @@ public static class UIHelpersExtensions
 
     extension(IChartView chartView)
     {
+        // Runs the action on the chart's UI thread and completes when it finishes,
+        // surfacing any exception so asserts inside fail the test. Works on every
+        // platform because it builds on IChartView.InvokeOnUIThread (sync or posted).
+        public Task InvokeOnUIThreadAsync(Action action)
+        {
+            var tcs = new TaskCompletionSource<object?>();
+
+            chartView.InvokeOnUIThread(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.SetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+
+            return tcs.Task;
+        }
+
         public Task WaitUntilChartRenders()
         {
             var tcs = new TaskCompletionSource<object>();
