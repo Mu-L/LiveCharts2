@@ -47,6 +47,13 @@ public class ChartViewThemeTests
         return LiveCharts.DefaultSettings.GetTheme();
     }
 
+    // AddSkiaSharp only registers the parsers + provider; it does NOT rebuild the
+    // theme, so it never clears a HasRuleForChart rule from the global default.
+    // AddDefaultTheme rebuilds a fresh Theme (empty ChartBuilder), which is what
+    // actually restores the default and stops a rule leaking into other tests.
+    private static void ResetTheme() =>
+        LiveCharts.Configure(s => s.AddDefaultTheme());
+
     [TestMethod]
     public void ChartLevelRuleIsAppliedDuringMeasure()
     {
@@ -70,7 +77,7 @@ public class ChartViewThemeTests
         finally
         {
             // restore the default theme so the rule does not leak into other tests.
-            LiveCharts.Configure(s => s.AddSkiaSharp());
+            ResetTheme();
         }
     }
 
@@ -99,7 +106,7 @@ public class ChartViewThemeTests
         }
         finally
         {
-            LiveCharts.Configure(s => s.AddSkiaSharp());
+            ResetTheme();
         }
     }
 
@@ -111,7 +118,7 @@ public class ChartViewThemeTests
             // Capture a theme whose chart rule sets a distinct sentinel, then reset the
             // global default so the ONLY source of that sentinel is this per-instance theme.
             var perInstanceTheme = BuildThemeWith(t => t.HasRuleForChart(view => view.TooltipTextSize = 37));
-            LiveCharts.Configure(s => s.AddSkiaSharp());
+            ResetTheme();
 
             var chart = new SKCartesianChart
             {
@@ -129,7 +136,7 @@ public class ChartViewThemeTests
         }
         finally
         {
-            LiveCharts.Configure(s => s.AddSkiaSharp());
+            ResetTheme();
         }
     }
 
@@ -145,13 +152,21 @@ public class ChartViewThemeTests
         // and a 220x220 draw-margin size.
         try
         {
-            _ = BuildThemeWith(t => t.HasRuleForChart(view => view.DrawMargin = new Margin(40)));
+            // Capture a theme carrying the DrawMargin rule, then immediately reset the
+            // global default. A global DrawMargin rule would force a 40px margin on
+            // EVERY chart measured during the run (SK charts have no user-set-wins
+            // arbitration), corrupting unrelated tests such as CollapsedDrawMargin* and
+            // PolarDrawMargin. Applying it only via the per-instance ChartTheme keeps it
+            // scoped to the two charts under test.
+            var theme = BuildThemeWith(t => t.HasRuleForChart(view => view.DrawMargin = new Margin(40)));
+            ResetTheme();
 
             var cartesian = new SKCartesianChart
             {
                 Width = 300,
                 Height = 300,
-                Series = [new LineSeries<double> { Values = [1, 2, 3] }]
+                Series = [new LineSeries<double> { Values = [1, 2, 3] }],
+                ChartTheme = theme
             };
 
             _ = cartesian.GetImage();
@@ -168,7 +183,8 @@ public class ChartViewThemeTests
             {
                 Width = 300,
                 Height = 300,
-                Series = [new PolarLineSeries<double> { Values = [1, 2, 3] }]
+                Series = [new PolarLineSeries<double> { Values = [1, 2, 3] }],
+                ChartTheme = theme
             };
 
             _ = polar.GetImage();
@@ -183,7 +199,7 @@ public class ChartViewThemeTests
         }
         finally
         {
-            LiveCharts.Configure(s => s.AddSkiaSharp());
+            ResetTheme();
         }
     }
 }
