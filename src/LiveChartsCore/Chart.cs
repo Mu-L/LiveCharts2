@@ -253,8 +253,8 @@ public abstract class Chart
     /// per-element override). It is rebuilt in place from the view's
     /// <see cref="IChartView.AnimationsSpeed"/> / <see cref="IChartView.EasingFunction"/> on every
     /// measure (see <see cref="UpdateAnimation"/>), so already-created visuals pick up runtime
-    /// changes without recreation. A null <see cref="Drawing.Animation.EasingFunction"/> or a zero
-    /// <see cref="Drawing.Animation.Duration"/> disables animations.
+    /// changes without recreation. A null <see cref="Animation.EasingFunction"/> or a zero
+    /// <see cref="Animation.Duration"/> disables animations.
     /// </summary>
     public Animation Animation { get; } = new(EasingFunctions.QuadraticOut, TimeSpan.Zero);
 
