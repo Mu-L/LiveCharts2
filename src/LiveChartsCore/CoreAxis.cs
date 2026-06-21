@@ -1756,16 +1756,23 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
 
             var k = 0.5f;
             var kl = (j + 1) / (double)(SubseparatorsCount + 1);
+            // The mid subtick stays emphasized by index (the raw fraction), independent
+            // of the axis scale.
             if (Math.Abs(kl - 0.5f) < 0.01) k += 0.25f;
+
+            // Position uses the same linear/log distribution as the subseparators so
+            // subticks stay aligned with them on a logarithmic axis (see
+            // UpdateSubseparators).
+            var step = _logBase is null ? kl : 1 + Math.Log(kl, _logBase.Value);
 
             float xs = 0f, ys = 0f;
             if (_orientation == AxisOrientation.X)
             {
-                xs = scale.MeasureInPixels(s * kl);
+                xs = scale.MeasureInPixels(s * step);
             }
             else
             {
-                ys = scale.MeasureInPixels(s * kl);
+                ys = scale.MeasureInPixels(s * step);
             }
 
             UpdateTick(subtick, _tickLength * k, x + xs, y + ys, mode);
