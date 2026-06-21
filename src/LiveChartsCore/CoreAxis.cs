@@ -1721,16 +1721,26 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
             var subseparator = subseparators[j];
             var kl = (j + 1) / (double)(SubseparatorsCount + 1);
 
-            if (_logBase is not null) kl = Math.Log(kl, _logBase.Value);
+            // On a linear axis the subseparators are evenly spaced inside the major
+            // step: offset = s * (j + 1) / (SubseparatorsCount + 1).
+            //
+            // On a logarithmic axis they must follow the log distribution so they
+            // tighten as they approach the next power of the base; the j-th line sits
+            // at s * log_base(j + 1). Because kl == (j + 1) / (SubseparatorsCount + 1),
+            // the identity 1 + log_base(kl) == log_base(j + 1) holds when
+            // SubseparatorsCount + 1 == logBase (e.g. 9 subseparators for base 10, the
+            // documented setup). The previous s * log_base(kl) mirrored the spacing, so
+            // the gaps grew toward the next power instead of shrinking.
+            var step = _logBase is null ? kl : 1 + Math.Log(kl, _logBase.Value);
 
             float xs = 0f, ys = 0f;
             if (_orientation == AxisOrientation.X)
             {
-                xs = scale.MeasureInPixels(s + s * kl);
+                xs = scale.MeasureInPixels(s * step);
             }
             else
             {
-                ys = scale.MeasureInPixels(s * kl);
+                ys = scale.MeasureInPixels(s * step);
             }
 
             UpdateSeparator(subseparator, x + xs, y + ys, lxi, lxj, lyi, lyj, mode);
