@@ -82,6 +82,37 @@ public class ChartViewThemeTests
     }
 
     [TestMethod]
+    public void ChartLevelRuleSetsAnimationsSpeed()
+    {
+        // Regression for the original motivation of this refactor: a HasRuleForChart rule that
+        // sets the chart-level animation must reach the chart's single resolved Animation. Before
+        // the cleanup the chart kept a parallel ActualAnimationsSpeed resolved from a MaxValue
+        // sentinel, so theme-driven animation settings were easy to lose.
+        try
+        {
+            _ = BuildThemeWith(t => t.HasRuleForChart(
+                view => view.AnimationsSpeed = System.TimeSpan.FromMilliseconds(1234)));
+
+            var chart = new SKCartesianChart
+            {
+                Width = 300,
+                Height = 300,
+                Series = [new LineSeries<double> { Values = [1, 2, 3] }]
+            };
+
+            _ = chart.GetImage();
+
+            Assert.AreEqual(
+                1234L, ((IChartView)chart).CoreChart.Animation.Duration,
+                "A HasRuleForChart AnimationsSpeed must flow into the chart's resolved Animation.");
+        }
+        finally
+        {
+            ResetTheme();
+        }
+    }
+
+    [TestMethod]
     public void ChartLevelRuleReachesGeoMap()
     {
         // Regression: GeoMapChart.Measure discarded GetTheme() and never called
