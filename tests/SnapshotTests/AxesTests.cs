@@ -329,6 +329,50 @@ public sealed class AxesTests
     }
 
     [TestMethod]
+    public void LogarithmicSubticks()
+    {
+        // Subticks must follow the same logarithmic distribution as the subseparators
+        // so they stay aligned with them; the previous code placed subticks at evenly
+        // spaced (linear) positions on a log axis, drifting away from the subseparators.
+        var values = new LogarithmicPointX[]
+        {
+            new(1, 1),
+            new(10, 2),
+            new(100, 3),
+            new(1000, 4),
+            new(10000, 5),
+            new(100000, 6),
+            new(1000000, 7),
+            new(10000000, 8)
+        };
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<LogarithmicPointX> { Values = values }
+            ],
+            XAxes = [
+                new LogarithmicAxis(10)
+                {
+                    SeparatorsPaint = new SolidColorPaint(SKColors.LightSlateGray),
+                    SubseparatorsPaint = new SolidColorPaint(SKColors.LightSlateGray) { StrokeThickness = 0.5f },
+                    TicksPaint = new SolidColorPaint(SKColors.LightSlateGray) { StrokeThickness = 2 },
+                    SubticksPaint = new SolidColorPaint(SKColors.LightSlateGray) { StrokeThickness = 1 },
+                    SubseparatorsCount = 9
+                }
+            ],
+            YAxes = [
+                new Axis
+                {
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(LogarithmicSubticks)}");
+    }
+
+    [TestMethod]
     public void MatchScale()
     {
         // y from 0 to 5. x should calculate the range, so the grid forms a perfect square,
