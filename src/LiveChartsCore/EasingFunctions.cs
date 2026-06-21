@@ -130,12 +130,18 @@ public static class EasingFunctions
     /// </value>
     public static Func<float, float> CubicInOut => CubicEasingFunction.InOut;
 
-    // The cubic-bezier easings are curve-constant, so build each lookup table once and reuse the
-    // delegate. They used to rebuild (allocating a table + closures) on every property access.
-    private static readonly Func<float, float> s_ease = CubicBezierEasingFunction.BuildBezierEasingFunction(0.25f, 0.1f, 0.25f, 1f);
-    private static readonly Func<float, float> s_easeIn = CubicBezierEasingFunction.BuildBezierEasingFunction(0.42f, 0f, 1f, 1f);
-    private static readonly Func<float, float> s_easeOut = CubicBezierEasingFunction.BuildBezierEasingFunction(0f, 0f, 0.58f, 1f);
-    private static readonly Func<float, float> s_easeInOut = CubicBezierEasingFunction.BuildBezierEasingFunction(0.42f, 0f, 0.58f, 1f);
+    // The cubic-bezier easings are curve-constant, so each lookup table is built once and reused.
+    // Lazy so a table is only computed when its easing is actually used (and never if it is not),
+    // instead of eagerly when the class is first touched. They used to rebuild the whole function
+    // (allocating a table + closures) on every property access.
+    private static readonly Lazy<Func<float, float>> s_ease =
+        new(() => CubicBezierEasingFunction.BuildBezierEasingFunction(0.25f, 0.1f, 0.25f, 1f));
+    private static readonly Lazy<Func<float, float>> s_easeIn =
+        new(() => CubicBezierEasingFunction.BuildBezierEasingFunction(0.42f, 0f, 1f, 1f));
+    private static readonly Lazy<Func<float, float>> s_easeOut =
+        new(() => CubicBezierEasingFunction.BuildBezierEasingFunction(0f, 0f, 0.58f, 1f));
+    private static readonly Lazy<Func<float, float>> s_easeInOut =
+        new(() => CubicBezierEasingFunction.BuildBezierEasingFunction(0.42f, 0f, 0.58f, 1f));
 
     /// <summary>
     /// Gets the ease.
@@ -143,7 +149,7 @@ public static class EasingFunctions
     /// <value>
     /// The ease.
     /// </value>
-    public static Func<float, float> Ease => s_ease;
+    public static Func<float, float> Ease => s_ease.Value;
 
     /// <summary>
     /// Gets the ease in.
@@ -151,7 +157,7 @@ public static class EasingFunctions
     /// <value>
     /// The ease in.
     /// </value>
-    public static Func<float, float> EaseIn => s_easeIn;
+    public static Func<float, float> EaseIn => s_easeIn.Value;
 
     /// <summary>
     /// Gets the ease out.
@@ -159,7 +165,7 @@ public static class EasingFunctions
     /// <value>
     /// The ease out.
     /// </value>
-    public static Func<float, float> EaseOut => s_easeOut;
+    public static Func<float, float> EaseOut => s_easeOut.Value;
 
     /// <summary>
     /// Gets the ease in out.
@@ -167,7 +173,7 @@ public static class EasingFunctions
     /// <value>
     /// The ease in out.
     /// </value>
-    public static Func<float, float> EaseInOut => s_easeInOut;
+    public static Func<float, float> EaseInOut => s_easeInOut.Value;
 
     /// <summary>
     /// Gets the elastic in.
