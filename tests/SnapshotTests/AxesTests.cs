@@ -285,6 +285,50 @@ public sealed class AxesTests
     }
 
     [TestMethod]
+    public void LogarithmicScaleX()
+    {
+        // Mirror of LogarithmicScale but with the logarithmic axis on X, so the X
+        // subseparators are exercised (LogarithmicScale only covers the Y axis). On a
+        // log scale they must tighten as they approach the next power of ten (left to
+        // right); the previous code mirrored the spacing so the gaps grew toward the
+        // next power instead.
+        var values = new LogarithmicPointX[]
+        {
+            new(1, 1),
+            new(10, 2),
+            new(100, 3),
+            new(1000, 4),
+            new(10000, 5),
+            new(100000, 6),
+            new(1000000, 7),
+            new(10000000, 8)
+        };
+
+        var chart = new SKCartesianChart
+        {
+            Series = [
+                new LineSeries<LogarithmicPointX> { Values = values }
+            ],
+            XAxes = [
+                new LogarithmicAxis(10)
+                {
+                    SeparatorsPaint = new SolidColorPaint(SKColors.LightSlateGray),
+                    SubseparatorsPaint = new SolidColorPaint(SKColors.LightSlateGray) { StrokeThickness = 0.5f },
+                    SubseparatorsCount = 9
+                }
+            ],
+            YAxes = [
+                new Axis
+                {
+                }
+            ],
+            Width = 600,
+            Height = 600
+        };
+        chart.AssertSnapshotMatches($"{nameof(AxesTests)}_{nameof(LogarithmicScaleX)}");
+    }
+
+    [TestMethod]
     public void MatchScale()
     {
         // y from 0 to 5. x should calculate the range, so the grid forms a perfect square,
@@ -908,5 +952,13 @@ public sealed class AxesTests
         public double Y { get; set; } = y;
         public ChartEntityMetaData? MetaData { get; set; }
         public Coordinate Coordinate => new(X, Math.Log(Y, 10));
+    }
+
+    private class LogarithmicPointX(double x, double y) : IChartEntity
+    {
+        public double X { get; set; } = x;
+        public double Y { get; set; } = y;
+        public ChartEntityMetaData? MetaData { get; set; }
+        public Coordinate Coordinate => new(Math.Log(X, 10), Y);
     }
 }
