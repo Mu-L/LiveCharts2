@@ -22,14 +22,17 @@ public static partial class CustomLiveChartsExtensions
                 // if neccessary, override the default theme, for more info see:
                 // https://github.com/beto-rodriguez/LiveCharts2/blob/master/samples/ViewModelsSamples/LiveChartsThemeExtensions.cs
 
-                //theme =>
-                //    theme.OnInitialized(() =>
+                //theme => theme
+                //    .OnInitialized(() =>
                 //    {
-                //        theme.AnimationsSpeed = TimeSpan.FromSeconds(1);
-                //        theme.EasingFunction = EasingFunctions.BounceOut;
                 //        theme.Colors = theme.IsDark
                 //            ? ColorPalletes.MaterialDesign200
                 //            : ColorPalletes.MaterialDesign800;
+                //    })
+                //    .HasRuleForChart(chart =>
+                //    {
+                //        chart.AnimationsSpeed = TimeSpan.FromSeconds(1);
+                //        chart.EasingFunction = EasingFunctions.BounceOut;
                 //    })
             )
 

@@ -603,8 +603,10 @@ public abstract class CorePolarAxis<TTextGeometry, TLineGeometry, TCircleGeometr
         if (AnimationsSpeed is null && EasingFunction is null)
             return chart.Animation;
 
-        _animation.Duration = (long)(AnimationsSpeed ?? chart.ActualAnimationsSpeed).TotalMilliseconds;
-        _animation.EasingFunction = EasingFunction ?? chart.ActualEasingFunction;
+        _animation.Duration = AnimationsSpeed.HasValue
+            ? (long)AnimationsSpeed.Value.TotalMilliseconds
+            : chart.Animation.Duration;
+        _animation.EasingFunction = EasingFunction ?? chart.Animation.EasingFunction;
         return _animation;
     }
 }

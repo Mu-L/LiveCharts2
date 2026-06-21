@@ -70,7 +70,7 @@ public class LiveChartsSettings
     /// <value>
     /// The default easing function.
     /// </value>
-    public Func<float, float> EasingFunction { get; set; } = EasingFunctions.Unset;
+    public Func<float, float> EasingFunction { get; set; } = EasingFunctions.ExponentialOut;
 
     /// <summary>
     /// Gets or sets the default animations speed.
@@ -78,7 +78,7 @@ public class LiveChartsSettings
     /// <value>
     /// The default animations speed.
     /// </value>
-    public TimeSpan AnimationsSpeed { get; set; } = TimeSpan.MaxValue;
+    public TimeSpan AnimationsSpeed { get; set; } = TimeSpan.FromMilliseconds(800);
 
     /// <summary>
     /// Gets or sets the default zoom speed.
