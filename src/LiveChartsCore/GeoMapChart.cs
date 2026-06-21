@@ -471,7 +471,12 @@ public class GeoMapChart : Chart
         // native control Background is set. Without it, GPU mode (SKGLView on
         // MAUI etc.) clears to the GL surface default (transparent/black)
         // instead of the theme's chart background.
-        _ = GetTheme();
+        var theme = GetTheme();
+
+        // Apply chart-level theme rules to the view, mirroring the other engines.
+        // The map exposes only a few themeable chart-level properties (tooltip
+        // paints / size, ...), but a HasRuleForChart rule must still reach it.
+        MapView.ApplyTheme(theme);
 
         if (_activeMap is not null && _activeMap != MapView.ActiveMap)
         {

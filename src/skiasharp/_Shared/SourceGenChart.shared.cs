@@ -232,4 +232,58 @@ public partial class SourceGenChart : IChartView
 
     void IChartView.Invalidate() =>
         CoreCanvas.Invalidate();
+
+    // While true, the generated dependency-property setters route theme writes through
+    // SetThemedValue instead of a normal SetValue, so a theme never clobbers a value the
+    // user set in XAML / code. Set only around ApplyStyleToChart (which runs synchronously
+    // inside Measure), see OnChartPropertyChanged / OnTextPaintPropertyChanged which skip the
+    // re-entrant Update while it is set.
+    private protected bool _isApplyingTheme;
+
+    /// <inheritdoc cref="IChartView.ApplyTheme(Theme)" />
+    public void ApplyTheme(Theme theme)
+    {
+        _isApplyingTheme = true;
+        try
+        {
+            theme.ApplyStyleToChart(this);
+        }
+        finally
+        {
+            _isApplyingTheme = false;
+        }
+    }
+
+#if WPF_LVC
+    // Theme write for a generated dependency property: a value the user set in XAML / code
+    // (a local value or a binding) always wins, so we skip it. Otherwise we write via
+    // SetCurrentValue so the theme value never becomes a "local" value — that keeps the
+    // property eligible to be re-themed on a light/dark switch and still overridable later.
+    private protected void SetThemedValue(global::System.Windows.DependencyProperty property, object? value)
+    {
+        if (ReadLocalValue(property) != global::System.Windows.DependencyProperty.UnsetValue) return;
+        SetCurrentValue(property, value);
+    }
+#elif WINUI_LVC
+    // WinUI/Uno has no SetCurrentValue, so a theme write becomes a local value; re-theming on
+    // a light/dark switch is a known follow-up for this platform (tracked with the fan-out).
+    private protected void SetThemedValue(global::Microsoft.UI.Xaml.DependencyProperty property, object? value)
+    {
+        if (ReadLocalValue(property) != global::Microsoft.UI.Xaml.DependencyProperty.UnsetValue) return;
+        SetValue(property, value);
+    }
+#elif AVALONIA_LVC
+    private protected void SetThemedValue(global::Avalonia.AvaloniaProperty property, object? value)
+    {
+        if (IsSet(property)) return;
+        SetCurrentValue(property, value);
+    }
+#elif MAUI_LVC
+    // MAUI has no SetCurrentValue, same re-theming caveat as WinUI above.
+    private protected void SetThemedValue(global::Microsoft.Maui.Controls.BindableProperty property, object? value)
+    {
+        if (IsSet(property)) return;
+        SetValue(property, value);
+    }
+#endif
 }

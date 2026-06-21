@@ -21,7 +21,10 @@
 // SOFTWARE.
 
 using Factos;
+using LiveChartsCore;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.Themes;
 using SharedUITests.Helpers;
 using Xunit;
 
@@ -36,6 +39,63 @@ namespace SharedUITests;
 public class ThemeTests
 {
     public AppController App => AppController.Current;
+
+    // Chart-level theming (HasRuleForChart) styles the IChartView itself from the shared
+    // theme logic, across every platform. Two invariants hold on all of them: the themed
+    // value reaches the view (TooltipTextSize), and a value the user set wins over the rule
+    // (LegendTextSize). The user-set-wins arbitration lives in the generated property
+    // setters — XAML platforms read the dependency-property local value (ReadLocalValue /
+    // IsSet); the field-backed platforms (WinForms / Blazor / Eto) use a generated __userSet
+    // flag gated on _isApplyingTheme — so both assertions now run on every platform.
+    [AppTestMethod]
+    public async Task ChartLevelThemeAppliesAndRespectsUserSet()
+    {
+        try
+        {
+            LiveCharts.Configure(c => c.AddDefaultTheme(theme => theme
+                .HasRuleForChart(view =>
+                {
+                    view.TooltipTextSize = 41;
+                    view.LegendTextSize = 7;
+                })));
+
+            var sut = await App.NavigateTo<Samples.General.FirstChart.View>();
+            // WaitUntilChartLoadsAndRenders polls with a timeout; the unbounded
+            // WaitUntilChartRenders races UpdateStarted against its own subscription
+            // and hangs on Android when the forced, un-throttled update fires the
+            // event before the handler is attached — which stalls the whole Factos
+            // session, not just this test.
+            await sut.Chart.WaitUntilChartLoadsAndRenders();
+
+            var view = (IChartView)sut.Chart;
+
+            // user explicitly sets LegendTextSize, then force another theme pass.
+            await view.InvokeOnUIThreadAsync(() =>
+            {
+                view.LegendTextSize = 99;
+                sut.Chart.CoreChart.Update();
+            });
+
+            await sut.Chart.WaitUntilChartLoadsAndRenders();
+            await Task.Delay(500);
+
+            await view.InvokeOnUIThreadAsync(() =>
+            {
+                // the themed value reaches the view on every platform...
+                Assert.Equal(41d, view.TooltipTextSize, 3);
+
+                // ...and the theme must not overwrite a value the user set, on every platform
+                // (DP local-value on XAML, generated __userSet flag on WinForms / Blazor / Eto).
+                Assert.Equal(99d, view.LegendTextSize, 3);
+            });
+        }
+        finally
+        {
+            // restore the default theme so the rule does not leak into other tests;
+            // AddDefaultTheme rebuilds a fresh theme — AddSkiaSharp would leave the rule in place.
+            LiveCharts.Configure(c => c.AddDefaultTheme());
+        }
+    }
 
 #if WINUI_UI_TESTING || UNO_UI_TESTING
     // regression for https://github.com/Live-Charts/LiveCharts2/issues/2004

@@ -345,6 +345,14 @@ public class CartesianChartEngine(
 
         #region shallow copy the current data in the view
 
+        var theme = GetTheme();
+
+        // Apply chart-level theme rules to the view BEFORE reading any of its
+        // styling properties below, so themed values (DrawMargin, legend and
+        // tooltip paints/size, ...) flow into this same measure pass. Mirrors
+        // the order used by the pie / sankey / treemap engines.
+        _chartView.ApplyTheme(theme);
+
         var viewDrawMargin = _chartView.DrawMargin;
         ControlSize = _chartView.ControlSize;
 
@@ -355,8 +363,6 @@ public class CartesianChartEngine(
         YAxes = [.. y.Select(x => x.ChartElementSource).Cast<ICartesianAxis>()];
 
         _zoomingSpeed = _chartView.ZoomingSpeed;
-
-        var theme = GetTheme();
 
         LegendPosition = _chartView.LegendPosition;
         Legend = _chartView.Legend;

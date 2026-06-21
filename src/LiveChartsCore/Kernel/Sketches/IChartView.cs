@@ -65,6 +65,14 @@ public interface IChartView : IDrawnView
     Theme? ChartTheme { get; set; }
 
     /// <summary>
+    /// Applies the given theme's chart-level rules (see <see cref="Theme.ChartBuilder"/>)
+    /// to this view. The implementation must honor any property the user set in XAML or
+    /// code, so a theme never overwrites an explicit user value.
+    /// </summary>
+    /// <param name="theme">The theme to apply.</param>
+    void ApplyTheme(Theme theme);
+
+    /// <summary>
     /// Sets the back color of the control.
     /// </summary>
     /// <value>

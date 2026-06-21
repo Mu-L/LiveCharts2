@@ -183,6 +183,9 @@ public partial class SourceGenChart
         // a reference to the canvas in the UI, CoreChart is null until then.
         if (chart.CoreChart is null) return;
 #endif
+        // ApplyTheme runs synchronously inside Measure; a themed write here would
+        // schedule a redundant Update (and re-enter Measure), so skip it.
+        if (chart._isApplyingTheme) return;
         chart.CoreChart.Update();
     }
 
@@ -194,6 +197,8 @@ public partial class SourceGenChart
         if (chart.CoreChart is null) return;
 #endif
         ((Paint)newValue)?.PaintStyle = PaintStyle.Text;
+        // see OnChartPropertyChanged: don't re-enter Update while a theme is applied.
+        if (chart._isApplyingTheme) return;
         chart.CoreChart.Update();
     }
 

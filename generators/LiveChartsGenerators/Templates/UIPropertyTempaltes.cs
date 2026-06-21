@@ -187,6 +187,21 @@ namespace {baseTypeSymbol.ContainingNamespace};
             return __current;
         }}";
 
+        // Only chart views carry the theme arbitration machinery (_isApplyingTheme /
+        // SetThemedValue, declared in the shared SourceGenChart partial). Other UIProperty
+        // hosts — e.g. axis wrappers (XamlDateTimeAxis) — must keep the plain setter; their
+        // theming flows through the wrapped ChartElement instead.
+        var setter = ImplementsIChartView(target.DeclaringType)
+            ? @$"set
+        {{
+            // While a theme is being applied (IChartView.ApplyTheme), route the write
+            // through SetThemedValue so it never clobbers a value the user set in XAML /
+            // code. Normal user / binding writes take the plain SetValue path.
+            if (_isApplyingTheme) {{ SetThemedValue({propertyName}Property, value); return; }}
+            SetValue({propertyName}Property, value);
+        }}"
+            : $"set => SetValue({propertyName}Property, value);";
+
         return @$"
     /// <summary>
     ///    The <see cref=""{propertyName}""/> property definition.
@@ -197,9 +212,69 @@ namespace {baseTypeSymbol.ContainingNamespace};
     {docs}{converter}    public {propertyType} {propertyName}
     {{
         {getter}
-        set => SetValue({propertyName}Property, value);
+        {setter}
     }}";
     }
+
+    // True when the UIProperty host is a chart view (implements IChartView), the only
+    // types that carry the theme arbitration members in the shared SourceGenChart partial.
+    internal static bool ImplementsIChartView(ITypeSymbol type) =>
+        type.AllInterfaces.Any(i =>
+            i.Name == "IChartView" &&
+            i.ContainingNamespace?.ToDisplayString() == "LiveChartsCore.Kernel.Sketches");
+
+    // Backing-field declaration(s) for a field-backed (non-XAML: WinForms / Blazor / Eto)
+    // view property. Chart views also get a private "user set" flag so the field-backed
+    // setter can implement the same user-set-wins theme arbitration the XAML path gets via
+    // ReadLocalValue / IsSet.
+    internal static string FieldBackedBackingFields(XamlProperty property, string field, string propertyType)
+    {
+        var backing =
+            $"private {propertyType} {field}{(property.DefaultValueExpression is null ? string.Empty : $" = {property.DefaultValueExpression}")};";
+
+        return ImplementsIChartView(property.DeclaringType)
+            ? $@"{backing}
+    private bool {UserSetField(property)};"
+            : backing;
+    }
+
+    // Setter body for a field-backed view property. For chart views it mirrors the XAML
+    // SetThemedValue arbitration: a write made while a theme is being applied
+    // (IChartView.ApplyTheme sets _isApplyingTheme) is dropped once the user has set the
+    // property explicitly, so a HasRuleForChart rule never clobbers a user / bound value.
+    // The OnXxxPropertyChanged handlers are themselves guarded against _isApplyingTheme, so
+    // firing the change in the theme branch can't re-enter the measure pass.
+    internal static string FieldBackedSetter(XamlProperty property, string field, string changeExpression)
+    {
+        // oldValue is declared once for the whole setter (the change expression may read
+        // it); declaring it per-branch would collide in the nested scope (CS0136).
+        var apply = $@"{field} = value;
+            {changeExpression}";
+
+        if (!ImplementsIChartView(property.DeclaringType))
+            return $@"set
+        {{
+            var oldValue = {field};
+            {apply}
+        }}";
+
+        var userSet = UserSetField(property);
+
+        return $@"set
+        {{
+            var oldValue = {field};
+            if (_isApplyingTheme)
+            {{
+                if ({userSet}) return;
+                {apply}
+                return;
+            }}
+            {userSet} = true;
+            {apply}
+        }}";
+    }
+
+    private static string UserSetField(XamlProperty property) => $"__userSet{property.Name}";
 
     private static string? GetLazyInitElementType(XamlProperty target)
     {
