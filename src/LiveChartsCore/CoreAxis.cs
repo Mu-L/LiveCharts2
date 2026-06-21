@@ -1713,24 +1713,52 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
         SetUpdateMode(tick, mode);
     }
 
+    /// <summary>
+    /// Offset of the j-th subseparator / subtick, as a fraction of the major step.
+    /// </summary>
+    /// <remarks>
+    /// On a linear axis the subdivisions are evenly spaced inside the major step:
+    /// (j + 1) / (SubseparatorsCount + 1).
+    /// <para>
+    /// On a logarithmic axis they must follow the log distribution so they tighten as
+    /// they approach the next power of the base; the j-th line sits at log_base(j + 1).
+    /// Since kl == (j + 1) / (SubseparatorsCount + 1), the identity
+    /// 1 + log_base(kl) == log_base(j + 1) holds when SubseparatorsCount + 1 == logBase
+    /// (e.g. 9 subseparators for base 10, the documented setup). The previous
+    /// log_base(kl) mirrored the spacing, so the gaps grew toward the next power instead
+    /// of shrinking.
+    /// </para>
+    /// <para>
+    /// The low end is clamped to 0: a base-b decade has only b - 2 strictly-interior
+    /// integer minor lines, so when SubseparatorsCount &gt;= logBase the extra
+    /// subdivisions would otherwise fall on or before the major separator. Clamping
+    /// collapses them onto the major edge instead of drawing them in the previous decade.
+    /// </para>
+    /// </remarks>
+    private double GetSubdivisionStep(int j)
+    {
+        var kl = (j + 1) / (double)(SubseparatorsCount + 1);
+        return _logBase is null
+            ? kl
+            : Math.Max(0, 1 + Math.Log(kl, _logBase.Value));
+    }
+
     private void UpdateSubseparators(
         BaseLineGeometry[] subseparators, Scaler scale, double s, float x, float y, float lxi, float lxj, float lyi, float lyj, UpdateMode mode)
     {
         for (var j = 0; j < subseparators.Length; j++)
         {
             var subseparator = subseparators[j];
-            var kl = (j + 1) / (double)(SubseparatorsCount + 1);
-
-            if (_logBase is not null) kl = Math.Log(kl, _logBase.Value);
+            var step = GetSubdivisionStep(j);
 
             float xs = 0f, ys = 0f;
             if (_orientation == AxisOrientation.X)
             {
-                xs = scale.MeasureInPixels(s * kl);
+                xs = scale.MeasureInPixels(s * step);
             }
             else
             {
-                ys = scale.MeasureInPixels(s * kl);
+                ys = scale.MeasureInPixels(s * step);
             }
 
             UpdateSeparator(subseparator, x + xs, y + ys, lxi, lxj, lyi, lyj, mode);
@@ -1745,17 +1773,23 @@ public abstract class CoreAxis<TTextGeometry, TLineGeometry>
             var subtick = subticks[j];
 
             var k = 0.5f;
+            // The mid subtick stays emphasized by index (the raw fraction), independent
+            // of the axis scale.
             var kl = (j + 1) / (double)(SubseparatorsCount + 1);
             if (Math.Abs(kl - 0.5f) < 0.01) k += 0.25f;
+
+            // Position uses the same linear/log distribution as the subseparators so
+            // subticks stay aligned with them on a logarithmic axis.
+            var step = GetSubdivisionStep(j);
 
             float xs = 0f, ys = 0f;
             if (_orientation == AxisOrientation.X)
             {
-                xs = scale.MeasureInPixels(s * kl);
+                xs = scale.MeasureInPixels(s * step);
             }
             else
             {
-                ys = scale.MeasureInPixels(s * kl);
+                ys = scale.MeasureInPixels(s * step);
             }
 
             UpdateTick(subtick, _tickLength * k, x + xs, y + ys, mode);
