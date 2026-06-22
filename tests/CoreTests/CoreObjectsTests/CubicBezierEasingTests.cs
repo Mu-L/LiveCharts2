@@ -32,7 +32,9 @@ namespace CoreTests.CoreObjectsTests;
 [TestClass]
 public class CubicBezierEasingTests
 {
-    // Exact reference: solve x(t) == x with many Newton steps in double precision, then return y(t).
+    // Exact reference: solve x(t) == x in double precision, then return y(t). Uses a bracketed
+    // safe-Newton (bisection fallback) so it stays correct even for degenerate-slope curves where
+    // a raw Newton seed would overshoot — the same robustness the LUT builder relies on.
     private static double Reference(double x, double x1, double x2, double y1, double y2)
     {
         static double Calc(double t, double a1, double a2) =>
@@ -43,12 +45,16 @@ public class CubicBezierEasingTests
         if (x <= 0) return 0;
         if (x >= 1) return 1;
 
-        var t = x;
-        for (var i = 0; i < 60; i++)
+        double lo = 0, hi = 1, t = x;
+        for (var i = 0; i < 80; i++)
         {
+            var fx = Calc(t, x1, x2) - x;
+            if (Math.Abs(fx) < 1e-12) break;
+            if (fx > 0) hi = t; else lo = t;
+
             var slope = Slope(t, x1, x2);
-            if (slope == 0) break;
-            t -= (Calc(t, x1, x2) - x) / slope;
+            var next = Math.Abs(slope) < 1e-12 ? double.NaN : t - fx / slope;
+            t = next > lo && next < hi ? next : 0.5 * (lo + hi);
         }
         return Calc(t, y1, y2);
     }
@@ -59,6 +65,7 @@ public class CubicBezierEasingTests
     [DataRow(0f, 0f, 0.58f, 1f)]       // EaseOut
     [DataRow(0.42f, 0f, 0.58f, 1f)]    // EaseInOut
     [DataRow(0.8f, 0f, 0.2f, 1f)]      // steep, monotonic custom curve
+    [DataRow(0f, 0.6f, 0f, 1f)]        // degenerate slope at the ends: x(t) == t^3
     public void LutMatchesAnalyticAcrossDomain(float x1, float y1, float x2, float y2)
     {
         var f = EasingFunctions.BuildCubicBezier(x1, y1, x2, y2);
