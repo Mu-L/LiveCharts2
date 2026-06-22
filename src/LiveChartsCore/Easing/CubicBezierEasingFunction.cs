@@ -34,9 +34,11 @@ public static class CubicBezierEasingFunction
     // linear interpolation, which is what makes it cheap to call every frame.
     private const int LutIntervals = 256;
 
-    // Build-time root solve for x(t) == aX. Cheap to do once per bucket; never runs per frame.
-    private const int BuildNewtonIterations = 8;
+    // Build-time root solve for x(t) == x. Cheap to do once per bucket; never runs per frame, so
+    // we can afford a robust bracketed solve rather than a few raw Newton steps.
+    private const int BuildSolveIterations = 24;
     private const float MinSlope = 1e-6f;
+    private const float SolveTolerance = 1e-6f;
 
     /// <summary>
     /// Builds a bezier easing function.
@@ -69,21 +71,33 @@ public static class CubicBezierEasingFunction
         static float Calc(float t, float a, float b, float c) => ((a * t + b) * t + c) * t;
         static float Slope(float t, float a, float b, float c) => (3f * a * t + 2f * b) * t + c;
 
-        // Precompute the eased y for evenly-spaced x. For each x we solve x(t) == x with a few
-        // Newton steps (seeded with t = x, which is already close), then store y(t). The endpoints
-        // are exact: Calc(0) == 0 and Calc(1) == 1 on both axes.
+        // Solve x(t) == x. x(t) is monotonic non-decreasing on [0, 1] for an easing curve, so we
+        // keep a [lo, hi] bracket and take a Newton step only when it is safe (non-tiny slope and
+        // the step stays inside the bracket); otherwise we bisect. This stays correct even for
+        // degenerate curves like mX1 == mX2 == 0 (x(t) == t^3), where a raw Newton seed overshoots.
+        static float SolveT(float x, float a, float b, float c)
+        {
+            float lo = 0f, hi = 1f, t = x;
+            for (var k = 0; k < BuildSolveIterations; k++)
+            {
+                var fx = Calc(t, a, b, c) - x;
+                if (Math.Abs(fx) < SolveTolerance) break;
+                if (fx > 0f) hi = t; else lo = t;
+
+                var slope = Slope(t, a, b, c);
+                var next = Math.Abs(slope) < MinSlope ? float.NaN : t - fx / slope;
+                t = next > lo && next < hi ? next : 0.5f * (lo + hi);
+            }
+            return t;
+        }
+
+        // Precompute the eased y for evenly-spaced x: solve x(t) == x, then store y(t). The
+        // endpoints are exact: Calc(0) == 0 and Calc(1) == 1 on both axes.
         var lut = new float[LutIntervals + 1];
         for (var i = 0; i <= LutIntervals; i++)
         {
             var x = i / (float)LutIntervals;
-            var t = x;
-            for (var k = 0; k < BuildNewtonIterations; k++)
-            {
-                var slope = Slope(t, ax, bx, cx);
-                if (slope < MinSlope) break;
-                t -= (Calc(t, ax, bx, cx) - x) / slope;
-            }
-            lut[i] = Calc(t, ay, by, cy);
+            lut[i] = Calc(SolveT(x, ax, bx, cx), ay, by, cy);
         }
 
         return x =>
