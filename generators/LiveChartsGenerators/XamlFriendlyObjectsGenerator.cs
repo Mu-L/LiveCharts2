@@ -156,6 +156,7 @@ public class XamlFriendlyObjectsGenerator : IIncrementalGenerator
         var events = new List<IEventSymbol>();
         var methods = new Dictionary<string, IMethodSymbol>();
         var explicitMethods = new Dictionary<string, IMethodSymbol>();
+        var explicitEvents = new Dictionary<string, IEventSymbol>();
 
         var targetAttribute = symbol.GetAttributes()
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == XamlAttribute);
@@ -296,14 +297,28 @@ public class XamlFriendlyObjectsGenerator : IIncrementalGenerator
                     // for now we just ignore it...
                     //if (@event.Name == "PropertyChanged")
                     //    continue;
-                    events.Add(@event);
+
+                    // mirror public events as new public events delegating to the wrapped instance;
+                    // re-declaring them with public/new modifiers only works for public members (CS0106).
+                    if (@event.DeclaredAccessibility == Accessibility.Public)
+                    {
+                        events.Add(@event);
+                    }
+                    // see the explicit-method handling above: host an explicitly-implemented
+                    // interface event only when the wrapper actually implements that interface, so
+                    // the wrapper satisfies the interface by forwarding to the wrapped instance.
+                    else if (@event.ExplicitInterfaceImplementations.Length > 0 &&
+                        ImplementsInterface(symbol, @event.ExplicitInterfaceImplementations[0].ContainingType))
+                    {
+                        explicitEvents[@event.Name] = @event;
+                    }
                 }
             }
         }
 
         return new(
             generateBaseTypeDeclaration, ns, name, symbol, baseType, bindablePropertiesDic, [.. notBindableProperties.Values], events,
-            [.. methods.Values], [.. explicitMethods.Values], fileHeader, manualOnPropertyChanged, propertyChangeMap, overridenTypes, overridenNames,
+            [.. methods.Values], [.. explicitMethods.Values], [.. explicitEvents.Values], fileHeader, manualOnPropertyChanged, propertyChangeMap, overridenTypes, overridenNames,
             tModel, tVisual, tLabel);
     }
 

@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Drawing;
+using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.Measure;
 using LiveChartsCore.Painting;
@@ -52,6 +53,45 @@ public interface ISeries : IChartElement
     /// Gets whether the series requires to find the closest point when the pointer goes down.
     /// </summary>
     bool RequiresFindClosestOnPointerDown { get; }
+
+    /// <summary>
+    /// Occurs when a point in this series is measured. This is the non-generic counterpart of
+    /// <see cref="Series{TModel, TVisual, TLabel}.PointMeasured"/>, exposed so code that only has
+    /// an <see cref="ISeries"/> reference (e.g. a theme rule) can react per point.
+    /// </summary>
+    event Action<ChartPoint>? PointMeasured;
+
+    /// <summary>
+    /// Occurs when a point in this series is created. This is the non-generic counterpart of
+    /// <see cref="Series{TModel, TVisual, TLabel}.PointCreated"/>, exposed so code that only has
+    /// an <see cref="ISeries"/> reference (e.g. a theme rule) can react per point.
+    /// </summary>
+    event Action<ChartPoint>? PointCreated;
+
+    /// <summary>
+    /// Occurs when the pointer goes down over a chart point(s). This is the non-generic counterpart
+    /// of <see cref="Series{TModel, TVisual, TLabel}.DataPointerDown"/>.
+    /// </summary>
+    event ChartPointsHandler? DataPointerDown;
+
+    /// <summary>
+    /// Occurs when the pointer is over a chart point. This is the non-generic counterpart of
+    /// <see cref="Series{TModel, TVisual, TLabel}.ChartPointPointerHover"/>.
+    /// </summary>
+    event ChartPointHandler? ChartPointPointerHover;
+
+    /// <summary>
+    /// Occurs when the pointer left a chart point. This is the non-generic counterpart of
+    /// <see cref="Series{TModel, TVisual, TLabel}.ChartPointPointerHoverLost"/>.
+    /// </summary>
+    event ChartPointHandler? ChartPointPointerHoverLost;
+
+    /// <summary>
+    /// Occurs when the pointer goes down over a chart point, if there are multiple points the closest
+    /// one is selected. This is the non-generic counterpart of
+    /// <see cref="Series{TModel, TVisual, TLabel}.ChartPointPointerDown"/>.
+    /// </summary>
+    event ChartPointHandler? ChartPointPointerDown;
 
     /// <summary>
     /// Gets or sets the name of the series, the name is normally used by <see cref="IChartTooltip"/> or 
