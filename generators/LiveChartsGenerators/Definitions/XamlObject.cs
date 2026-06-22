@@ -36,6 +36,7 @@ public readonly record struct XamlObject
     public readonly List<IEventSymbol> Events;
     public readonly List<IMethodSymbol> Methods;
     public readonly List<IMethodSymbol> ExplicitMethods;
+    public readonly List<IEventSymbol> ExplicitEvents;
     public readonly string? FileHeader;
     public readonly bool ManualOnPropertyChanged = false;
     public readonly Dictionary<string, string> PropertyChangedMap = [];
@@ -55,6 +56,7 @@ public readonly record struct XamlObject
         List<IEventSymbol> events,
         List<IMethodSymbol> methods,
         List<IMethodSymbol> explicitMethods,
+        List<IEventSymbol> explicitEvents,
         string? fileHeader,
         bool manualOnPropertyChanged,
         string? propertyChangedMap,
@@ -74,6 +76,7 @@ public readonly record struct XamlObject
         Events = events;
         Methods = methods;
         ExplicitMethods = explicitMethods;
+        ExplicitEvents = explicitEvents;
         FileHeader = fileHeader;
         ManualOnPropertyChanged = manualOnPropertyChanged;
 

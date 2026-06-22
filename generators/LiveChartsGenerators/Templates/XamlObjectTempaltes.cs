@@ -90,6 +90,11 @@ public partial class {target.Name} : LiveChartsCore.Generators.IXamlWrapper<{bas
 {Concatenate(target.ExplicitMethods, GetExplicitMethodSyntax)}
 #endregion
 
+#region explicit events
+
+{Concatenate(target.ExplicitEvents, GetExplicitEventSyntax)}
+#endregion
+
     {(target.ManualOnPropertyChanged ? string.Empty : template.GetPropertyChangedMetod())}
 
     private System.Collections.Generic.HashSet<string> _setCommands = [];
@@ -210,6 +215,21 @@ public partial class {target.Name} : LiveChartsCore.Generators.IXamlWrapper<{bas
         var actualName = nameSplit[nameSplit.Length - 1];
 
         return @$"    {method.ReturnType} {method.Name}({sb}) => (({path})_baseType).{actualName}({sb1});";
+    }
+
+    private static string GetExplicitEventSyntax(IEventSymbol @event)
+    {
+        // @event.Name is the fully-qualified explicit name, e.g. "LiveChartsCore.ISeries.PointMeasured";
+        // split off the interface so we can both declare the explicit member and cast _baseType to it.
+        var nameSplit = @event.Name.Split('.');
+        var path = string.Join(".", nameSplit, 0, nameSplit.Length - 1);
+        var actualName = nameSplit[nameSplit.Length - 1];
+
+        return @$"    event {@event.Type.ToDisplayString()} {@event.Name}
+    {{
+        add => (({path})_baseType).{actualName} += value;
+        remove => (({path})_baseType).{actualName} -= value;
+    }}";
     }
 
     private static string GetChangesMap(XamlObject target, FrameworkTemplate template)
