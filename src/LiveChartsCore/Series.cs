@@ -183,7 +183,9 @@ public abstract class Series<TModel, TVisual, TLabel>
 
     int ISeries.SeriesId { get; set; } = -1;
 
-    bool ISeries.RequiresFindClosestOnPointerDown => DataPointerDown is not null || ChartPointPointerDown is not null;
+    bool ISeries.RequiresFindClosestOnPointerDown =>
+        DataPointerDown is not null || ChartPointPointerDown is not null ||
+        _dataPointerDown is not null || _chartPointPointerDown is not null;
 
     /// <inheritdoc cref="ISeries.ZIndex" />
     public int ZIndex { get; set => SetProperty(ref field, value); }
@@ -358,6 +360,54 @@ public abstract class Series<TModel, TVisual, TLabel>
     /// </summary>
     public event ChartPointHandler<TModel, TVisual, TLabel>? ChartPointPointerDown;
 
+    // Non-generic event twins exposed on ISeries so code that only has an ISeries reference
+    // (e.g. a theme rule) can subscribe per point/pointer without knowing the series generic
+    // arguments. Each twin keeps its own backing delegate and is fanned out alongside its
+    // strongly-typed counterpart in the matching On* method. Mirrors the same non-generic
+    // exposure used by ISeries.DataLabelsFormatter (see hack #040425).
+
+    private Action<ChartPoint>? _pointMeasured;
+    event Action<ChartPoint>? ISeries.PointMeasured
+    {
+        add => _pointMeasured += value;
+        remove => _pointMeasured -= value;
+    }
+
+    private Action<ChartPoint>? _pointCreated;
+    event Action<ChartPoint>? ISeries.PointCreated
+    {
+        add => _pointCreated += value;
+        remove => _pointCreated -= value;
+    }
+
+    private ChartPointsHandler? _dataPointerDown;
+    event ChartPointsHandler? ISeries.DataPointerDown
+    {
+        add => _dataPointerDown += value;
+        remove => _dataPointerDown -= value;
+    }
+
+    private ChartPointHandler? _chartPointPointerHover;
+    event ChartPointHandler? ISeries.ChartPointPointerHover
+    {
+        add => _chartPointPointerHover += value;
+        remove => _chartPointPointerHover -= value;
+    }
+
+    private ChartPointHandler? _chartPointPointerHoverLost;
+    event ChartPointHandler? ISeries.ChartPointPointerHoverLost
+    {
+        add => _chartPointPointerHoverLost += value;
+        remove => _chartPointPointerHoverLost -= value;
+    }
+
+    private ChartPointHandler? _chartPointPointerDown;
+    event ChartPointHandler? ISeries.ChartPointPointerDown
+    {
+        add => _chartPointPointerDown += value;
+        remove => _chartPointPointerDown -= value;
+    }
+
     /// <inheritdoc cref="ISeries.Fetch(Chart)"/>
     protected IEnumerable<ChartPoint> Fetch(Chart chart)
     {
@@ -369,7 +419,12 @@ public abstract class Series<TModel, TVisual, TLabel>
     protected virtual void OnDataPointerDown(IChartView chart, IEnumerable<ChartPoint> points, LvcPoint pointer)
     {
         DataPointerDown?.Invoke(chart, points.Select(point => new ChartPoint<TModel, TVisual, TLabel>(point)));
-        ChartPointPointerDown?.Invoke(chart, new ChartPoint<TModel, TVisual, TLabel>(points.FindClosestTo<TModel, TVisual, TLabel>(pointer)!));
+        _dataPointerDown?.Invoke(chart, points);
+
+        if (ChartPointPointerDown is null && _chartPointPointerDown is null) return;
+        var closest = points.FindClosestTo<TModel, TVisual, TLabel>(pointer)!;
+        ChartPointPointerDown?.Invoke(chart, new ChartPoint<TModel, TVisual, TLabel>(closest));
+        _chartPointPointerDown?.Invoke(chart, closest);
     }
 
     ///<inheritdoc cref="ISeries.FindHitPoints(Chart, LvcPoint, FindingStrategy, FindPointFor)"/>
@@ -479,8 +534,11 @@ public abstract class Series<TModel, TVisual, TLabel>
     /// Called when a point was measured.
     /// </summary>
     /// <param name="chartPoint">The chart point.</param>
-    protected internal virtual void OnPointMeasured(ChartPoint chartPoint) =>
+    protected internal virtual void OnPointMeasured(ChartPoint chartPoint)
+    {
         PointMeasured?.Invoke(new ChartPoint<TModel, TVisual, TLabel>(chartPoint));
+        _pointMeasured?.Invoke(chartPoint);
+    }
 
     /// <summary>
     /// Called when a point is created.
@@ -490,6 +548,7 @@ public abstract class Series<TModel, TVisual, TLabel>
     {
         SetDefaultPointTransitions(chartPoint);
         PointCreated?.Invoke(new ChartPoint<TModel, TVisual, TLabel>(chartPoint));
+        _pointCreated?.Invoke(chartPoint);
     }
 
     /// <summary>
@@ -507,9 +566,10 @@ public abstract class Series<TModel, TVisual, TLabel>
     {
         point.Context.Series.VisualStates.SetState("Hover", point.Context.Visual);
 
-        if (ChartPointPointerHover is null || point.IsPointerOver) return;
+        if ((ChartPointPointerHover is null && _chartPointPointerHover is null) || point.IsPointerOver) return;
         point.IsPointerOver = true;
-        ChartPointPointerHover.Invoke(point.Context.Chart, ConvertToTypedChartPoint(point));
+        ChartPointPointerHover?.Invoke(point.Context.Chart, ConvertToTypedChartPoint(point));
+        _chartPointPointerHover?.Invoke(point.Context.Chart, point);
     }
 
     /// <summary>
@@ -520,9 +580,10 @@ public abstract class Series<TModel, TVisual, TLabel>
     {
         point.Context.Series.VisualStates.ClearState("Hover", point.Context.Visual);
 
-        if (ChartPointPointerHoverLost is null || !point.IsPointerOver) return;
+        if ((ChartPointPointerHoverLost is null && _chartPointPointerHoverLost is null) || !point.IsPointerOver) return;
         point.IsPointerOver = false;
-        ChartPointPointerHoverLost.Invoke(point.Context.Chart, ConvertToTypedChartPoint(point));
+        ChartPointPointerHoverLost?.Invoke(point.Context.Chart, ConvertToTypedChartPoint(point));
+        _chartPointPointerHoverLost?.Invoke(point.Context.Chart, point);
     }
 
     /// <inheritdoc cref="ChartElement.OnPaintChanged(string?)"/>
