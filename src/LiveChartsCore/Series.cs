@@ -422,7 +422,13 @@ public abstract class Series<TModel, TVisual, TLabel>
         _dataPointerDown?.Invoke(chart, points);
 
         if (ChartPointPointerDown is null && _chartPointPointerDown is null) return;
-        var closest = points.FindClosestTo<TModel, TVisual, TLabel>(pointer)!;
+
+        // Use the non-generic FindClosestTo so we can null-check once (it returns null when
+        // points is empty) and wrap the closest point exactly once for the typed event while
+        // reusing the same base ChartPoint for the non-generic one.
+        var closest = points.FindClosestTo(pointer);
+        if (closest is null) return;
+
         ChartPointPointerDown?.Invoke(chart, new ChartPoint<TModel, TVisual, TLabel>(closest));
         _chartPointPointerDown?.Invoke(chart, closest);
     }
