@@ -101,6 +101,27 @@ public class SeriesNonGenericEventsTests
     }
 
     [TestMethod]
+    public void DataPointerDown_EmptyPoints_SkipsClosestWithoutThrowing()
+    {
+        // OnDataPointerDown can be called with no hit points; the closest-point events must be
+        // skipped (FindClosestTo returns null on an empty set) instead of wrapping/invoking a
+        // null closest. DataPointerDown still reports the press.
+        var series = new ColumnSeries<int> { Values = [10, 20, 30] };
+        var chart = NewChart(series);
+        _ = ChangingPaintTasks.DrawChart(chart);
+
+        var dataFired = false;
+        var closestFired = false;
+        ((ISeries)series).DataPointerDown += (_, _) => dataFired = true;
+        ((ISeries)series).ChartPointPointerDown += (_, _) => closestFired = true;
+
+        ((ISeries)series).OnDataPointerDown(chart, Array.Empty<ChartPoint>(), new LvcPoint(0, 0));
+
+        Assert.IsTrue(dataFired, "DataPointerDown reports the press even with no hit points");
+        Assert.IsFalse(closestFired, "ChartPointPointerDown must not fire when there is no closest point");
+    }
+
+    [TestMethod]
     public void RequiresFindClosestOnPointerDown_HonorsNonGenericSubscription()
     {
         // InvokePointerDown skips a series whose RequiresFindClosestOnPointerDown is false,
