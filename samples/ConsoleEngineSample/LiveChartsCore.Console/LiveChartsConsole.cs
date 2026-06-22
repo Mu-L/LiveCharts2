@@ -33,10 +33,13 @@ public static class LiveChartsConsole
             .HasTheme(theme => theme
                 .OnInitialized(() =>
                 {
-                    theme.AnimationsSpeed = TimeSpan.FromMilliseconds(500);
-                    theme.EasingFunction = LvcEasings.ExponentialOut;
                     theme.Colors = ColorPalletes.MaterialDesign500;
                     theme.VirtualBackroundColor = new(0, 0, 0);
+                })
+                .HasRuleForChart(chart =>
+                {
+                    chart.AnimationsSpeed = TimeSpan.FromMilliseconds(500);
+                    chart.EasingFunction = LvcEasings.ExponentialOut;
                 })
                 .HasDefaultTooltip(() => new ConsoleTooltip())
                 .HasDefaultLegend(() => new ConsoleLegend())

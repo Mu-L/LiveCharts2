@@ -249,45 +249,26 @@ public abstract class Chart
     public IChartTooltip? Tooltip { get; protected set; }
 
     /// <summary>
-    /// Gets the animations speed. Setting this also refreshes <see cref="Animation"/> so
-    /// already-created chart-default geometries pick up the new duration without recreation.
+    /// Gets the resolved animation shared by chart-default geometries (those without a
+    /// per-element override). It is rebuilt in place from the view's
+    /// <see cref="IChartView.AnimationsSpeed"/> / <see cref="IChartView.EasingFunction"/> on every
+    /// measure (see <see cref="UpdateAnimation"/>), so already-created visuals pick up runtime
+    /// changes without recreation. A null <see cref="Animation.EasingFunction"/> or a zero
+    /// <see cref="Animation.Duration"/> disables animations.
     /// </summary>
-    /// <value>
-    /// The animations speed.
-    /// </value>
-    public TimeSpan ActualAnimationsSpeed
+    public Animation Animation { get; } = new(EasingFunctions.QuadraticOut, TimeSpan.Zero);
+
+    /// <summary>
+    /// Rebuilds <see cref="Animation"/> in place from the view's animation settings. Called once
+    /// per measure, after the theme has been applied to the view (so themed or user-set values are
+    /// already in place). This is the single place that resolves the chart-level animation;
+    /// per-element overrides resolve against it in their own GetAnimation.
+    /// </summary>
+    internal void UpdateAnimation()
     {
-        get;
-        protected set
-        {
-            field = value;
-            Animation.Duration = (long)value.TotalMilliseconds;
-        }
+        Animation.Duration = (long)View.AnimationsSpeed.TotalMilliseconds;
+        Animation.EasingFunction = View.EasingFunction;
     }
-
-    /// <summary>
-    /// Gets the easing function. Setting this also refreshes <see cref="Animation"/> so
-    /// already-created chart-default geometries pick up the new function without recreation.
-    /// </summary>
-    /// <value>
-    /// The easing function.
-    /// </value>
-    public Func<float, float>? ActualEasingFunction
-    {
-        get;
-        protected set
-        {
-            field = value;
-            Animation.EasingFunction = value;
-        }
-    } = EasingFunctions.QuadraticOut;
-
-    /// <summary>
-    /// Shared animation reference used by chart-default geometries (geometries that don't
-    /// have a per-element override). Mutated in-place by <see cref="ActualAnimationsSpeed"/>
-    /// and <see cref="ActualEasingFunction"/> so existing visuals pick up new settings.
-    /// </summary>
-    internal Animation Animation { get; } = new(EasingFunctions.QuadraticOut, TimeSpan.Zero);
 
     /// <summary>
     /// Gets the visual elements.

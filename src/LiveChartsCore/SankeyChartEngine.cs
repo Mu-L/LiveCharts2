@@ -97,12 +97,7 @@ public class SankeyChartEngine(
         TooltipPosition = view.TooltipPosition;
         Tooltip = view.Tooltip;
 
-        ActualAnimationsSpeed = view.AnimationsSpeed == TimeSpan.MaxValue
-            ? theme.AnimationsSpeed
-            : view.AnimationsSpeed;
-        ActualEasingFunction = view.EasingFunction == EasingFunctions.Unset
-            ? theme.EasingFunction
-            : view.EasingFunction;
+        UpdateAnimation();
 
         SeriesContext = new SeriesContext(VisibleSeries, this);
         var themeId = theme.ThemeId;

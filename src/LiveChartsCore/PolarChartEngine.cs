@@ -204,12 +204,7 @@ public class PolarChartEngine(
         TooltipPosition = view.TooltipPosition;
         Tooltip = view.Tooltip;
 
-        ActualAnimationsSpeed = view.AnimationsSpeed == TimeSpan.MaxValue
-            ? theme.AnimationsSpeed
-            : view.AnimationsSpeed;
-        ActualEasingFunction = view.EasingFunction == EasingFunctions.Unset
-            ? theme.EasingFunction
-            : view.EasingFunction;
+        UpdateAnimation();
 
         FitToBounds = view.FitToBounds;
         TotalAnge = (float)view.TotalAngle;

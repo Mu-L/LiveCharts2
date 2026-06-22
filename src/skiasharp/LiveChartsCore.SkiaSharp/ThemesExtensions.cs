@@ -60,8 +60,6 @@ public static class ThemesExtensions
                     .OnInitialized(() =>
                     {
                         theme.RequestedTheme = requestedTheme;
-                        theme.AnimationsSpeed = TimeSpan.FromMilliseconds(800);
-                        theme.EasingFunction = EasingFunctions.ExponentialOut;
 
                         if (theme.IsDark)
                         {

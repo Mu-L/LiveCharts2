@@ -457,11 +457,10 @@ public abstract class Series<TModel, TVisual, TLabel>
 
     /// <summary>
     /// Returns the <see cref="Animation"/> instance that every geometry this series animates
-    /// should reference. With no per-series override, the chart's shared <see cref="Chart.Animation"/>
-    /// is returned directly so chart-level <see cref="Chart.ActualAnimationsSpeed"/> /
-    /// <see cref="Chart.ActualEasingFunction"/> changes propagate to already-created visuals.
-    /// With a per-series override, a series-owned instance is mutated in-place from the active
-    /// settings.
+    /// should reference. When neither <see cref="AnimationsSpeed"/> nor <see cref="EasingFunction"/>
+    /// is set, the chart's shared <see cref="Chart.Animation"/> is returned directly (so chart-level
+    /// animation changes propagate to already-created visuals without recreation). When either is
+    /// set, a series-owned instance is mutated in place, inheriting the unset field from the chart.
     /// </summary>
     /// <param name="chart">The chart whose <see cref="Chart.Animation"/> is used as the fallback.</param>
     protected Animation GetAnimation(Chart chart)
@@ -469,8 +468,10 @@ public abstract class Series<TModel, TVisual, TLabel>
         if (AnimationsSpeed is null && EasingFunction is null)
             return chart.Animation;
 
-        _animation.Duration = (long)(AnimationsSpeed ?? chart.ActualAnimationsSpeed).TotalMilliseconds;
-        _animation.EasingFunction = EasingFunction ?? chart.ActualEasingFunction;
+        _animation.Duration = AnimationsSpeed.HasValue
+            ? (long)AnimationsSpeed.Value.TotalMilliseconds
+            : chart.Animation.Duration;
+        _animation.EasingFunction = EasingFunction ?? chart.Animation.EasingFunction;
         return _animation;
     }
 

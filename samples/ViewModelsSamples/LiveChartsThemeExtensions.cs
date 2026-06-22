@@ -19,14 +19,19 @@ public static class LiveChartsThemeExtensions
             {
                 // the OnInitialized method is called when the // mark
                 // theme is applied to a chart for the first time // mark
-                // here ee can define colors, animations speed, easing function, etc. // mark
-                theme.AnimationsSpeed = TimeSpan.FromSeconds(1);
-                theme.EasingFunction = EasingFunctions.BounceOut;
+                // here we can define colors, palettes, etc. // mark
                 theme.Colors = [
                     new(66, 165, 245),
                     new(30, 136, 229),
                     new(21, 101, 192)
                 ];
+            })
+            .HasRuleForChart(chart =>
+            {
+                // animations are configured on the chart view itself; // mark
+                // a rule here applies them to every chart unless the user sets them explicitly // mark
+                chart.AnimationsSpeed = TimeSpan.FromSeconds(1);
+                chart.EasingFunction = EasingFunctions.BounceOut;
             })
             .HasRuleForBarSeries(series =>
             {

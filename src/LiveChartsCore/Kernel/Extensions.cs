@@ -352,10 +352,9 @@ public static class Extensions
     /// Points the given <paramref name="properties"/> at the chart's shared
     /// <see cref="Chart.Animation"/> instance. When <paramref name="properties"/> is null or
     /// empty, every animatable property on <paramref name="animatable"/> is bound to the same
-    /// instance. Because that instance is mutated in-place when
-    /// <see cref="Chart.ActualAnimationsSpeed"/> or <see cref="Chart.ActualEasingFunction"/>
-    /// change, callers using this overload pick up chart-level animation changes without
-    /// recreating their geometries.
+    /// instance. Because that instance is mutated in-place by <see cref="Chart.UpdateAnimation"/>
+    /// when the view's animation settings change, callers using this overload pick up chart-level
+    /// animation changes without recreating their geometries.
     /// </summary>
     /// <param name="animatable">The animatable object.</param>
     /// <param name="chart">

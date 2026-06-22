@@ -176,8 +176,9 @@ public interface IPlane : IChartElement
     IList<string>? Labels { get; set; }
 
     /// <summary>
-    /// Gets or sets the animations speed, if this property is null, the
-    /// <see cref="Chart.ActualAnimationsSpeed"/> property will be used.
+    /// Gets or sets the animations speed; when null the axis inherits the chart-level animation
+    /// (see <see cref="Chart.Animation"/>). Set it to <see cref="TimeSpan.Zero"/> to disable
+    /// animations for this axis only.
     /// </summary>
     /// <value>
     /// The animations speed.
@@ -185,8 +186,8 @@ public interface IPlane : IChartElement
     TimeSpan? AnimationsSpeed { get; set; }
 
     /// <summary>
-    /// Gets or sets the easing function to animate the series, if this property is null, the
-    /// <see cref="Chart.ActualEasingFunction"/> property will be used.
+    /// Gets or sets the easing function used to animate the axis; when null the axis inherits the
+    /// chart-level easing (see <see cref="Chart.Animation"/>).
     /// </summary>
     /// <value>
     /// The easing function.

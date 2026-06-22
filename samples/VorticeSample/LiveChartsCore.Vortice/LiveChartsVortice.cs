@@ -40,10 +40,13 @@ public static class LiveChartsVortice
             .HasTheme(theme => theme
                 .OnInitialized(() =>
                 {
-                    theme.AnimationsSpeed = TimeSpan.FromMilliseconds(800);
-                    theme.EasingFunction = EasingFunctions.ExponentialOut;
                     theme.Colors = ColorPalletes.MaterialDesign500;
                     theme.VirtualBackroundColor = new(255, 255, 255);
+                })
+                .HasRuleForChart(chart =>
+                {
+                    chart.AnimationsSpeed = TimeSpan.FromMilliseconds(800);
+                    chart.EasingFunction = EasingFunctions.ExponentialOut;
                 })
                 .HasDefaultTooltip(() => new VorticeDefaultTooltip())
                 .HasDefaultLegend(() => new VorticeDefaultLegend())

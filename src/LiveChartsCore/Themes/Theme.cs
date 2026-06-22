@@ -75,22 +75,6 @@ public class Theme
     public LvcColor VirtualBackroundColor { get; set; } = new(255, 255, 255);
 
     /// <summary>
-    /// Gets or sets the default easing function.
-    /// </summary>
-    /// <value>
-    /// The default easing function.
-    /// </value>
-    public Func<float, float> EasingFunction { get; set; } = EasingFunctions.ExponentialOut;
-
-    /// <summary>
-    /// Gets or sets the default animations speed.
-    /// </summary>
-    /// <value>
-    /// The default animations speed.
-    /// </value>
-    public TimeSpan AnimationsSpeed { get; set; } = TimeSpan.FromMilliseconds(800);
-
-    /// <summary>
     /// Gets or sets the tooltip text size.
     /// </summary>
     public float TooltipTextSize { get; set; } = 16f;
