@@ -133,43 +133,6 @@ public class RadialGradientPaint : SkiaPaint
         _skiaPaint.ColorFilter = null;
     }
 
-    internal override Paint Transitionate(float progress, Paint target)
-    {
-        if (target is not RadialGradientPaint toPaint) return target;
-
-        if (toPaint._gradientStops.Length != _gradientStops.Length)
-            throw new ArgumentException("The gradient stops must be the same length.");
-
-        for (var i = 0; i < _gradientStops.Length; i++)
-            _gradientStops[i] = new SKColor(
-                (byte)(_gradientStops[i].Red + progress * (toPaint._gradientStops[i].Red - _gradientStops[i].Red)),
-                (byte)(_gradientStops[i].Green + progress * (toPaint._gradientStops[i].Green - _gradientStops[i].Green)),
-                (byte)(_gradientStops[i].Blue + progress * (toPaint._gradientStops[i].Blue - _gradientStops[i].Blue)),
-                (byte)(_gradientStops[i].Alpha + progress * (toPaint._gradientStops[i].Alpha - _gradientStops[i].Alpha)));
-
-        _center = new SKPoint(
-            _center.X + progress * (toPaint._center.X - _center.X),
-            _center.Y + progress * (toPaint._center.Y - _center.Y));
-
-        _radius = _radius + progress * (toPaint._radius - _radius);
-
-        if (_colorPos is not null && toPaint._colorPos is not null)
-        {
-            if (_colorPos is null || _colorPos.Length != _colorPos.Length)
-                throw new ArgumentException("The color positions must be the same length.");
-
-            for (var i = 0; i < _colorPos.Length; i++)
-                _colorPos[i] = _colorPos[i] + progress * (_colorPos[i] - _colorPos[i]);
-        }
-
-        _shader?.Dispose();
-        _shader = null;
-
-        _skiaPaint?.Shader = GetShader();
-
-        return this;
-    }
-
     internal override void DisposeTask()
     {
         base.DisposeTask();

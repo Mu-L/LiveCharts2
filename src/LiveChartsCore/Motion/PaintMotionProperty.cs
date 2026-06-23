@@ -25,29 +25,22 @@ using LiveChartsCore.Painting;
 namespace LiveChartsCore.Motion;
 
 /// <summary>
-/// Defines the float motion property class.
+/// Defines a motion property that holds a <see cref="Paint"/> reference.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="PaintMotionProperty"/> class.
+/// A paint reference is not interpolated: changing the reference snaps to the new paint.
+/// Animation now lives inside the paint itself (its own properties are motion properties,
+/// e.g. <c>SolidColorPaint.Color</c>), so a paint animates by mutating its own state
+/// on the same instance rather than by blending one paint instance into another.
 /// </remarks>
 /// <param name="defaultValue">The default value.</param>
 public class PaintMotionProperty(Paint defaultValue = null!)
     : MotionProperty<Paint?>(defaultValue)
 {
-    internal static Paint? s_activePaint;
-
     /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
-    protected override bool CanTransitionate =>
-        (FromValue ?? s_activePaint) is not null &&
-        (ToValue ?? s_activePaint) is not null;
+    protected override bool CanTransitionate => false;
 
     /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)" />
-    protected override Paint OnGetMovement(float progress)
-    {
-        // ! canot be null here because of the check in CanTransitionate
-        var from = FromValue ?? s_activePaint!.CloneTask();
-        var to = ToValue ?? s_activePaint!.CloneTask();
-
-        return from.Transitionate(progress, to);
-    }
+    // Never invoked: CanTransitionate is false, so GetMovement returns the value directly.
+    protected override Paint? OnGetMovement(float progress) => ToValue;
 }

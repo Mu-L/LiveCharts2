@@ -55,7 +55,5 @@ public class DrawnTask : Paint
 
     internal override void RestoreOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement) { }
 
-    internal override Paint Transitionate(float progress, Paint target) => this;
-
     internal override void DisposeTask() { }
 }

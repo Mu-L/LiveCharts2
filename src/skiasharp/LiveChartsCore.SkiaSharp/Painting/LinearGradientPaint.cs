@@ -154,47 +154,6 @@ public class LinearGradientPaint(
         _skiaPaint.ColorFilter = null;
     }
 
-    internal override Paint Transitionate(float progress, Paint target)
-    {
-        if (target is not LinearGradientPaint toPaint) return target;
-
-        if (toPaint.GradientStops.Length != GradientStops.Length)
-            throw new NotImplementedException(
-                $"Transitions between {nameof(GradientStops)} must be of the same length.");
-
-        for (var i = 0; i < GradientStops.Length; i++)
-            GradientStops[i] = new SKColor(
-                (byte)(GradientStops[i].Red + progress * (toPaint.GradientStops[i].Red - GradientStops[i].Red)),
-                (byte)(GradientStops[i].Green + progress * (toPaint.GradientStops[i].Green - GradientStops[i].Green)),
-                (byte)(GradientStops[i].Blue + progress * (toPaint.GradientStops[i].Blue - GradientStops[i].Blue)),
-                (byte)(GradientStops[i].Alpha + progress * (toPaint.GradientStops[i].Alpha - GradientStops[i].Alpha)));
-
-        StartPoint = new SKPoint(
-            StartPoint.X + progress * (toPaint.StartPoint.X - StartPoint.X),
-            StartPoint.Y + progress * (toPaint.StartPoint.Y - StartPoint.Y));
-
-        EndPoint = new SKPoint(
-            EndPoint.X + progress * (toPaint.EndPoint.X - EndPoint.X),
-            EndPoint.Y + progress * (toPaint.EndPoint.Y - EndPoint.Y));
-
-        if (ColorPos is not null && toPaint.ColorPos is not null)
-        {
-            if (ColorPos is null || ColorPos.Length != toPaint.ColorPos.Length)
-                throw new NotImplementedException(
-                    $"Transitions between {nameof(ColorPos)} must be of the same length.");
-
-            for (var i = 0; i < ColorPos.Length; i++)
-                ColorPos[i] = ColorPos[i] + progress * (toPaint.ColorPos[i] - ColorPos[i]);
-        }
-
-        _shader?.Dispose();
-        _shader = null;
-
-        _skiaPaint?.Shader = GetShader();
-
-        return this;
-    }
-
     internal override void DisposeTask()
     {
         base.DisposeTask();

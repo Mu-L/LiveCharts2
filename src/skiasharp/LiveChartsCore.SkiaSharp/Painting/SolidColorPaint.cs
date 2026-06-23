@@ -91,21 +91,6 @@ public partial class SolidColorPaint : SkiaPaint
         if (_skiaPaint.Color != Color) _skiaPaint.Color = Color;
     }
 
-    internal override Paint Transitionate(float progress, Paint target)
-    {
-        if (target is not SolidColorPaint toPaint) return target;
-
-        Color = new SKColor(
-            (byte)(Color.Red + progress * (toPaint.Color.Red - Color.Red)),
-            (byte)(Color.Green + progress * (toPaint.Color.Green - Color.Green)),
-            (byte)(Color.Blue + progress * (toPaint.Color.Blue - Color.Blue)),
-            (byte)(Color.Alpha + progress * (toPaint.Color.Alpha - Color.Alpha)));
-
-        _skiaPaint?.Color = Color;
-
-        return this;
-    }
-
     internal override void ApplyOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement)
     {
         var skiaContext = (SkiaSharpDrawingContext)context;

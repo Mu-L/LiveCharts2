@@ -195,8 +195,6 @@ public abstract partial class Paint : Animatable
     internal void ReleaseCanvas(CoreMotionCanvas canvas) =>
         _ = _geometriesByCanvas.Remove(canvas);
 
-    internal abstract Paint Transitionate(float progress, Paint target);
-
     internal HashSet<IDrawnElement> GetGeometries(CoreMotionCanvas canvas) =>
         GetGeometriesByCanvas(canvas) ?? [];
 
@@ -224,7 +222,6 @@ public abstract partial class Paint : Animatable
         internal override void OnPaintFinished(DrawingContext context, IDrawnElement? drawnElement) { }
         internal override void OnPaintStarted(DrawingContext drawingContext, IDrawnElement? drawnElement) { }
         internal override void RestoreOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement) { }
-        internal override Paint Transitionate(float progress, Paint target) => this;
         internal override void DisposeTask() { }
     }
 }
