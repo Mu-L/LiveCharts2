@@ -72,6 +72,20 @@ public static class LiveChartsthemeExtensions
     }
 
     /// <summary>
+    /// Defines a style builder for <see cref="ISeries"/> objects that runs AFTER the
+    /// type-specific builders, when the series' paints and other defaults are already
+    /// assigned. Use it for rules that decorate or read the fully styled series.
+    /// </summary>
+    /// <param name="theme">The theme.</param>
+    /// <param name="predicate">The predicate.</param>
+    /// <returns></returns>
+    public static Theme HasPostRuleForAnySeries(this Theme theme, Action<ISeries> predicate)
+    {
+        theme.SeriesPostBuilder.Add(predicate);
+        return theme;
+    }
+
+    /// <summary>
     ///  Defines a style builder for <see cref="IPieSeries"/> objects.
     /// </summary>
     /// <param name="theme">The theme.</param>
