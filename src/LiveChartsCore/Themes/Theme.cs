@@ -118,19 +118,6 @@ public class Theme
     public List<Action<IPlane>> AxisBuilder { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the draw margin frame getter.
-    /// </summary>
-    /// <value>
-    /// The draw margin frame builder.
-    /// </value>
-    public Func<CoreDrawMarginFrame?>? DrawMarginFrameGetter { get; set; }
-
-    /// <summary>
-    /// Gets or sets the draw margin frame builder.
-    /// </summary>
-    public List<Action<CoreDrawMarginFrame>> DrawMarginFrameBuilder { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the series builder.
     /// </summary>
     /// <value>
@@ -503,15 +490,6 @@ public class Theme
         {
             foreach (var rule in SankeySeriesBuilder) rule((ISankeySeries)series);
         }
-    }
-
-    /// <summary>
-    /// Build a draw amrgin frame based on the theme.
-    /// </summary>
-    public void ApplyStyleToDrawMarginFrame(CoreDrawMarginFrame drawMarginFrame)
-    {
-        foreach (var rule in DrawMarginFrameBuilder)
-            rule(drawMarginFrame);
     }
 
     /// <summary>
