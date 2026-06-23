@@ -60,20 +60,6 @@ public static class LiveChartsthemeExtensions
     }
 
     /// <summary>
-    /// Defines a style builder for <see cref="CoreDrawMarginFrame"/> objects.
-    /// </summary>
-    /// <param name="theme">The theme.</param>
-    /// <param name="getter">The getter.</param>
-    /// <param name="predicate">The predicate.</param>
-    /// <returns></returns>
-    public static Theme HasRuleForDrawMarginFrame(this Theme theme, Func<CoreDrawMarginFrame?> getter, Action<CoreDrawMarginFrame> predicate)
-    {
-        theme.DrawMarginFrameGetter = getter;
-        theme.DrawMarginFrameBuilder.Add(predicate);
-        return theme;
-    }
-
-    /// <summary>
     ///  Defines a style builder for <see cref="ISeries"/> objects.
     /// </summary>
     /// <param name="theme">The theme.</param>
