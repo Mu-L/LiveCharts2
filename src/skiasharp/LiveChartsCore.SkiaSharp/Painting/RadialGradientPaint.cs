@@ -195,10 +195,7 @@ public partial class RadialGradientPaint : SkiaPaint
         _builtClip = _activeClip;
 
         var center = new SKPoint(_activeClip.Location.X + centerPos.X * _activeClip.Width, _activeClip.Location.Y + centerPos.Y * _activeClip.Height);
-        var r = _activeClip.Location.X + _activeClip.Width > _activeClip.Location.Y + _activeClip.Height
-            ? _activeClip.Location.Y + _activeClip.Height
-            : _activeClip.Location.X + _activeClip.Width;
-        r *= radius;
+        var r = Math.Min(_activeClip.Width, _activeClip.Height) * radius;
 
         _shader?.Dispose();
 
