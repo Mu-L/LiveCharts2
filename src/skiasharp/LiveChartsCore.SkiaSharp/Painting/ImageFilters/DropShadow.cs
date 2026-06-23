@@ -46,9 +46,9 @@ public class DropShadow(
 {
     internal static object s_key = new();
 
-    private float Dx { get; set; } = dx;
-    private float Dy { get; set; } = dy;
     // internal so the drawing context can floor a per-element shadow at the paint's own shadow.
+    internal float Dx { get; set; } = dx;
+    internal float Dy { get; set; } = dy;
     internal float SigmaX { get; set; } = sigmaX;
     internal float SigmaY { get; set; } = sigmaY;
     internal SKColor Color { get; set; } = color;

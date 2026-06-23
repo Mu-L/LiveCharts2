@@ -301,28 +301,31 @@ public class SkiaSharpDrawingContext(
             originalFilter = ActiveSkiaPaint.ImageFilter;
 
             // A per-element shadow that is animating away interpolates toward a transparent,
-            // zero-radius shadow. If the paint itself carries a base drop shadow (e.g. an
-            // always-on glow), floor the element shadow at that base — radius AND color — so it
-            // eases down to the base instead of fading to nothing and popping back when the
-            // transition completes (it becomes null, and the paint's own filter takes over).
-            // ActiveLvcPaint is the paint currently drawing this element, so the base is
-            // automatically the correct fallback per draw pass (fill vs stroke).
+            // zero-radius, zero-offset shadow. If the paint itself carries a base drop shadow
+            // (e.g. an always-on glow), floor the element shadow at that base — radius, color AND
+            // offset — so it eases down to the base instead of fading/sliding to nothing and
+            // popping back when the transition completes (it becomes null, and the paint's own
+            // filter takes over). ActiveLvcPaint is the paint currently drawing this element, so
+            // the base is automatically the correct fallback per draw pass (fill vs stroke).
+            var dx = shadow.Dx;
+            var dy = shadow.Dy;
             var sigmaX = shadow.SigmaX;
             var sigmaY = shadow.SigmaY;
             var color = new SKColor(shadow.Color.R, shadow.Color.G, shadow.Color.B, shadow.Color.A);
             if (ActiveLvcPaint is SkiaPaint { ImageFilter: DropShadow baseShadow })
             {
-                // Floor the radius at the base, and use the base color throughout. The element's
-                // own color is interpolating toward transparent, so blending it in would still
-                // fade out; using the base color keeps the glow solid all the way down to the base
-                // (the radius is what conveys the hover grow/shrink anyway).
-                sigmaX = System.Math.Max(sigmaX, baseShadow.SigmaX);
-                sigmaY = System.Math.Max(sigmaY, baseShadow.SigmaY);
+                // Grow the radius from the base; take the offset and color from the base. The
+                // element's own color/offset are interpolating toward nothing, so blending them in
+                // would still fade/slide out — the radius is what conveys the grow/shrink anyway.
+                sigmaX = Math.Max(sigmaX, baseShadow.SigmaX);
+                sigmaY = Math.Max(sigmaY, baseShadow.SigmaY);
+                dx = baseShadow.Dx;
+                dy = baseShadow.Dy;
                 color = baseShadow.Color;
             }
 
             ActiveSkiaPaint.ImageFilter = SKImageFilter.CreateDropShadow(
-                shadow.Dx, shadow.Dy,
+                dx, dy,
                 sigmaX, sigmaY,
                 color);
         }
