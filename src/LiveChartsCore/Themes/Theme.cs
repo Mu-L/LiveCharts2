@@ -126,6 +126,13 @@ public class Theme
     public List<Action<ISeries>> SeriesBuilder { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the post series builder. These rules run AFTER the type-specific builders
+    /// (so a series' paints and other defaults are already assigned), which makes this the place
+    /// for rules that decorate or read the final styled series.
+    /// </summary>
+    public List<Action<ISeries>> SeriesPostBuilder { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the pie series builder.
     /// </summary>
     /// <value>
@@ -490,6 +497,10 @@ public class Theme
         {
             foreach (var rule in SankeySeriesBuilder) rule((ISankeySeries)series);
         }
+
+        // Runs last, after the type-specific builders assigned the series' paints / defaults,
+        // so post rules can decorate or read the fully styled series.
+        foreach (var rule in SeriesPostBuilder) rule(series);
     }
 
     /// <summary>
