@@ -26,8 +26,7 @@ namespace LiveChartsCore.SkiaSharpView.Painting.Effects;
 
 /// <summary>
 /// A motion property that animates a <see cref="PathEffect"/>, interpolating between two effects
-/// with <see cref="PathEffect.Transitionate(float, PathEffect)"/> — the same way
-/// <see cref="PaintMotionProperty"/> animates whole paints. Assigning a new effect can soft-
+/// with <see cref="PathEffect.Transitionate(float, PathEffect)"/>. Assigning a new effect can soft-
 /// transition; a self-animating effect (one carrying a looping <see cref="PathEffect.Animation"/>)
 /// keeps the rail running indefinitely, so the paint never needs an "is animating" flag.
 /// </summary>

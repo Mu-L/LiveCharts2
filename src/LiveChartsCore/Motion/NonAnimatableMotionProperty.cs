@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,27 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Painting;
-
 namespace LiveChartsCore.Motion;
 
 /// <summary>
-/// Defines a motion property that holds a <see cref="Paint"/> reference.
+/// A motion property whose value is never interpolated: assigning a new value snaps to it.
+/// Used for properties where animation lives inside the value itself rather than by blending one
+/// value instance into another — for example a <see cref="Painting.Paint"/> reference, whose own
+/// properties are motion properties.
 /// </summary>
+/// <typeparam name="T">The property type.</typeparam>
 /// <remarks>
-/// A paint reference is not interpolated: changing the reference snaps to the new paint.
-/// Animation now lives inside the paint itself (its own properties are motion properties,
-/// e.g. <c>SolidColorPaint.Color</c>), so a paint animates by mutating its own state
-/// on the same instance rather than by blending one paint instance into another.
+/// Initializes a new instance of the <see cref="NonAnimatableMotionProperty{T}"/> class.
 /// </remarks>
 /// <param name="defaultValue">The default value.</param>
-public class PaintMotionProperty(Paint defaultValue = null!)
-    : MotionProperty<Paint?>(defaultValue)
+public class NonAnimatableMotionProperty<T>(T defaultValue = default!)
+    : MotionProperty<T>(defaultValue)
 {
     /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
     protected override bool CanTransitionate => false;
 
     /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)" />
     // Never invoked: CanTransitionate is false, so GetMovement returns the value directly.
-    protected override Paint? OnGetMovement(float progress) => ToValue;
+    protected override T OnGetMovement(float progress) => ToValue;
 }
