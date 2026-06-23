@@ -59,9 +59,11 @@ internal static class PaintConstants
     internal const double AxisSubticksPaintZIndex = -0.85;
 
     /// <summary>
-    /// Default z-index for axis zero line paint.
+    /// Default z-index for axis zero line paint. Sits just above the separators and
+    /// subseparators (both -1) so the zero line is not hidden behind the grid, while
+    /// staying below the ticks and labels.
     /// </summary>
-    internal const double AxisZeroPaintZIndex = -1;
+    internal const double AxisZeroPaintZIndex = -0.95;
 
     /// <summary>
     /// Default z-index for axis bands paint — above the draw margin frame fill (-3),
