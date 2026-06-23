@@ -194,6 +194,8 @@ namespace {containingType.ContainingNamespace};
             "" => "LiveChartsCore.Motion.DropShadowMotionProperty",
             "LiveChartsCore.Drawing.LvcDropShadow?" => "LiveChartsCore.Motion.DropShadowMotionProperty",
             "SkiaSharp.SKMatrix" => "LiveChartsCore.SkiaSharpView.Motion.SKMatrixMotionProperty",
+            "SkiaSharp.SKColor" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
+            "SkiaSharp.SKColor?" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
             _ => "UnsuportedType"
         };
     }

@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Generators;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing;
 using SkiaSharp;
@@ -31,7 +32,7 @@ namespace LiveChartsCore.SkiaSharpView.Painting;
 /// Defines a set of geometries that will be painted using a solid color.
 /// </summary>
 /// <seealso cref="Paint" />
-public class SolidColorPaint : SkiaPaint
+public partial class SolidColorPaint : SkiaPaint
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SolidColorPaint"/> class.
@@ -58,7 +59,7 @@ public class SolidColorPaint : SkiaPaint
     public SolidColorPaint(SKColor color, float strokeWidth)
         : base(strokeWidth)
     {
-        Color = color;
+        _ColorMotionProperty = new(color);
     }
 
     /// <summary>
@@ -67,7 +68,8 @@ public class SolidColorPaint : SkiaPaint
     /// <value>
     /// The color.
     /// </value>
-    public SKColor Color { get; set; }
+    [MotionProperty]
+    public partial SKColor Color { get; set; }
 
     /// <inheritdoc cref="Paint.CloneTask" />
     public override Paint CloneTask()
