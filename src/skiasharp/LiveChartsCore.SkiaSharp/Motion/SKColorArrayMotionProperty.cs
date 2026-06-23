@@ -33,8 +33,8 @@ namespace LiveChartsCore.SkiaSharpView.Motion;
 /// Initializes a new instance of the <see cref="SKColorArrayMotionProperty"/> class.
 /// </remarks>
 /// <param name="defaultValue">The default value.</param>
-public class SKColorArrayMotionProperty(SKColor[] defaultValue = null!)
-    : MotionProperty<SKColor[]>(defaultValue)
+public class SKColorArrayMotionProperty(SKColor[]? defaultValue = null)
+    : MotionProperty<SKColor[]>(defaultValue ?? [])
 {
     /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
     // Only equal-length, non-null arrays interpolate; otherwise the transition is skipped and
