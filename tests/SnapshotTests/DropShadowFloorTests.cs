@@ -27,7 +27,8 @@ public sealed class DropShadowFloorTests
                 Stroke = null,
                 Fill = new SolidColorPaint(SKColors.Red)
                 {
-                    ImageFilter = new DropShadow(0, 0, 20, 20, SKColors.Red)
+                    // an offset base shadow, so the floor must also pin Dx/Dy, not just radius/color.
+                    ImageFilter = new DropShadow(8, 8, 20, 20, SKColors.Red)
                 },
             };
 
