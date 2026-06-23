@@ -48,9 +48,10 @@ public class DropShadow(
 
     private float Dx { get; set; } = dx;
     private float Dy { get; set; } = dy;
-    private float SigmaX { get; set; } = sigmaX;
-    private float SigmaY { get; set; } = sigmaY;
-    private SKColor Color { get; set; } = color;
+    // internal so the drawing context can floor a per-element shadow at the paint's own shadow.
+    internal float SigmaX { get; set; } = sigmaX;
+    internal float SigmaY { get; set; } = sigmaY;
+    internal SKColor Color { get; set; } = color;
 
     /// <inheritdoc cref="ImageFilter.Clone"/>
     public override ImageFilter Clone() =>
