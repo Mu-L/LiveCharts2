@@ -182,6 +182,8 @@ namespace {containingType.ContainingNamespace};
         return type.ToDisplayString() switch
         {
             "float" => "LiveChartsCore.Motion.FloatMotionProperty",
+            "float[]" => "LiveChartsCore.Motion.FloatArrayMotionProperty",
+            "float[]?" => "LiveChartsCore.Motion.FloatArrayMotionProperty",
             "double" => "LiveChartsCore.Motion.DoubleMotionProperty",
             "double?" => "LiveChartsCore.Motion.NullableDoubleMotionProperty",
             "LiveChartsCore.Drawing.LvcColor" => "LiveChartsCore.Motion.ColorMotionProperty",
@@ -194,8 +196,10 @@ namespace {containingType.ContainingNamespace};
             "" => "LiveChartsCore.Motion.DropShadowMotionProperty",
             "LiveChartsCore.Drawing.LvcDropShadow?" => "LiveChartsCore.Motion.DropShadowMotionProperty",
             "SkiaSharp.SKMatrix" => "LiveChartsCore.SkiaSharpView.Motion.SKMatrixMotionProperty",
+            "SkiaSharp.SKPoint" => "LiveChartsCore.SkiaSharpView.Motion.SKPointMotionProperty",
             "SkiaSharp.SKColor" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
             "SkiaSharp.SKColor?" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
+            "SkiaSharp.SKColor[]" => "LiveChartsCore.SkiaSharpView.Motion.SKColorArrayMotionProperty",
             _ => "UnsuportedType"
         };
     }
