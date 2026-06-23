@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System;
 using LiveChartsCore.Drawing;
 using LiveChartsCore.Generators;
 using LiveChartsCore.Painting;
@@ -183,7 +184,7 @@ public partial class RadialGradientPaint : SkiaPaint
             ReferenceEquals(stops, _builtStops) &&
             ReferenceEquals(colorPos, _builtColorPos) &&
             centerPos == _builtCenter &&
-            radius == _builtRadius &&
+            Math.Abs(radius - _builtRadius) < 1e-6f &&
             _activeClip == _builtClip)
             return _shader;
 
