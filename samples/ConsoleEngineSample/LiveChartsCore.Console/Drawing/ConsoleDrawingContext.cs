@@ -90,7 +90,6 @@ public class ConsoleDrawingContext(CoreMotionCanvas motionCanvas, ConsoleSurface
     internal override void SelectPaint(Paint paint)
     {
         ActiveLvcPaint = paint;
-        PaintMotionProperty.s_activePaint = paint;
         paint.OnPaintStarted(this, null);
     }
 
@@ -98,7 +97,6 @@ public class ConsoleDrawingContext(CoreMotionCanvas motionCanvas, ConsoleSurface
     {
         paint.OnPaintFinished(this, null);
         ActiveLvcPaint = null!;
-        PaintMotionProperty.s_activePaint = null!;
     }
 
     private void DrawByPaint(Paint paint, IDrawnElement<ConsoleDrawingContext> element, float opacity)
