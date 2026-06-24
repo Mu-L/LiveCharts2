@@ -1,5 +1,7 @@
 using System;
+using LiveChartsCore.Motion;
 using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Drawing;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.ImageFilters;
 using LiveChartsCore.SkiaSharpView.SKCharts;
@@ -12,75 +14,34 @@ namespace CoreTests.OtherTests;
 public class ImageFiltersTests
 {
     [TestMethod]
-    public void Blur_CreateFilterPopulatesUnderlyingSKImageFilter()
+    public void Blur_CreateNativeBuildsAnSKImageFilter()
     {
         var blur = new Blur(2f, 3f);
 
-        Assert.IsNull(blur._sKImageFilter);
-        blur.CreateFilter();
-        Assert.IsNotNull(blur._sKImageFilter);
-
-        blur.Dispose();
-        Assert.IsNull(blur._sKImageFilter);
+        // the filter holds no native; it builds a fresh one that the caller (the paint) owns.
+        using var native = blur.CreateNative();
+        Assert.IsNotNull(native);
     }
 
     [TestMethod]
-    public void Blur_CloneIsAnIndependentInstanceOfTheSameType()
-    {
-        var blur = new Blur(2f, 3f);
-        var clone = blur.Clone();
-
-        Assert.AreNotSame(blur, clone);
-        Assert.IsInstanceOfType<Blur>(clone);
-    }
-
-    [TestMethod]
-    public void DropShadow_CreateFilterPopulatesUnderlyingSKImageFilter()
+    public void DropShadow_CreateNativeBuildsAnSKImageFilter()
     {
         var dropShadow = new DropShadow(1f, 2f, 3f, 4f, SKColors.Black);
 
-        Assert.IsNull(dropShadow._sKImageFilter);
-        dropShadow.CreateFilter();
-        Assert.IsNotNull(dropShadow._sKImageFilter);
-
-        dropShadow.Dispose();
+        using var native = dropShadow.CreateNative();
+        Assert.IsNotNull(native);
     }
 
     [TestMethod]
-    public void DropShadow_CloneIsAnIndependentInstanceOfTheSameType()
+    public void Merge_CreateNativeBuildsAMergedFilter()
     {
-        var dropShadow = new DropShadow(1f, 2f, 3f, 4f, SKColors.Black);
-        var clone = dropShadow.Clone();
+        var merged = new ImageFiltersMergeOperation(
+            [new Blur(2f, 2f), new DropShadow(1f, 1f, 1f, 1f, SKColors.Black)]);
 
-        Assert.AreNotSame(dropShadow, clone);
-        Assert.IsInstanceOfType<DropShadow>(clone);
-    }
-
-    [TestMethod]
-    public void Merge_CreateFilterCombinesEachChildFilter()
-    {
-        var blur = new Blur(2f, 2f);
-        var shadow = new DropShadow(1f, 1f, 1f, 1f, SKColors.Black);
-        var merged = new ImageFiltersMergeOperation([blur, shadow]);
-
-        merged.CreateFilter();
-
-        Assert.IsNotNull(merged._sKImageFilter);
-        // Children get their own SKImageFilter instances populated in the process.
-        Assert.IsNotNull(blur._sKImageFilter);
-        Assert.IsNotNull(shadow._sKImageFilter);
-
-        merged.Dispose();
-    }
-
-    [TestMethod]
-    public void Merge_CloneIsAnIndependentInstanceOfTheSameType()
-    {
-        var merged = new ImageFiltersMergeOperation([new Blur(1f, 1f), new Blur(2f, 2f)]);
-        var clone = merged.Clone();
-
-        Assert.AreNotSame(merged, clone);
-        Assert.IsInstanceOfType<ImageFiltersMergeOperation>(clone);
+        // builds each child native, merges them, and returns a single owned native (the transient
+        // child handles are released internally — the merge holds its own references).
+        using var native = merged.CreateNative();
+        Assert.IsNotNull(native);
     }
 
     [TestMethod]
@@ -135,6 +96,34 @@ public class ImageFiltersTests
         Assert.IsNotNull(blended);
         Assert.AreNotSame(from, blended);
         Assert.AreNotSame(to, blended);
+    }
+
+    [TestMethod]
+    public void Filter_NativeIsRebuilt_WhenPaintIsReusedAfterDispose()
+    {
+        // The paint owns and caches the native filter keyed on the source instance. After the paint
+        // is disposed (e.g. between renders) the cached native is gone, but the SAME filter instance
+        // is still assigned — the next paint pass must rebuild the native, not reuse the disposed one.
+        // Regression: forgetting to clear the source on dispose made the rebuild be skipped, dropping
+        // the filter entirely on the second render.
+        using var surface = SKSurface.Create(new SKImageInfo(10, 10));
+        var canvas = new CoreMotionCanvas();
+        var context = new SkiaSharpDrawingContext(canvas, surface.Canvas, SKColor.Empty);
+
+        var paint = new SolidColorPaint(SKColors.Red)
+        {
+            ImageFilter = new DropShadow(2f, 2f, 4f, 4f, SKColors.Black)
+        };
+
+        paint.OnPaintStarted(context, null);
+        Assert.IsNotNull(paint._skiaPaint!.ImageFilter, "the native filter must be built on first use.");
+
+        paint.DisposeTask();
+
+        paint.OnPaintStarted(context, null);
+        Assert.IsNotNull(
+            paint._skiaPaint!.ImageFilter,
+            "the native filter must be rebuilt after the paint was disposed, not left null.");
     }
 
     [TestMethod]

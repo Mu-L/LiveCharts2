@@ -23,14 +23,13 @@ public class AnimatedPaintEffectsTests
     public void ResetClock() => CoreMotionCanvas.DebugElapsedMilliseconds = -1;
 
     // A minimal path effect: Transitionate maps progress straight to a "phase" so the test can read
-    // the interpolated value. No native SKPathEffect needed (we don't draw).
+    // the interpolated value. CreateNative is never exercised here (we don't draw).
     private sealed class TestEffect : PathEffect
     {
         private static readonly object s_key = new();
         public float Phase { get; }
         public TestEffect(float phase) : base(s_key) => Phase = phase;
-        public override PathEffect Clone() => new TestEffect(Phase);
-        public override void CreateEffect() { }
+        public override SKPathEffect CreateNative() => SKPathEffect.CreateDash([1f, 0f], 0);
         public override PathEffect Transitionate(float progress, PathEffect? target) => new TestEffect(progress);
     }
 
@@ -39,8 +38,7 @@ public class AnimatedPaintEffectsTests
         private static readonly object s_key = new();
         public float Radius { get; }
         public TestFilter(float radius) : base(s_key) => Radius = radius;
-        public override ImageFilter Clone() => new TestFilter(Radius);
-        public override void CreateFilter() { }
+        public override SKImageFilter CreateNative() => SKImageFilter.CreateBlur(0, 0);
         protected override ImageFilter Transitionate(float progress, ImageFilter target) => new TestFilter(progress);
     }
 
