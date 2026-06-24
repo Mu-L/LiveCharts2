@@ -160,6 +160,21 @@ jobs:
           test-type: console
           target-framework: net8.0
 
+  test-generator:
+    runs-on: windows-2025
+    needs: [prepare]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.1
+
+      - name: Run tests
+        uses: ./.github/actions/run-tests
+        with:
+          id: generator
+          test-id: generator
+          livecharts-suffix: ${{ needs.prepare.outputs.suffix }}
+          test-type: generator
+
   report-code-coverage:
     runs-on: ubuntu-24.04
     if: ${{ needs.test-core.result == 'success' && needs.test-snapshot.result == 'success' && needs.test-console.result == 'success' }}
