@@ -120,13 +120,13 @@ public abstract partial class BaseLabelGeometry : Animatable, IDrawnElement
     public partial Padding Padding { get; set; }
 
     /// <inheritdoc cref="IDrawnElement.Paint"/>
-    [MotionProperty(HasExplicitAcessors = true)]
-    public partial Paint? Paint
+    [StateProperty]
+    public Paint? Paint
     {
-        get => _PaintMotionProperty.GetMovement(this);
+        get;
         set
         {
-            _PaintMotionProperty.SetMovement(value, this);
+            field = value;
             value?.PaintStyle = PaintStyle.Text;
         }
     }

@@ -9,42 +9,57 @@ using SkiaSharp;
 
 namespace CoreTests.CoreObjectsTests;
 
-// A paint reference is not interpolated (animation lives inside the paint). Assigning a new paint
-// to a geometry's Fill snaps to it, and the motion must report completion even with an animation
-// configured — a non-interpolated transition is trivially done.
+// A paint reference is not interpolated (animation lives inside the paint). A geometry's Fill is a
+// visual-state target (a registered PropertyDefinition) but NOT a motion property: assigning a new
+// paint snaps to it, and the definition exposes no motion. (Paint.Transitionate, the old in-place
+// two-paint blend, was removed earlier; the by-reference motion backing was removed in this change.)
 [TestClass]
 public class PaintReferenceMotionTests
 {
     [TestMethod]
-    public void Fill_SnapsToNewPaintAndReportsCompleted()
+    public void Fill_SnapsToNewPaint_AndIsNotBackedByAMotion()
     {
         var geometry = new RectangleGeometry();
-        var animatable = (Animatable)geometry;
         var paintA = new SolidColorPaint(SKColors.Red);
         var paintB = new SolidColorPaint(SKColors.Blue);
 
-        geometry.SetTransition(
-            new Animation(EasingFunctions.Lineal, TimeSpan.FromSeconds(1)), DrawnGeometry.FillProperty);
+        geometry.Fill = paintA;
+        Assert.AreSame(paintA, geometry.Fill);
+
+        // assigning a new paint snaps to it — references are never blended.
+        geometry.Fill = paintB;
+        Assert.AreSame(paintB, geometry.Fill);
+
+        // Fill is registered (states can target it) but motionless: it must not animate, so the
+        // definition has no motion — which also means no FromValue pins the previous paint instance.
+        var definition = geometry.GetPropertyDefinition(nameof(DrawnGeometry.Fill))!;
+        Assert.IsNull(
+            definition.GetMotion(geometry),
+            "a paint reference must be a state property, not a motion property.");
+    }
+
+    // ByReferenceMotionProperty is no longer used to back the geometry paint references, but it remains
+    // public API. Pin its contract directly: it snaps to the assigned value and reports completion even
+    // with an animation configured (a non-interpolated transition is trivially done — the early-return
+    // path must still run OnCompleted, the base regression behind the original fix).
+    [TestMethod]
+    public void ByReferenceMotionProperty_Snaps_AndReportsCompleted()
+    {
+        var host = new RectangleGeometry();
+        var property = new ByReferenceMotionProperty<object?>
+        {
+            Animation = new Animation(EasingFunctions.Lineal, TimeSpan.FromSeconds(1))
+        };
 
         CoreMotionCanvas.DebugElapsedMilliseconds = 0;
-        animatable.IsValid = true;
-        geometry.Fill = paintA;
-        geometry.CompleteTransition(DrawnGeometry.FillProperty);
-
-        // Assign a new paint while a transition + animation are configured.
-        CoreMotionCanvas.DebugElapsedMilliseconds = 500;
-        animatable.IsValid = true;
-        geometry.Fill = paintB;
+        var target = new object();
+        property.SetMovement(target, host);
 
         try
         {
-            // The reference snaps to the new paint (no blending between instances).
-            Assert.AreSame(paintB, geometry.Fill);
-
-            // Regression: before the base fix the motion stayed IsCompleted == false forever because
-            // GetMovement returns early when it cannot interpolate, never running the completion path.
-            var motion = geometry.GetPropertyDefinition(nameof(DrawnGeometry.Fill))!.GetMotion(geometry);
-            Assert.IsTrue(motion.IsCompleted, "a non-interpolated paint transition must report completion.");
+            CoreMotionCanvas.DebugElapsedMilliseconds = 500;
+            Assert.AreSame(target, property.GetMovement(host), "a by-reference value snaps to the target.");
+            Assert.IsTrue(property.IsCompleted, "a non-interpolated transition must report completion.");
         }
         finally
         {

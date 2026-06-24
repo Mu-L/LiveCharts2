@@ -100,26 +100,26 @@ public abstract partial class BaseVectorGeometry : Animatable, IDrawnElement
     partial void OnSkewTransformChanged(LvcPoint value) => HasTransform = true;
 
     /// <inheritdoc cref="IDrawnElement.Stroke"/>
-    [MotionProperty(HasExplicitAcessors = true)]
-    public partial Paint? Stroke
+    [StateProperty]
+    public Paint? Stroke
     {
-        get => _StrokeMotionProperty.GetMovement(this);
+        get;
         set
         {
             value?.PaintStyle = PaintStyle.Stroke;
-            _StrokeMotionProperty.SetMovement(value, this);
+            field = value;
         }
     }
 
     /// <inheritdoc cref="IDrawnElement.Fill"/>
-    [MotionProperty(HasExplicitAcessors = true)]
-    public partial Paint? Fill
+    [StateProperty]
+    public Paint? Fill
     {
-        get => _FillMotionProperty.GetMovement(this);
+        get;
         set
         {
             value?.PaintStyle = PaintStyle.Fill;
-            _FillMotionProperty.SetMovement(value, this);
+            field = value;
         }
     }
 
