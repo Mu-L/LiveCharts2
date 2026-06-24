@@ -53,15 +53,19 @@ public class VisualStatesDictionary : Dictionary<string, DrawnPropertiesDictiona
         foreach (var setter in state.Values)
         {
             var definition = animatable.GetPropertyDefinition(setter.PropertyName);
-            var property = definition?.GetMotion(animatable);
-            if (definition is null || property is null) continue;
+            if (definition is null) continue;
 
             // if the value is already saved, it means that the original value
             // was already saved by this or another state
             if (!animatable._statesTracker.OriginalValues.ContainsKey(definition))
             {
-                // save the original value
-                animatable._statesTracker.OriginalValues[definition] = property.ToValue;
+                // Save the original value. Prefer the motion's target (ToValue) so a property that is
+                // mid-animation restores to where it was heading, not its interpolated mid-flight value.
+                // A property without a motion (e.g. registered via [StateProperty]) snapshots its
+                // current value through the definition getter — states no longer require a motion.
+                var motion = definition.GetMotion(animatable);
+                animatable._statesTracker.OriginalValues[definition] =
+                    motion is not null ? motion.ToValue : definition.GetValue(animatable);
             }
 
             // set the state value
@@ -91,8 +95,7 @@ public class VisualStatesDictionary : Dictionary<string, DrawnPropertiesDictiona
         foreach (var setter in state.Values)
         {
             var definition = animatable.GetPropertyDefinition(setter.PropertyName);
-            var property = definition?.GetMotion(animatable);
-            if (definition is null || property is null) continue;
+            if (definition is null) continue;
 
             var foundValue = false;
             object? value = null;
@@ -146,8 +149,7 @@ public class VisualStatesDictionary : Dictionary<string, DrawnPropertiesDictiona
             foreach (var setter in state.Values)
             {
                 var definition = animatable.GetPropertyDefinition(setter.PropertyName);
-                var property = definition?.GetMotion(animatable);
-                if (definition is null || property is null) continue;
+                if (definition is null) continue;
 
                 // set the original value
                 if (animatable._statesTracker.OriginalValues.TryGetValue(definition, out var originalValue))
