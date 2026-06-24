@@ -21,26 +21,27 @@
 // SOFTWARE.
 
 using LiveChartsCore.Motion;
+using LiveChartsCore.SkiaSharpView.Painting.Effects;
 
-namespace LiveChartsCore.SkiaSharpView.Painting.ImageFilters;
+namespace LiveChartsCore.SkiaSharpView.Motion;
 
 /// <summary>
-/// A motion property that animates an <see cref="ImageFilter"/>, interpolating between two filters
-/// with <see cref="ImageFilter.Transitionate(ImageFilter?, ImageFilter?, float)"/> — the image-filter
-/// counterpart of <see cref="Effects.PathEffectMotionProperty"/>. Assigning a new filter can soft-
-/// transition; a self-animating filter (one carrying a looping <see cref="ImageFilter.Animation"/>)
-/// keeps the rail running indefinitely, so the paint never needs an "is animating" flag.
+/// A motion property that animates a <see cref="PathEffect"/>, interpolating between two effects
+/// with <see cref="PathEffect.Transitionate(PathEffect?, PathEffect?, float)"/> — the path-effect
+/// counterpart of <see cref="ImageFilterMotionProperty"/>. The timing lives on the owning paint
+/// (a transition set on the paint's effect property); a single effect can also animate against
+/// itself (it maps progress → its own shape, e.g. a dash phase).
 /// </summary>
-/// <param name="defaultValue">The default filter.</param>
-public class ImageFilterMotionProperty(ImageFilter? defaultValue = null)
-    : MotionProperty<ImageFilter?>(defaultValue)
+/// <param name="defaultValue">The default effect.</param>
+public class PathEffectMotionProperty(PathEffect? defaultValue = null)
+    : MotionProperty<PathEffect?>(defaultValue)
 {
     /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
     protected override bool CanTransitionate => (FromValue ?? ToValue) is not null;
 
     /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)"/>
     // The instance Transitionate is protected, so go through the assembly-internal static one
-    // (it also handles the default-filter fallback when an endpoint is null).
-    protected override ImageFilter? OnGetMovement(float progress) =>
-        ImageFilter.Transitionate(FromValue ?? ToValue, ToValue, progress);
+    // (it also handles the default-effect fallback when an endpoint is null).
+    protected override PathEffect? OnGetMovement(float progress) =>
+        PathEffect.Transitionate(FromValue ?? ToValue, ToValue, progress);
 }

@@ -22,6 +22,7 @@
 
 using System;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Generators;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
@@ -35,7 +36,7 @@ namespace LiveChartsCore.SkiaSharpView.Painting;
 /// </summary>
 /// <param name="strokeThickness">The stroke thickness.</param>
 /// <param name="strokeMiter">The stroke miter.</param>
-public abstract class SkiaPaint(float strokeThickness = 1f, float strokeMiter = 0f)
+public abstract partial class SkiaPaint(float strokeThickness = 1f, float strokeMiter = 0f)
     : Paint(strokeThickness, strokeMiter)
 {
     /// <summary>
@@ -105,48 +106,27 @@ public abstract class SkiaPaint(float strokeThickness = 1f, float strokeMiter = 
     /// </value>
     public SKStrokeJoin StrokeJoin { get; set; }
 
-    private readonly PathEffectMotionProperty _pathEffectMotion = new();
-
     /// <summary>
-    /// Gets or sets the path effect. Backed by a motion property so the effect can animate on
-    /// the rail: assigning a new effect can soft-transition, and a self-animating effect (one
-    /// carrying a looping <see cref="PathEffect.Animation"/>) marches indefinitely — the looping
-    /// lives in the effect, the paint just reads the current value each frame.
+    /// Gets or sets the path effect. Backed by a motion property: the effect is interpolated by the
+    /// paint's motion rail, so it animates when the owning paint has a transition for this property
+    /// (the paint is the animatable; the effect is just the value).
     /// </summary>
     /// <value>
     /// The path effect.
     /// </value>
-    public PathEffect? PathEffect
-    {
-        get => _pathEffectMotion.GetMovement(this);
-        set
-        {
-            // The effect owns its animation (null = static, no transition). The motion uses it,
-            // so an effect with a looping animation keeps re-evaluating + invalidating forever.
-            _pathEffectMotion.Animation = value?.Animation;
-            _pathEffectMotion.SetMovement(value, this);
-        }
-    }
-
-    private readonly ImageFilterMotionProperty _imageFilterMotion = new();
+    [MotionProperty]
+    public partial PathEffect? PathEffect { get; set; }
 
     /// <summary>
-    /// Gets or sets the image filter. Backed by a motion property (like <see cref="PathEffect"/>)
-    /// so a self-animating filter (one carrying a looping <see cref="ImageFilters.ImageFilter.Animation"/>)
-    /// animates on the rail; the paint just reads the current value each frame.
+    /// Gets or sets the image filter. Backed by a motion property (like <see cref="PathEffect"/>):
+    /// the filter is interpolated by the paint's motion rail, so it animates when the owning paint
+    /// has a transition for this property (the paint is the animatable; the filter is just the value).
     /// </summary>
     /// <value>
     /// The image filter.
     /// </value>
-    public ImageFilter? ImageFilter
-    {
-        get => _imageFilterMotion.GetMovement(this);
-        set
-        {
-            _imageFilterMotion.Animation = value?.Animation;
-            _imageFilterMotion.SetMovement(value, this);
-        }
-    }
+    [MotionProperty]
+    public partial ImageFilter? ImageFilter { get; set; }
 
     /// <summary>
     /// Configures the SkiaSharp font manually.

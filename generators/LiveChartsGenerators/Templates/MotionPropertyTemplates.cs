@@ -200,6 +200,10 @@ namespace {containingType.ContainingNamespace};
             "SkiaSharp.SKColor" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
             "SkiaSharp.SKColor?" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
             "SkiaSharp.SKColor[]" => "LiveChartsCore.SkiaSharpView.Motion.SKColorArrayMotionProperty",
+            "LiveChartsCore.SkiaSharpView.Painting.ImageFilters.ImageFilter" => "LiveChartsCore.SkiaSharpView.Motion.ImageFilterMotionProperty",
+            "LiveChartsCore.SkiaSharpView.Painting.ImageFilters.ImageFilter?" => "LiveChartsCore.SkiaSharpView.Motion.ImageFilterMotionProperty",
+            "LiveChartsCore.SkiaSharpView.Painting.Effects.PathEffect" => "LiveChartsCore.SkiaSharpView.Motion.PathEffectMotionProperty",
+            "LiveChartsCore.SkiaSharpView.Painting.Effects.PathEffect?" => "LiveChartsCore.SkiaSharpView.Motion.PathEffectMotionProperty",
             _ => "UnsuportedType"
         };
     }
