@@ -48,7 +48,10 @@ public partial class SolidColorPaint : SkiaPaint
     public SolidColorPaint(SKColor color)
         : base()
     {
-        Color = color;
+        // Seed the motion property so the color is the baseline value, not an animation target from
+        // the type default. Assigning via the Color setter would leave the motion's From/Default at
+        // the default color and treat the constructed color as a transition.
+        _ColorMotionProperty = new(color);
     }
 
     /// <summary>
@@ -74,7 +77,9 @@ public partial class SolidColorPaint : SkiaPaint
     /// <inheritdoc cref="Paint.CloneTask" />
     public override Paint CloneTask()
     {
-        var clone = new SolidColorPaint { Color = Color };
+        // Use the seeding constructor (not an object initializer through the Color setter) so the
+        // clone's color is its baseline value, matching the original.
+        var clone = new SolidColorPaint(Color);
         Map(this, clone);
 
         return clone;
