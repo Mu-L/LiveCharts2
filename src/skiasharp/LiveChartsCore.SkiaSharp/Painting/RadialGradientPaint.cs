@@ -22,6 +22,7 @@
 
 using System;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Generators;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing;
 using SkiaSharp;
@@ -32,17 +33,20 @@ namespace LiveChartsCore.SkiaSharpView.Painting;
 /// Defines a set of geometries that will be painted using a radial gradient shader.
 /// </summary>
 /// <seealso cref="SkiaPaint" />
-public class RadialGradientPaint : SkiaPaint
+public partial class RadialGradientPaint : SkiaPaint
 {
+    private readonly SKShaderTileMode _tileMode;
     private SKShader? _shader;
     internal SKColorFilter? _opacityFilter;
     internal float _opacityFilterAlpha = -1f;
     private SKRect _activeClip = new();
-    private readonly SKColor[] _gradientStops;
-    private SKPoint _center;
-    private float _radius;
-    private readonly float[]? _colorPos;
-    private readonly SKShaderTileMode _tileMode;
+
+    // Inputs used to build the cached shader; see LinearGradientPaint for the caching rationale.
+    private SKColor[]? _builtStops;
+    private float[]? _builtColorPos;
+    private SKPoint _builtCenter;
+    private float _builtRadius = -1f;
+    private SKRect _builtClip;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RadialGradientPaint"/> class.
@@ -70,13 +74,36 @@ public class RadialGradientPaint : SkiaPaint
         float[]? colorPos = null,
         SKShaderTileMode tileMode = SKShaderTileMode.Clamp)
     {
-        _gradientStops = gradientStops;
-        center ??= new SKPoint(0.5f, 0.5f);
-        _center = center.Value;
-        _radius = radius;
-        _colorPos = colorPos;
+        _GradientStopsMotionProperty = new(gradientStops);
+        _CenterMotionProperty = new(center ?? new SKPoint(0.5f, 0.5f));
+        _RadiusMotionProperty = new(radius);
+        _ColorPosMotionProperty = new(colorPos);
         _tileMode = tileMode;
     }
+
+    /// <summary>
+    /// Gets or sets the gradient stops.
+    /// </summary>
+    [MotionProperty]
+    public partial SKColor[] GradientStops { get; set; }
+
+    /// <summary>
+    /// Gets or sets the center point of the gradient, both X and Y in the range of 0 to 1.
+    /// </summary>
+    [MotionProperty]
+    public partial SKPoint Center { get; set; }
+
+    /// <summary>
+    /// Gets or sets the radius, in the range of 0 to 1, where 1 is the minimum of the chart Width and Height.
+    /// </summary>
+    [MotionProperty]
+    public partial float Radius { get; set; }
+
+    /// <summary>
+    /// Gets or sets the relative positions of the colors, in the range of 0 to 1, or null to space them equally.
+    /// </summary>
+    [MotionProperty]
+    public partial float[]? ColorPos { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RadialGradientPaint"/> class.
@@ -89,7 +116,7 @@ public class RadialGradientPaint : SkiaPaint
     /// <inheritdoc cref="Paint.CloneTask" />
     public override Paint CloneTask()
     {
-        var clone = new RadialGradientPaint(_gradientStops, _center, _radius, _colorPos, _tileMode);
+        var clone = new RadialGradientPaint(GradientStops, Center, Radius, ColorPos, _tileMode);
         Map(this, clone);
 
         return clone;
@@ -133,43 +160,6 @@ public class RadialGradientPaint : SkiaPaint
         _skiaPaint.ColorFilter = null;
     }
 
-    internal override Paint Transitionate(float progress, Paint target)
-    {
-        if (target is not RadialGradientPaint toPaint) return target;
-
-        if (toPaint._gradientStops.Length != _gradientStops.Length)
-            throw new ArgumentException("The gradient stops must be the same length.");
-
-        for (var i = 0; i < _gradientStops.Length; i++)
-            _gradientStops[i] = new SKColor(
-                (byte)(_gradientStops[i].Red + progress * (toPaint._gradientStops[i].Red - _gradientStops[i].Red)),
-                (byte)(_gradientStops[i].Green + progress * (toPaint._gradientStops[i].Green - _gradientStops[i].Green)),
-                (byte)(_gradientStops[i].Blue + progress * (toPaint._gradientStops[i].Blue - _gradientStops[i].Blue)),
-                (byte)(_gradientStops[i].Alpha + progress * (toPaint._gradientStops[i].Alpha - _gradientStops[i].Alpha)));
-
-        _center = new SKPoint(
-            _center.X + progress * (toPaint._center.X - _center.X),
-            _center.Y + progress * (toPaint._center.Y - _center.Y));
-
-        _radius = _radius + progress * (toPaint._radius - _radius);
-
-        if (_colorPos is not null && toPaint._colorPos is not null)
-        {
-            if (_colorPos is null || _colorPos.Length != _colorPos.Length)
-                throw new ArgumentException("The color positions must be the same length.");
-
-            for (var i = 0; i < _colorPos.Length; i++)
-                _colorPos[i] = _colorPos[i] + progress * (_colorPos[i] - _colorPos[i]);
-        }
-
-        _shader?.Dispose();
-        _shader = null;
-
-        _skiaPaint?.Shader = GetShader();
-
-        return this;
-    }
-
     internal override void DisposeTask()
     {
         base.DisposeTask();
@@ -184,16 +174,32 @@ public class RadialGradientPaint : SkiaPaint
 
     private SKShader GetShader()
     {
-        if (_shader is not null)
+        // Read the (possibly interpolated) values once; the getters advance any active transition.
+        var stops = GradientStops;
+        var colorPos = ColorPos;
+        var centerPos = Center;
+        var radius = Radius;
+
+        if (_shader is not null &&
+            ReferenceEquals(stops, _builtStops) &&
+            ReferenceEquals(colorPos, _builtColorPos) &&
+            centerPos == _builtCenter &&
+            Math.Abs(radius - _builtRadius) < 1e-6f &&
+            _activeClip == _builtClip)
             return _shader;
 
-        var center = new SKPoint(_activeClip.Location.X + _center.X * _activeClip.Width, _activeClip.Location.Y + _center.Y * _activeClip.Height);
-        var r = _activeClip.Location.X + _activeClip.Width > _activeClip.Location.Y + _activeClip.Height
-            ? _activeClip.Location.Y + _activeClip.Height
-            : _activeClip.Location.X + _activeClip.Width;
-        r *= _radius;
+        _builtStops = stops;
+        _builtColorPos = colorPos;
+        _builtCenter = centerPos;
+        _builtRadius = radius;
+        _builtClip = _activeClip;
+
+        var center = new SKPoint(_activeClip.Location.X + centerPos.X * _activeClip.Width, _activeClip.Location.Y + centerPos.Y * _activeClip.Height);
+        var r = Math.Min(_activeClip.Width, _activeClip.Height) * radius;
+
+        _shader?.Dispose();
 
         return
-            _shader = SKShader.CreateRadialGradient(center, r, _gradientStops, _colorPos, _tileMode);
+            _shader = SKShader.CreateRadialGradient(center, r, stops, colorPos, _tileMode);
     }
 }

@@ -22,9 +22,8 @@
 
 #pragma warning disable IDE0290 // Use primary ctor... why suggest this?? you cant do it in this case
 
-using System;
-using System.Collections.Generic;
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Generators;
 using LiveChartsCore.Motion;
 
 namespace LiveChartsCore.Painting;
@@ -44,16 +43,14 @@ public abstract partial class Paint : Animatable
     /// <param name="strokeMiter">The stroke miter.</param>
     public Paint(float strokeThickness = 1f, float strokeMiter = 0)
     {
-        StrokeThickness = strokeThickness;
-        StrokeMiter = strokeMiter;
+        _StrokeThicknessMotionProperty = new(strokeThickness);
+        _StrokeMiterMotionProperty = new(strokeMiter);
     }
 
     /// <summary>
     /// Gets the default paint.
     /// </summary>
     public static Paint Default { get; } = new DefaultPaint();
-
-
 
     /// <summary>
     /// Gets or sets the index of the z.
@@ -94,12 +91,14 @@ public abstract partial class Paint : Animatable
     /// <summary>
     /// Gets or sets the stroke thickness.
     /// </summary>
-    public float StrokeThickness { get; set; }
+    [MotionProperty]
+    public partial float StrokeThickness { get; set; }
 
     /// <summary>
     /// Gets or sets the stroke miter.
     /// </summary>
-    public float StrokeMiter { get; set; }
+    [MotionProperty]
+    public partial float StrokeMiter { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether this instance is empty.
@@ -196,8 +195,6 @@ public abstract partial class Paint : Animatable
     internal void ReleaseCanvas(CoreMotionCanvas canvas) =>
         _ = _geometriesByCanvas.Remove(canvas);
 
-    internal abstract Paint Transitionate(float progress, Paint target);
-
     internal HashSet<IDrawnElement> GetGeometries(CoreMotionCanvas canvas) =>
         GetGeometriesByCanvas(canvas) ?? [];
 
@@ -225,7 +222,6 @@ public abstract partial class Paint : Animatable
         internal override void OnPaintFinished(DrawingContext context, IDrawnElement? drawnElement) { }
         internal override void OnPaintStarted(DrawingContext drawingContext, IDrawnElement? drawnElement) { }
         internal override void RestoreOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement) { }
-        internal override Paint Transitionate(float progress, Paint target) => this;
         internal override void DisposeTask() { }
     }
 }

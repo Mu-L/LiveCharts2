@@ -156,7 +156,6 @@ public class VorticeDrawingContext(
     internal override void SelectPaint(Paint paint)
     {
         ActiveLvcPaint = paint;
-        PaintMotionProperty.s_activePaint = paint;
 
         paint.OnPaintStarted(this, null);
     }
@@ -167,7 +166,6 @@ public class VorticeDrawingContext(
 
         ActiveLvcPaint = null!;
         ActiveBrush = null!;
-        PaintMotionProperty.s_activePaint = null!;
     }
 
     private void DrawByPaint(Paint paint, IDrawnElement<VorticeDrawingContext> element, float opacity)

@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,34 +20,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Painting;
-
 namespace LiveChartsCore.Motion;
 
 /// <summary>
-/// Defines the float motion property class.
+/// Defines the <see cref="float"/> array motion property class. Each element is interpolated
+/// independently.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="PaintMotionProperty"/> class.
+/// Initializes a new instance of the <see cref="FloatArrayMotionProperty"/> class.
 /// </remarks>
 /// <param name="defaultValue">The default value.</param>
-public class PaintMotionProperty(Paint defaultValue = null!)
-    : MotionProperty<Paint?>(defaultValue)
+public class FloatArrayMotionProperty(float[]? defaultValue = null)
+    : MotionProperty<float[]?>(defaultValue)
 {
-    internal static Paint? s_activePaint;
-
     /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
+    // Only equal-length, non-null arrays interpolate; otherwise the transition is skipped and
+    // the target value is used directly (a change to a different-length array, or to/from null,
+    // snaps).
     protected override bool CanTransitionate =>
-        (FromValue ?? s_activePaint) is not null &&
-        (ToValue ?? s_activePaint) is not null;
+        FromValue is not null && ToValue is not null && FromValue.Length == ToValue.Length;
 
     /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)" />
-    protected override Paint OnGetMovement(float progress)
+    protected override float[] OnGetMovement(float progress)
     {
-        // ! canot be null here because of the check in CanTransitionate
-        var from = FromValue ?? s_activePaint!.CloneTask();
-        var to = ToValue ?? s_activePaint!.CloneTask();
+        var from = FromValue!;
+        var to = ToValue!;
 
-        return from.Transitionate(progress, to);
+        var result = new float[to.Length];
+        for (var i = 0; i < to.Length; i++)
+            result[i] = from[i] + progress * (to[i] - from[i]);
+
+        return result;
     }
 }

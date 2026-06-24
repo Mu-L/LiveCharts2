@@ -20,27 +20,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using LiveChartsCore.Drawing;
+using LiveChartsCore.Motion;
+using SkiaSharp;
 
-namespace LiveChartsCore.Painting;
+namespace LiveChartsCore.SkiaSharpView.Motion;
 
 /// <summary>
-/// Just an empty paint task, this is used to measure layouts... just a hack.
+/// Defines the color motion property class.
 /// </summary>
-internal class MeasureTask : Paint
+/// <remarks>
+/// Initializes a new instance of the <see cref="SKColorMotionProperty"/> class.
+/// </remarks>
+/// <param name="defaultValue">The default value.</param>
+public class SKColorMotionProperty(SKColor defaultValue = new SKColor())
+    : MotionProperty<SKColor>(defaultValue)
 {
-    public static MeasureTask Instance { get; } = new MeasureTask();
+    /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
+    protected override bool CanTransitionate => true;
 
-    /// <inheritdoc cref="Paint.CloneTask" />
-    public override Paint CloneTask() => this;
-
-    internal override void ApplyOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement) { }
-
-    internal override void OnPaintFinished(DrawingContext context, IDrawnElement? drawnElement) { }
-
-    internal override void OnPaintStarted(DrawingContext drawingContext, IDrawnElement? drawnElement) { }
-
-    internal override void RestoreOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement) { }
-
-    internal override void DisposeTask() { }
+    /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)" />
+    protected override SKColor OnGetMovement(float progress)
+    {
+        return new SKColor(
+            (byte)(FromValue.Red + progress * (ToValue.Red - FromValue.Red)),
+            (byte)(FromValue.Green + progress * (ToValue.Green - FromValue.Green)),
+            (byte)(FromValue.Blue + progress * (ToValue.Blue - FromValue.Blue)),
+            (byte)(FromValue.Alpha + progress * (ToValue.Alpha - FromValue.Alpha)));
+    }
 }

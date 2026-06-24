@@ -21,27 +21,25 @@
 // SOFTWARE.
 
 using LiveChartsCore.Motion;
+using SkiaSharp;
 
-namespace LiveChartsCore.SkiaSharpView.Painting.Effects;
+namespace LiveChartsCore.SkiaSharpView.Motion;
 
 /// <summary>
-/// A motion property that animates a <see cref="PathEffect"/>, interpolating between two effects
-/// with <see cref="PathEffect.Transitionate(float, PathEffect)"/>. Assigning a new effect can soft-
-/// transition; a self-animating effect (one carrying a looping <see cref="PathEffect.Animation"/>)
-/// keeps the rail running indefinitely, so the paint never needs an "is animating" flag.
+/// Defines the <see cref="SKPoint"/> motion property class.
 /// </summary>
-/// <param name="defaultValue">The default effect.</param>
-public class PathEffectMotionProperty(PathEffect? defaultValue = null)
-    : MotionProperty<PathEffect?>(defaultValue)
+/// <remarks>
+/// Initializes a new instance of the <see cref="SKPointMotionProperty"/> class.
+/// </remarks>
+/// <param name="defaultValue">The default value.</param>
+public class SKPointMotionProperty(SKPoint defaultValue = new SKPoint())
+    : MotionProperty<SKPoint>(defaultValue)
 {
     /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
-    // A single assigned effect can animate against itself (it maps progress → its own shape,
-    // e.g. a dash phase), so a non-null target alone is enough.
-    protected override bool CanTransitionate => (FromValue ?? ToValue) is not null;
+    protected override bool CanTransitionate => true;
 
-    /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)"/>
-    // Go through the assembly-internal static Transitionate (like ImageFilterMotionProperty) so the
-    // null-endpoint → default-effect handling is consistent across both rails.
-    protected override PathEffect? OnGetMovement(float progress) =>
-        PathEffect.Transitionate(FromValue ?? ToValue, ToValue, progress);
+    /// <inheritdoc cref="MotionProperty{T}.OnGetMovement(float)" />
+    protected override SKPoint OnGetMovement(float progress) =>
+        new(FromValue.X + progress * (ToValue.X - FromValue.X),
+            FromValue.Y + progress * (ToValue.Y - FromValue.Y));
 }

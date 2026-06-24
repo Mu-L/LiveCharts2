@@ -182,18 +182,24 @@ namespace {containingType.ContainingNamespace};
         return type.ToDisplayString() switch
         {
             "float" => "LiveChartsCore.Motion.FloatMotionProperty",
+            "float[]" => "LiveChartsCore.Motion.FloatArrayMotionProperty",
+            "float[]?" => "LiveChartsCore.Motion.FloatArrayMotionProperty",
             "double" => "LiveChartsCore.Motion.DoubleMotionProperty",
             "double?" => "LiveChartsCore.Motion.NullableDoubleMotionProperty",
             "LiveChartsCore.Drawing.LvcColor" => "LiveChartsCore.Motion.ColorMotionProperty",
             "LiveChartsCore.Drawing.LvcPoint" => "LiveChartsCore.Motion.PointMotionProperty",
             "LiveChartsCore.Drawing.LvcSize" => "LiveChartsCore.Motion.SizeMotionProperty",
             "LiveChartsCore.Drawing.Padding" => "LiveChartsCore.Motion.PaddingMotionProperty",
-            "LiveChartsCore.Painting.Paint" => "LiveChartsCore.Motion.PaintMotionProperty",
-            "LiveChartsCore.Painting.Paint?" => "LiveChartsCore.Motion.PaintMotionProperty",
+            "LiveChartsCore.Painting.Paint" => "LiveChartsCore.Motion.ByReferenceMotionProperty<LiveChartsCore.Painting.Paint>",
+            "LiveChartsCore.Painting.Paint?" => "LiveChartsCore.Motion.ByReferenceMotionProperty<LiveChartsCore.Painting.Paint?>",
             "LiveChartsCore.Drawing.LvcDropShadow" +
             "" => "LiveChartsCore.Motion.DropShadowMotionProperty",
             "LiveChartsCore.Drawing.LvcDropShadow?" => "LiveChartsCore.Motion.DropShadowMotionProperty",
             "SkiaSharp.SKMatrix" => "LiveChartsCore.SkiaSharpView.Motion.SKMatrixMotionProperty",
+            "SkiaSharp.SKPoint" => "LiveChartsCore.SkiaSharpView.Motion.SKPointMotionProperty",
+            "SkiaSharp.SKColor" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
+            "SkiaSharp.SKColor?" => "LiveChartsCore.SkiaSharpView.Motion.SKColorMotionProperty",
+            "SkiaSharp.SKColor[]" => "LiveChartsCore.SkiaSharpView.Motion.SKColorArrayMotionProperty",
             _ => "UnsuportedType"
         };
     }

@@ -21,17 +21,6 @@ public class SolidColorPaint : ConsolePaint
     internal override void OnPaintStarted(DrawingContext drawingContext, IDrawnElement? drawnElement) =>
         ((ConsoleDrawingContext)drawingContext).ActiveColor = Color;
 
-    internal override Paint Transitionate(float progress, Paint target)
-    {
-        if (target is not SolidColorPaint to) return target;
-        Color = new LvcColor(
-            (byte)(Color.R + progress * (to.Color.R - Color.R)),
-            (byte)(Color.G + progress * (to.Color.G - Color.G)),
-            (byte)(Color.B + progress * (to.Color.B - Color.B)),
-            (byte)(Color.A + progress * (to.Color.A - Color.A)));
-        return this;
-    }
-
     internal override void ApplyOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement)
     {
         // skipped — single-cell color cannot meaningfully alpha-blend without a per-pixel

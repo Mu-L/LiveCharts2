@@ -69,21 +69,6 @@ public class SolidColorPaint : VorticePaint
         vorticeContext.ActiveBrush = _brush;
     }
 
-    internal override Paint Transitionate(float progress, Paint target)
-    {
-        if (target is not SolidColorPaint toPaint) return target;
-
-        Color = new Color4(
-            (byte)(Color.R + progress * (toPaint.Color.R - Color.R)),
-            (byte)(Color.G + progress * (toPaint.Color.G - Color.G)),
-            (byte)(Color.B + progress * (toPaint.Color.B - Color.B)),
-            (byte)(Color.A + progress * (toPaint.Color.A - Color.A)));
-
-        ((ID2D1SolidColorBrush)_brush!).Color = Color;
-
-        return this;
-    }
-
     internal override void ApplyOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement)
     {
         _brush.Opacity = opacity;

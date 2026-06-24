@@ -119,6 +119,15 @@ public abstract class MotionProperty<T>(T defaultValue) : IMotionProperty
             if (LogGet == animatable)
                 System.Diagnostics.Debug.WriteLine($"[MOTION GET] invalid transition state.");
 #endif
+            // The value cannot be interpolated, so it snaps to the target; the "transition" is
+            // therefore already done. Mark it complete so a non-animatable property (e.g. a paint
+            // reference) does not stay stuck at IsCompleted == false after SetMovement.
+            if (!IsCompleted)
+            {
+                IsCompleted = true;
+                OnCompleted();
+            }
+
             return ToValue;
         }
 

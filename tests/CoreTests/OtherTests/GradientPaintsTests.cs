@@ -1,4 +1,3 @@
-using System;
 using LiveChartsCore.Motion;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView;
@@ -77,55 +76,6 @@ public class GradientPaintsTests
     }
 
     [TestMethod]
-    public void LinearGradient_TransitionateBetweenSameLengthStopsBlendsValues()
-    {
-        var from = new LinearGradientPaint(
-            [new SKColor(0, 0, 0, 0), new SKColor(0, 0, 0, 0)],
-            new SKPoint(0, 0),
-            new SKPoint(0, 0));
-        var to = new LinearGradientPaint(
-            [new SKColor(100, 200, 50, 200), new SKColor(50, 100, 150, 100)],
-            new SKPoint(1, 1),
-            new SKPoint(1, 1),
-            colorPos: [0f, 1f]);
-
-        // ColorPos on `from` matches `to` length so the colorPos transition branch runs.
-        var fromWithColorPos = new LinearGradientPaint(
-            [new SKColor(0, 0, 0, 0), new SKColor(0, 0, 0, 0)],
-            new SKPoint(0, 0),
-            new SKPoint(0, 0),
-            colorPos: [0f, 1f]);
-
-        // Simple smoke-call: should not throw and should return `from` (in-place mutation).
-        var result = fromWithColorPos.Transitionate(0.5f, to);
-        Assert.AreSame(fromWithColorPos, result);
-
-        // Same-length stops without colorPos still works.
-        result = from.Transitionate(0.5f, to);
-        Assert.AreSame(from, result);
-    }
-
-    [TestMethod]
-    public void LinearGradient_TransitionateToDifferentTargetTypeReturnsTarget()
-    {
-        var gradient = new LinearGradientPaint(s_twoStops);
-        var solid = new SolidColorPaint(SKColors.Red);
-
-        // When the target is a different paint type, Transitionate must hand off the target.
-        var result = gradient.Transitionate(0.5f, solid);
-        Assert.AreSame(solid, result);
-    }
-
-    [TestMethod]
-    public void LinearGradient_TransitionateMismatchedStopsThrows()
-    {
-        var from = new LinearGradientPaint(s_twoStops);
-        var to = new LinearGradientPaint(s_threeStops);
-
-        Assert.ThrowsExactly<NotImplementedException>(() => _ = from.Transitionate(0.5f, to));
-    }
-
-    [TestMethod]
     public void RadialGradient_ConstructorOverloadsAllProduceUsablePaint()
     {
         var fromArray = new RadialGradientPaint(s_twoStops);
@@ -166,42 +116,6 @@ public class GradientPaintsTests
         using var image = chart.GetImage();
         Assert.IsNotNull(image);
         paint.DisposeTask();
-    }
-
-    [TestMethod]
-    public void RadialGradient_TransitionateBetweenSameLengthStopsBlendsValues()
-    {
-        var from = new RadialGradientPaint(
-            [new SKColor(0, 0, 0, 0), new SKColor(0, 0, 0, 0)],
-            new SKPoint(0, 0),
-            radius: 0f);
-        var to = new RadialGradientPaint(
-            [new SKColor(100, 200, 50, 200), new SKColor(50, 100, 150, 100)],
-            new SKPoint(1, 1),
-            radius: 1f,
-            colorPos: [0f, 1f]);
-
-        var result = from.Transitionate(0.5f, to);
-        Assert.AreSame(from, result);
-    }
-
-    [TestMethod]
-    public void RadialGradient_TransitionateToDifferentTargetTypeReturnsTarget()
-    {
-        var gradient = new RadialGradientPaint(s_twoStops);
-        var solid = new SolidColorPaint(SKColors.Red);
-
-        var result = gradient.Transitionate(0.5f, solid);
-        Assert.AreSame(solid, result);
-    }
-
-    [TestMethod]
-    public void RadialGradient_TransitionateMismatchedStopsThrows()
-    {
-        var from = new RadialGradientPaint(s_twoStops);
-        var to = new RadialGradientPaint(s_threeStops);
-
-        Assert.ThrowsExactly<ArgumentException>(() => _ = from.Transitionate(0.5f, to));
     }
 
     // The next three tests cover the opacity-filter cache + disposal contract introduced

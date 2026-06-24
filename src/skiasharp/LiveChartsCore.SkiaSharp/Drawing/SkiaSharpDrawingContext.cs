@@ -240,7 +240,6 @@ public class SkiaSharpDrawingContext(
     {
         ActiveLvcPaint = paint;
         //ActiveSkiaPaint = paint.SKPaint; set by paint.OnPaintStarted
-        PaintMotionProperty.s_activePaint = paint;
 
         paint.OnPaintStarted(this, null);
     }
@@ -251,7 +250,6 @@ public class SkiaSharpDrawingContext(
 
         ActiveLvcPaint = null!;
         ActiveSkiaPaint = null!;
-        PaintMotionProperty.s_activePaint = null!;
     }
 
     private void DrawByPaint(Paint paint, IDrawnElement<SkiaSharpDrawingContext> element, float opacity)

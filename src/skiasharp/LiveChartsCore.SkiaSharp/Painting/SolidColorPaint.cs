@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 using LiveChartsCore.Drawing;
+using LiveChartsCore.Generators;
 using LiveChartsCore.Painting;
 using LiveChartsCore.SkiaSharpView.Drawing;
 using SkiaSharp;
@@ -31,7 +32,7 @@ namespace LiveChartsCore.SkiaSharpView.Painting;
 /// Defines a set of geometries that will be painted using a solid color.
 /// </summary>
 /// <seealso cref="Paint" />
-public class SolidColorPaint : SkiaPaint
+public partial class SolidColorPaint : SkiaPaint
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SolidColorPaint"/> class.
@@ -58,7 +59,7 @@ public class SolidColorPaint : SkiaPaint
     public SolidColorPaint(SKColor color, float strokeWidth)
         : base(strokeWidth)
     {
-        Color = color;
+        _ColorMotionProperty = new(color);
     }
 
     /// <summary>
@@ -67,7 +68,8 @@ public class SolidColorPaint : SkiaPaint
     /// <value>
     /// The color.
     /// </value>
-    public SKColor Color { get; set; }
+    [MotionProperty]
+    public partial SKColor Color { get; set; }
 
     /// <inheritdoc cref="Paint.CloneTask" />
     public override Paint CloneTask()
@@ -87,21 +89,6 @@ public class SolidColorPaint : SkiaPaint
         // skipping the write when the source color hasn't moved avoids that pair on every
         // paint-task selection. Most paints carry a static color in steady state.
         if (_skiaPaint.Color != Color) _skiaPaint.Color = Color;
-    }
-
-    internal override Paint Transitionate(float progress, Paint target)
-    {
-        if (target is not SolidColorPaint toPaint) return target;
-
-        Color = new SKColor(
-            (byte)(Color.Red + progress * (toPaint.Color.Red - Color.Red)),
-            (byte)(Color.Green + progress * (toPaint.Color.Green - Color.Green)),
-            (byte)(Color.Blue + progress * (toPaint.Color.Blue - Color.Blue)),
-            (byte)(Color.Alpha + progress * (toPaint.Color.Alpha - Color.Alpha)));
-
-        _skiaPaint?.Color = Color;
-
-        return this;
     }
 
     internal override void ApplyOpacityMask(DrawingContext context, float opacity, IDrawnElement? drawnElement)
