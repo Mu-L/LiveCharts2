@@ -41,25 +41,12 @@ public abstract class ImageFilter(object key)
         { Blur.s_key, new Blur(0,0) }
     };
     /// <summary>
-    /// The native Skia image filter produced by <see cref="CreateFilter"/>.
+    /// Builds the native Skia image filter from this filter's parameters. The returned object is owned
+    /// by the caller (the <see cref="SkiaPaint"/>), which caches and disposes it — the filter itself
+    /// holds no native resource, so it is a lightweight, shareable value.
     /// </summary>
-    /// <remarks>
-    /// This field is <see langword="protected"/> <see langword="internal"/> so the owning
-    /// <see cref="SkiaPaint"/> can read it in this assembly, while an <see cref="ImageFilter"/>
-    /// subclass in another assembly can set it from its <see cref="CreateFilter"/> override.
-    /// </remarks>
-    protected internal SKImageFilter? _sKImageFilter;
-
-    /// <summary>
-    /// Creates the image filter.
-    /// </summary>
-    public abstract void CreateFilter();
-
-    /// <summary>
-    /// Clones this instance.
-    /// </summary>
-    /// <returns></returns>
-    public abstract ImageFilter Clone();
+    /// <returns>A new native image filter.</returns>
+    public abstract SKImageFilter CreateNative();
 
     /// <summary>
     /// Adds a default filter.
@@ -90,11 +77,5 @@ public abstract class ImageFilter(object key)
         to ??= s_defaultFilters.TryGetValue(key, out var dTo) ? dTo : from;
 
         return from!.Transitionate(progress, to!);
-    }
-
-    internal virtual void Dispose()
-    {
-        _sKImageFilter?.Dispose();
-        _sKImageFilter = null;
     }
 }

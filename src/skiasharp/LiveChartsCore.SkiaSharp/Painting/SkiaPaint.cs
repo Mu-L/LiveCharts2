@@ -53,6 +53,14 @@ public abstract partial class SkiaPaint(float strokeThickness = 1f, float stroke
     internal FontBuilderDelegate _fontBuilder = LiveChartsSkiaSharp.DefaultTextSettings.FontBuilder;
     internal SKPaint? _skiaPaint;
 
+    // The paint owns the native effect/filter: it builds one from the current (possibly interpolated)
+    // value, caches it, and rebuilds + disposes it when the source value changes. The PathEffect /
+    // ImageFilter objects themselves hold no native resource — they are lightweight parameter values.
+    private SKPathEffect? _skPathEffect;
+    private PathEffect? _pathEffectSource;
+    private SKImageFilter? _skImageFilter;
+    private ImageFilter? _imageFilterSource;
+
     /// <summary>
     /// Gets or sets the font family.
     /// </summary>
@@ -193,32 +201,39 @@ public abstract partial class SkiaPaint(float strokeThickness = 1f, float stroke
         paint.StrokeMiter = StrokeMiter;
         paint.StrokeWidth = StrokeThickness;
 
-        // Read the effect ONCE: when animating, the motion returns a fresh interpolated effect
-        // per call, so re-reading would build a different instance each access.
+        // Read the effect ONCE: when animating, the motion returns a fresh interpolated effect per
+        // call. Rebuild the native only when the source value actually changes (reference identity):
+        // a static effect returns the same instance every frame → reuse the cached native; an
+        // animating effect returns a new instance per frame → rebuild and dispose the previous one.
         var pathEffect = PathEffect;
-        if (pathEffect is not null)
+        if (pathEffect is null)
         {
-            // A fresh animated effect arrives each frame with no native effect yet → build it.
-            // A static effect is built once and cached, exactly as before.
-            if (pathEffect._sKPathEffect is null)
-                pathEffect.CreateEffect();
-
-            paint.PathEffect = pathEffect._sKPathEffect;
+            _skPathEffect?.Dispose();
+            _skPathEffect = null;
+            _pathEffectSource = null;
         }
+        else if (!ReferenceEquals(pathEffect, _pathEffectSource))
+        {
+            _skPathEffect?.Dispose();
+            _skPathEffect = pathEffect.CreateNative();
+            _pathEffectSource = pathEffect;
+        }
+        paint.PathEffect = _skPathEffect;
 
-        // Read once (the motion returns a fresh interpolated filter per call while animating).
         var imageFilter = ImageFilter;
-        if (imageFilter is not null)
+        if (imageFilter is null)
         {
-            if (imageFilter._sKImageFilter is null)
-                imageFilter.CreateFilter();
-
-            paint.ImageFilter = imageFilter._sKImageFilter;
+            _skImageFilter?.Dispose();
+            _skImageFilter = null;
+            _imageFilterSource = null;
         }
-        else
+        else if (!ReferenceEquals(imageFilter, _imageFilterSource))
         {
-            paint.ImageFilter = null; // filter removed → clear it from the cached/reused SKPaint
+            _skImageFilter?.Dispose();
+            _skImageFilter = imageFilter.CreateNative();
+            _imageFilterSource = imageFilter;
         }
+        paint.ImageFilter = _skImageFilter;
 
         if (drawnElement is not null)
             paint.StrokeWidth = drawnElement.StrokeThickness;
@@ -246,8 +261,15 @@ public abstract partial class SkiaPaint(float strokeThickness = 1f, float stroke
         if (_skiaPaint is not null && !IsGlobalSKTypeface)
             _skiaPaint.Typeface?.Dispose();
 
-        PathEffect?.Dispose();
-        ImageFilter?.Dispose();
+        // the paint owns the native effect/filter it built — release them deterministically. Also
+        // clear the source references so the next UpdateSkiaPaint rebuilds the native instead of
+        // reusing the (now disposed) one when the same effect/filter instance is still assigned.
+        _skPathEffect?.Dispose();
+        _skPathEffect = null;
+        _pathEffectSource = null;
+        _skImageFilter?.Dispose();
+        _skImageFilter = null;
+        _imageFilterSource = null;
 
         _skiaPaint?.Dispose();
         _skiaPaint = null;
