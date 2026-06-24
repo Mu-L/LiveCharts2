@@ -285,6 +285,20 @@ public class SkiaSharpDrawingContext(
 
         ActiveSkiaPaint = originalPaint;
         ActiveLvcPaint = originalTask;
+
+        // Honor RemoveOnCompleted for a per-element override paint: once its transition is done, detach
+        // it from the element and release its native resources, so the element draws with its paint task
+        // again (or not at all) on the next frame. The frame loop only acts on RemoveOnCompleted for
+        // registered tasks and geometries — a per-element paint is neither, so without this an override
+        // assigned per hover would never be cleaned up and would orphan its SKPaint until finalization.
+        if (paint != MeasureTask.Instance && paint.RemoveOnCompleted && paint.IsValid)
+        {
+            if (ReferenceEquals(element.Fill, paint)) element.Fill = null;
+            else if (ReferenceEquals(element.Stroke, paint)) element.Stroke = null;
+            else if (ReferenceEquals(element.Paint, paint)) element.Paint = null;
+
+            paint.DisposeTask();
+        }
     }
 
     private void DrawElement(IDrawnElement<SkiaSharpDrawingContext> element, float opacity)
