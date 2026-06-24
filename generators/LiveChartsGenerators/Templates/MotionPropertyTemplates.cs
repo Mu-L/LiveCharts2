@@ -190,8 +190,8 @@ namespace {containingType.ContainingNamespace};
             "LiveChartsCore.Drawing.LvcPoint" => "LiveChartsCore.Motion.PointMotionProperty",
             "LiveChartsCore.Drawing.LvcSize" => "LiveChartsCore.Motion.SizeMotionProperty",
             "LiveChartsCore.Drawing.Padding" => "LiveChartsCore.Motion.PaddingMotionProperty",
-            "LiveChartsCore.Painting.Paint" => "LiveChartsCore.Motion.NonAnimatableMotionProperty<LiveChartsCore.Painting.Paint>",
-            "LiveChartsCore.Painting.Paint?" => "LiveChartsCore.Motion.NonAnimatableMotionProperty<LiveChartsCore.Painting.Paint?>",
+            "LiveChartsCore.Painting.Paint" => "LiveChartsCore.Motion.ByReferenceMotionProperty<LiveChartsCore.Painting.Paint>",
+            "LiveChartsCore.Painting.Paint?" => "LiveChartsCore.Motion.ByReferenceMotionProperty<LiveChartsCore.Painting.Paint?>",
             "LiveChartsCore.Drawing.LvcDropShadow" +
             "" => "LiveChartsCore.Motion.DropShadowMotionProperty",
             "LiveChartsCore.Drawing.LvcDropShadow?" => "LiveChartsCore.Motion.DropShadowMotionProperty",

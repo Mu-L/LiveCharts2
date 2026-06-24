@@ -23,17 +23,18 @@
 namespace LiveChartsCore.Motion;
 
 /// <summary>
-/// A motion property whose value is never interpolated: assigning a new value snaps to it.
-/// Used for properties where animation lives inside the value itself rather than by blending one
-/// value instance into another — for example a <see cref="Painting.Paint"/> reference, whose own
-/// properties are motion properties.
+/// A motion property that holds its value by reference: the value is not interpolated, so assigning
+/// a new value snaps to it. Used for properties where animation lives inside the value itself (for
+/// example a <see cref="Painting.Paint"/> reference, whose own properties are motion properties)
+/// rather than by blending one value instance into another. How a change of the reference behaves
+/// (snap vs. animate) is left to the owner — e.g. via the generated <c>On…Changed</c> hook.
 /// </summary>
 /// <typeparam name="T">The property type.</typeparam>
 /// <remarks>
-/// Initializes a new instance of the <see cref="NonAnimatableMotionProperty{T}"/> class.
+/// Initializes a new instance of the <see cref="ByReferenceMotionProperty{T}"/> class.
 /// </remarks>
 /// <param name="defaultValue">The default value.</param>
-public class NonAnimatableMotionProperty<T>(T defaultValue = default!)
+public class ByReferenceMotionProperty<T>(T defaultValue = default!)
     : MotionProperty<T>(defaultValue)
 {
     /// <inheritdoc cref="MotionProperty{T}.CanTransitionate"/>
