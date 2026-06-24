@@ -36,6 +36,7 @@ public class XamlFriendlyObjectsGenerator : IIncrementalGenerator
 {
     private const string XamlAttribute = "LiveChartsCore.Generators.XamlClassAttribute";
     private const string MotionPropertyAttribute = "LiveChartsCore.Generators.MotionPropertyAttribute";
+    private const string StatePropertyAttribute = "LiveChartsCore.Generators.StatePropertyAttribute";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -59,14 +60,25 @@ public class XamlFriendlyObjectsGenerator : IIncrementalGenerator
                 transform: static (ctx, _) => GetXamlObjectsToGenerate(ctx.SemanticModel, ctx.TargetNode))
             .Where(static m => m is not null);
 
-        var motionProperties = context.SyntaxProvider
+        var motionProps = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 MotionPropertyAttribute,
                 predicate: static (syntaxNode, _) => syntaxNode is PropertyDeclarationSyntax,
                 transform: static (ctx, _) => GetMotionPropertiesToGenerate(ctx.SemanticModel, ctx.TargetNode))
-            .Where(static m => m is not null)
-            .Collect()
-            .Select((props, _) => props
+            .Where(static m => m is not null);
+
+        var stateProps = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                StatePropertyAttribute,
+                predicate: static (syntaxNode, _) => syntaxNode is PropertyDeclarationSyntax,
+                transform: static (ctx, _) => GetStatePropertiesToGenerate(ctx.SemanticModel, ctx.TargetNode))
+            .Where(static m => m is not null);
+
+        // [MotionProperty] and [StateProperty] both register a PropertyDefinition; group them together
+        // per containing type so a type's generated PropertyDefinitions collection holds both kinds.
+        var motionProperties = motionProps.Collect()
+            .Combine(stateProps.Collect())
+            .Select((pair, _) => pair.Left.AddRange(pair.Right)
                 .GroupBy(prop => prop?.Property.ContainingType, SymbolEqualityComparer.Default)
                 .ToList());
 
@@ -103,9 +115,13 @@ public class XamlFriendlyObjectsGenerator : IIncrementalGenerator
                 {
                     if (item is not { } value) return;
 
+                    var source = value.IsStateOnly
+                        ? MotionPropertyTemplates.GetStatePropertyTemplate(value)
+                        : MotionPropertyTemplates.GetTemplate(value);
+
                     spc.AddSource(
                         $"{value.Property.ContainingType.Name}.{value.Property.Name}.g.cs".Replace('<', '_').Replace('>', '_'),
-                        SourceText.From(MotionPropertyTemplates.GetTemplate(value), Encoding.UTF8));
+                        SourceText.From(source, Encoding.UTF8));
                 }
 
                 spc.AddSource(
@@ -346,6 +362,19 @@ public class XamlFriendlyObjectsGenerator : IIncrementalGenerator
         }
 
         return new(symbol, hasExplicitAcessors);
+    }
+
+    private static MotionProperty? GetStatePropertiesToGenerate(SemanticModel semanticModel, SyntaxNode declarationSyntax)
+    {
+        if (semanticModel.GetDeclaredSymbol(declarationSyntax) is not IPropertySymbol symbol)
+            return null; // something went wrong
+
+        var targetAttribute = symbol.GetAttributes()
+           .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == StatePropertyAttribute);
+        if (targetAttribute is null) return null;
+
+        // state-only: the generator emits a motionless definition and does not touch the accessors.
+        return new(symbol, hasExplicitAcessors: false, isStateOnly: true);
     }
 
     private static XamlProperty? GetUIPropertiesToGenerate(SemanticModel semanticModel, SyntaxNode node)

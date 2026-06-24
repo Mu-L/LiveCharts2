@@ -2,7 +2,7 @@ name: "Run tests"
 description: "Runs the specified tests using ui or core tests"
 inputs:
   test-type:
-    description: 'The type of tests to run (factos, factos-android, factos-ios, core, snapshot or console)'
+    description: 'The type of tests to run (factos, factos-android, factos-ios, core, snapshot, console or generator)'
     required: true
   id:
     description: "Identifier for the test target"
@@ -171,6 +171,15 @@ runs:
         max_attempts: 3
         shell: pwsh
         command: dotnet run --project tests/ConsoleTests/ConsoleTests.csproj -c Debug -f ${{ inputs.target-framework }} --report-trx
+
+    - name: Run generator tests
+      uses: nick-fields/retry@v3.0.2
+      if : ${{ inputs.test-type == 'generator' }}
+      with:
+        timeout_minutes: 8
+        max_attempts: 3
+        shell: pwsh
+        command: dotnet run --project tests/GeneratorTests/GeneratorTests.csproj -c Debug --report-trx
 
     - name: Upload snapshot diffs
       if: failure() && inputs.test-type == 'snapshot'

@@ -1,4 +1,4 @@
-﻿// The MIT License(MIT)
+// The MIT License(MIT)
 //
 // Copyright(c) 2021 Alberto Rodriguez Orozco & LiveCharts Contributors
 //
@@ -20,26 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using Microsoft.CodeAnalysis;
+using System;
 
-namespace LiveChartsGenerators.Definitions;
+namespace LiveChartsCore.Generators;
 
-public readonly record struct MotionProperty
+/// <summary>
+/// Registers a property as a visual-state target without making it a motion property. LiveCharts
+/// generates a <see cref="LiveChartsCore.Motion.PropertyDefinition"/> for it (with a null motion
+/// getter) and adds it to the type's property-definition collection, so a visual state can set and
+/// restore it by name. The property itself is left untouched — declare its accessors yourself.
+/// Use this for properties whose value is not interpolated (for example a paint reference); use
+/// <see cref="MotionPropertyAttribute"/> when the value should also animate.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property)]
+public class StatePropertyAttribute : Attribute
 {
-    public readonly IPropertySymbol Property;
-    public readonly bool HasExplicitAcessors;
-
-    /// <summary>
-    /// When true the property is registered for visual states only (via [StateProperty]): the
-    /// generator emits a motionless PropertyDefinition and leaves the property's accessors alone.
-    /// When false it is a full motion property (via [MotionProperty]).
-    /// </summary>
-    public readonly bool IsStateOnly;
-
-    public MotionProperty(IPropertySymbol symbol, bool hasExplicitAcessors, bool isStateOnly = false)
-    {
-        Property = symbol;
-        HasExplicitAcessors = hasExplicitAcessors;
-        IsStateOnly = isStateOnly;
-    }
 }
