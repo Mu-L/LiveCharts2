@@ -51,4 +51,45 @@ public class PaintReferenceMotionTests
             CoreMotionCanvas.DebugElapsedMilliseconds = -1;
         }
     }
+
+    // Replacing a geometry's fill must NOT mutate the previous paint instance. Regression guard for
+    // the in-place blend this PR removes: the old Paint.Transitionate lerped the previous paint's
+    // color in place, corrupting visual-state paints shared across points (e.g. ConditionalDraw's
+    // shared red paint stopped being red after the first clear). With references snapping, the
+    // previous paint is left untouched.
+    [TestMethod]
+    public void ReplacingFill_DoesNotMutateThePreviousPaint()
+    {
+        var red = new SKColor(255, 0, 0);
+        var shared = new SolidColorPaint(red); // stands in for a state paint shared across points
+        var geometry = new RectangleGeometry();
+        var animatable = (Animatable)geometry;
+
+        // Animate the geometry the way a series does, so any transition machinery is exercised.
+        geometry.SetTransition(new Animation(EasingFunctions.Lineal, TimeSpan.FromSeconds(1)));
+
+        try
+        {
+            CoreMotionCanvas.DebugElapsedMilliseconds = 0;
+            animatable.IsValid = true;
+            geometry.Fill = shared;
+            Assert.AreSame(shared, geometry.Fill);
+
+            // Replace the fill (as clearing/changing a state does) and drive a full second of frames.
+            geometry.Fill = new SolidColorPaint(new SKColor(0, 0, 255));
+            for (long t = 0; t <= 1000; t += 100)
+            {
+                CoreMotionCanvas.DebugElapsedMilliseconds = t;
+                animatable.IsValid = true;
+                _ = geometry.Fill;
+            }
+
+            Assert.AreEqual(red, shared.Color,
+                "replacing a geometry's fill must not mutate the previous paint instance.");
+        }
+        finally
+        {
+            CoreMotionCanvas.DebugElapsedMilliseconds = -1;
+        }
+    }
 }
