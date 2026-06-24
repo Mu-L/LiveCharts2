@@ -21,7 +21,6 @@
 // SOFTWARE.
 
 using System.Collections.Generic;
-using LiveChartsCore.Drawing;
 using SkiaSharp;
 
 namespace LiveChartsCore.SkiaSharpView.Painting.Effects;
@@ -45,15 +44,6 @@ public abstract class PathEffect(object key)
     /// subclass in another assembly can set it from its <see cref="CreateEffect"/> override.
     /// </remarks>
     protected internal SKPathEffect? _sKPathEffect;
-
-    /// <summary>
-    /// An optional animation that drives this effect on the motion rail. <see langword="null"/>
-    /// (the default) means the effect is static — created once and cached, exactly as before.
-    /// A self-animating effect assigns one (e.g. with <see cref="Animation.RepeatTimes"/> =
-    /// <see cref="int.MaxValue"/>) so it animates indefinitely; the looping/"not finished"
-    /// reporting then lives entirely in the effect, not on the paint.
-    /// </summary>
-    public Animation? Animation { get; set; }
 
     /// <summary>
     /// Creates a new object that is a copy of the current instance.

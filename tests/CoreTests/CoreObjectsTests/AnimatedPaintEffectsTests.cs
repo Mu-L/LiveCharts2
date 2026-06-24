@@ -10,10 +10,10 @@ using SkiaSharp;
 
 namespace CoreTests.CoreObjectsTests;
 
-// SkiaPaint.PathEffect and SkiaPaint.ImageFilter are motion-backed: an effect/filter that
-// carries a looping Animation animates on the rail (the paint reads the interpolated value each
-// frame, stays invalid so the canvas keeps drawing, and loops past the end). Static effects
-// (Animation == null) keep their previous create-once behavior — covered by the existing tests.
+// SkiaPaint.PathEffect and SkiaPaint.ImageFilter are motion-backed. The animatable is the PAINT:
+// when the paint has a transition for the property, the effect/filter is interpolated on the rail
+// (the paint reads the interpolated value each frame, stays invalid so the canvas keeps drawing,
+// and loops past the end). With no transition the value is returned as-is (create-once behavior).
 [TestClass]
 public class AnimatedPaintEffectsTests
 {
@@ -22,34 +22,26 @@ public class AnimatedPaintEffectsTests
     [TestCleanup]
     public void ResetClock() => CoreMotionCanvas.DebugElapsedMilliseconds = -1;
 
-    // A minimal self-animating path effect: Transitionate maps progress straight to a "phase"
-    // so the test can read the interpolated value. No native SKPathEffect needed (we don't draw).
+    // A minimal path effect: Transitionate maps progress straight to a "phase" so the test can read
+    // the interpolated value. No native SKPathEffect needed (we don't draw).
     private sealed class TestEffect : PathEffect
     {
         private static readonly object s_key = new();
         public float Phase { get; }
-        public TestEffect(float phase, Animation? animation) : base(s_key)
-        {
-            Phase = phase;
-            Animation = animation;
-        }
-        public override PathEffect Clone() => new TestEffect(Phase, Animation);
+        public TestEffect(float phase) : base(s_key) => Phase = phase;
+        public override PathEffect Clone() => new TestEffect(Phase);
         public override void CreateEffect() { }
-        public override PathEffect Transitionate(float progress, PathEffect? target) => new TestEffect(progress, Animation);
+        public override PathEffect Transitionate(float progress, PathEffect? target) => new TestEffect(progress);
     }
 
     private sealed class TestFilter : ImageFilter
     {
         private static readonly object s_key = new();
         public float Radius { get; }
-        public TestFilter(float radius, Animation? animation) : base(s_key)
-        {
-            Radius = radius;
-            Animation = animation;
-        }
-        public override ImageFilter Clone() => new TestFilter(Radius, Animation);
+        public TestFilter(float radius) : base(s_key) => Radius = radius;
+        public override ImageFilter Clone() => new TestFilter(Radius);
         public override void CreateFilter() { }
-        protected override ImageFilter Transitionate(float progress, ImageFilter target) => new TestFilter(progress, Animation);
+        protected override ImageFilter Transitionate(float progress, ImageFilter target) => new TestFilter(progress);
     }
 
     [TestMethod]
@@ -58,7 +50,9 @@ public class AnimatedPaintEffectsTests
         var loop = new Animation(EasingFunctions.Lineal, TimeSpan.FromSeconds(1), int.MaxValue);
 
         CoreMotionCanvas.DebugElapsedMilliseconds = 0;
-        var paint = new SolidColorPaint(SKColors.Blue) { PathEffect = new TestEffect(0, loop) };
+        var paint = new SolidColorPaint(SKColors.Blue);
+        paint.SetTransition(loop, SkiaPaint.PathEffectProperty); // the PAINT is the animatable
+        paint.PathEffect = new TestEffect(0);
 
         paint.IsValid = true;
         CoreMotionCanvas.DebugElapsedMilliseconds = 250;
@@ -74,8 +68,6 @@ public class AnimatedPaintEffectsTests
         CoreMotionCanvas.DebugElapsedMilliseconds = 1300;
         Assert.AreEqual(0.30f, ((TestEffect)paint.PathEffect!).Phase, 1e-3f, "must wrap to 30% of the next cycle");
         Assert.IsFalse(paint.IsValid, "an infinite animation never settles");
-
-        CoreMotionCanvas.DebugElapsedMilliseconds = -1;
     }
 
     [TestMethod]
@@ -84,7 +76,9 @@ public class AnimatedPaintEffectsTests
         var loop = new Animation(EasingFunctions.Lineal, TimeSpan.FromSeconds(1), int.MaxValue);
 
         CoreMotionCanvas.DebugElapsedMilliseconds = 0;
-        var paint = new SolidColorPaint(SKColors.Red) { ImageFilter = new TestFilter(0, loop) };
+        var paint = new SolidColorPaint(SKColors.Red);
+        paint.SetTransition(loop, SkiaPaint.ImageFilterProperty);
+        paint.ImageFilter = new TestFilter(0);
 
         paint.IsValid = true;
         CoreMotionCanvas.DebugElapsedMilliseconds = 400;
@@ -95,23 +89,19 @@ public class AnimatedPaintEffectsTests
         CoreMotionCanvas.DebugElapsedMilliseconds = 1700; // 1.7 cycles → wraps to 70%
         Assert.AreEqual(0.70f, ((TestFilter)paint.ImageFilter!).Radius, 1e-3f);
         Assert.IsFalse(paint.IsValid);
-
-        CoreMotionCanvas.DebugElapsedMilliseconds = -1;
     }
 
     [TestMethod]
     public void StaticEffect_DoesNotAnimateOrInvalidate()
     {
-        // No Animation → the motion has nothing to run: the value is returned as-is and the paint
-        // is left settled (the create-once behavior every existing effect relies on).
+        // No transition on the paint → the motion has nothing to run: the value is returned as-is
+        // and the paint is left settled (the create-once behavior every existing effect relies on).
         CoreMotionCanvas.DebugElapsedMilliseconds = 0;
-        var paint = new SolidColorPaint(SKColors.Green) { PathEffect = new TestEffect(0.5f, animation: null) };
+        var paint = new SolidColorPaint(SKColors.Green) { PathEffect = new TestEffect(0.5f) };
 
         paint.IsValid = true;
         CoreMotionCanvas.DebugElapsedMilliseconds = 500;
         Assert.AreEqual(0.5f, ((TestEffect)paint.PathEffect!).Phase, 1e-4f, "a static effect returns its assigned value unchanged");
         Assert.IsTrue(paint.IsValid, "a static effect must not keep invalidating the canvas");
-
-        CoreMotionCanvas.DebugElapsedMilliseconds = -1;
     }
 }
