@@ -36,11 +36,17 @@ public static class SetterExtensions
     /// <param name="series">The series.</param>
     /// <param name="stateName">The state name.</param>
     /// <param name="setters">The setters collection.</param>
+    /// <param name="behaviors">
+    /// Optional imperative behaviors for the state, for effects a value setter can not express (for
+    /// example animating a fill color). Each is applied when the state becomes active and reversed
+    /// when it is removed. Use <see cref="StateBehavior"/> for an inline, delegate-based behavior.
+    /// </param>
     /// <returns>The series.</returns>
     public static ISeries HasState(
         this ISeries series,
         string stateName,
-        (string, object)[] setters)
+        (string, object)[] setters,
+        params IStateBehavior[] behaviors)
     {
         var statesDictionary = setters.ToDictionary(
             x => x.Item1,
@@ -57,7 +63,7 @@ public static class SetterExtensions
                 // if both are defined by the user or both are defined by the theme
 
                 series.VisualStates[stateName] =
-                    new VisualStatesDictionary.DrawnPropertiesDictionary(statesDictionary, isInternalSet);
+                    new VisualStatesDictionary.DrawnPropertiesDictionary(statesDictionary, isInternalSet, behaviors);
             }
             else
             {
@@ -66,7 +72,7 @@ public static class SetterExtensions
                 if (propertiesDictionary.isInternalSet && !isInternalSet)
                 {
                     series.VisualStates[stateName] =
-                        new VisualStatesDictionary.DrawnPropertiesDictionary(statesDictionary, isInternalSet);
+                        new VisualStatesDictionary.DrawnPropertiesDictionary(statesDictionary, isInternalSet, behaviors);
                 }
             }
         }
@@ -75,7 +81,7 @@ public static class SetterExtensions
             // if the state is not defined, we can add it
 
             series.VisualStates[stateName] =
-                new VisualStatesDictionary.DrawnPropertiesDictionary(statesDictionary, isInternalSet);
+                new VisualStatesDictionary.DrawnPropertiesDictionary(statesDictionary, isInternalSet, behaviors);
         }
 
         return series;

@@ -70,6 +70,10 @@ public class VisualStatesDictionary : Dictionary<string, DrawnPropertiesDictiona
 
         if (!animatable._statesTracker.ActiveStates.Add(stateName)) return;
         animatable._statesTracker.ActiveStatesList.Add(stateName);
+
+        // run the imperative side of the state, once, on activation.
+        foreach (var behavior in state.Behaviors)
+            behavior.OnStateApplied(animatable);
     }
 
     /// <summary>
@@ -120,6 +124,10 @@ public class VisualStatesDictionary : Dictionary<string, DrawnPropertiesDictiona
 
         _ = animatable._statesTracker.ActiveStates.Remove(stateName);
         _ = animatable._statesTracker.ActiveStatesList.Remove(stateName);
+
+        // undo the imperative side of the state (we only get here when the state was active).
+        foreach (var behavior in state.Behaviors)
+            behavior.OnStateRemoved(animatable);
     }
 
     /// <summary>
@@ -148,6 +156,10 @@ public class VisualStatesDictionary : Dictionary<string, DrawnPropertiesDictiona
                     _ = animatable._statesTracker.OriginalValues.Remove(definition);
                 }
             }
+
+            // undo the imperative side of every active state.
+            foreach (var behavior in state.Behaviors)
+                behavior.OnStateRemoved(animatable);
         }
 
         animatable._statesTracker.ActiveStates.Clear();
@@ -172,11 +184,21 @@ public class VisualStatesDictionary : Dictionary<string, DrawnPropertiesDictiona
     /// </summary>
     /// <param name="baseDictionary">The base dictionary.</param>
     /// <param name="isInternalSet">Indicates whether the object was created by a theme.</param>
+    /// <param name="behaviors">The imperative behaviors run when the state is applied/removed.</param>
     public class DrawnPropertiesDictionary(
         Dictionary<string, DrawnPropertySetter> baseDictionary,
-        bool isInternalSet)
+        bool isInternalSet,
+        IReadOnlyList<IStateBehavior>? behaviors = null)
             : Dictionary<string, DrawnPropertySetter>(baseDictionary)
     {
         internal bool isInternalSet { get; } = isInternalSet;
+
+        /// <summary>
+        /// Gets the imperative behaviors of the state. These run alongside the value setters: each is
+        /// applied when the state becomes active and reversed when the state is removed. They are kept
+        /// separate from the value setters because they are not keyed by a property name and so do not
+        /// take part in the value-setter restore/layering.
+        /// </summary>
+        public IReadOnlyList<IStateBehavior> Behaviors { get; } = behaviors ?? [];
     }
 }
