@@ -264,10 +264,22 @@ public class SkiaSharpDrawingContext(
         if (paint != MeasureTask.Instance)
         {
             ActiveLvcPaint = paint;
+
+            // A per-element paint (an override the geometry carries, not a registered paint task) is
+            // visited only here, so the frame loop never resets its validity latch the way it does for
+            // tasks and geometries. Reset it before reading; OnPaintStarted re-flags it false while the
+            // paint is still animating, and leaves it true once the transition completes.
+            paint.IsValid = true;
             paint.OnPaintStarted(this, element);
         }
 
         DrawElement(element, opacity);
+
+        // Fold the per-element paint's validity into the element so an animating override keeps the
+        // canvas redrawing until its transition completes (the frame loop only checks geometries and
+        // registered tasks, never per-element paints). The measure pass does not paint, so skip it.
+        if (paint != MeasureTask.Instance)
+            element.IsValid = element.IsValid && paint.IsValid;
 
         paint.OnPaintFinished(this, element);
 
