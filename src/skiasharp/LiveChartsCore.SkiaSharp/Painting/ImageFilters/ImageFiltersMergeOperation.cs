@@ -37,25 +37,23 @@ public class ImageFiltersMergeOperation(ImageFilter[] imageFilters) : ImageFilte
 {
     internal static object s_key = new();
 
-    private ImageFilter[] Filters { get; set; } = imageFilters;
+    private ImageFilter[] Filters { get; } = imageFilters;
 
-    /// <inheritdoc cref="ImageFilter.Clone"/>
-    public override ImageFilter Clone() => new ImageFiltersMergeOperation(Filters);
-
-    /// <inheritdoc cref="ImageFilter.CreateFilter()"/>
-    public override void CreateFilter()
+    /// <inheritdoc cref="ImageFilter.CreateNative()"/>
+    public override SKImageFilter CreateNative()
     {
-        var imageFilters = new SKImageFilter[Filters.Length];
-        var i = 0;
+        var natives = new SKImageFilter[Filters.Length];
+        for (var i = 0; i < natives.Length; i++)
+            natives[i] = Filters[i].CreateNative();
 
-        foreach (var item in Filters)
-        {
-            item.CreateFilter();
-            if (item._sKImageFilter is null) throw new System.Exception("Image filter is not valid");
-            imageFilters[i++] = item._sKImageFilter;
-        }
+        var merged = SKImageFilter.CreateMerge(natives);
 
-        _sKImageFilter = SKImageFilter.CreateMerge(imageFilters);
+        // CreateMerge takes its own reference to each child, so the transient child handles can be
+        // released here; only the merged filter is returned, and the paint owns and disposes it.
+        foreach (var native in natives)
+            native.Dispose();
+
+        return merged;
     }
 
     /// <inheritdoc cref="ImageFilter.Transitionate(float, ImageFilter)"/>
@@ -66,7 +64,6 @@ public class ImageFiltersMergeOperation(ImageFilter[] imageFilters) : ImageFilte
         if (merge.Filters.Length != Filters.Length)
             throw new System.Exception("The image filters must have the same length");
 
-        var clone = (ImageFiltersMergeOperation)Clone();
         var filters = new ImageFilter[Filters.Length];
 
         var hasNull = false;
@@ -77,16 +74,7 @@ public class ImageFiltersMergeOperation(ImageFilter[] imageFilters) : ImageFilte
             if (transitionated is null) hasNull = true;
         }
 
-        clone.Filters = hasNull
-            ? [.. filters.Where(x => x is not null)]
-            : filters;
-
-        return clone;
-    }
-
-    internal override void Dispose()
-    {
-        foreach (var item in Filters)
-            item.Dispose();
+        return new ImageFiltersMergeOperation(
+            hasNull ? [.. filters.Where(x => x is not null)] : filters);
     }
 }

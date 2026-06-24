@@ -37,31 +37,26 @@ public class DashEffect(float[] dashArray, float phase = 0)
 {
     internal static object s_key = new();
 
-    private float[] DashArray { get; set; } = dashArray;
-    private float Phase { get; set; } = phase;
+    private float[] DashArray { get; } = dashArray;
+    private float Phase { get; } = phase;
 
-    /// <inheritdoc cref="PathEffect.Clone"/>
-    public override PathEffect Clone() => new DashEffect(DashArray, Phase);
-
-    /// <inheritdoc cref="PathEffect.CreateEffect()"/>
-    public override void CreateEffect() =>
-        _sKPathEffect = SKPathEffect.CreateDash(DashArray, Phase);
+    /// <inheritdoc cref="PathEffect.CreateNative()"/>
+    public override SKPathEffect CreateNative() => SKPathEffect.CreateDash(DashArray, Phase);
 
     /// <inheritdoc cref="PathEffect.Transitionate(float, PathEffect)"/>
     public override PathEffect? Transitionate(float progress, PathEffect? target)
     {
         if (target is not DashEffect dashEffect) return target;
 
-        var clone = (DashEffect)Clone();
-
         if (DashArray.Length != dashEffect.DashArray.Length)
             throw new Exception("The dash arrays must have the same length");
 
-        for (var i = 0; i < DashArray.Length; i++)
-            clone.DashArray[i] = DashArray[i] + (dashEffect.DashArray[i] - DashArray[i]) * progress;
+        var dashArray = new float[DashArray.Length];
+        for (var i = 0; i < dashArray.Length; i++)
+            dashArray[i] = DashArray[i] + (dashEffect.DashArray[i] - DashArray[i]) * progress;
 
-        clone.Phase = Phase + (dashEffect.Phase - Phase) * progress;
+        var phase = Phase + (dashEffect.Phase - Phase) * progress;
 
-        return clone;
+        return new DashEffect(dashArray, phase);
     }
 }

@@ -40,26 +40,19 @@ public class Blur(
 {
     internal static object s_key = new();
 
-    private float SigmaX { get; set; } = sigmaX;
-    private float SigmaY { get; set; } = sigmaY;
+    private float SigmaX { get; } = sigmaX;
+    private float SigmaY { get; } = sigmaY;
 
-    /// <inheritdoc cref="ImageFilter.Clone"/>
-    public override ImageFilter Clone() => new Blur(SigmaX, SigmaY);
-
-    /// <inheritdoc cref="ImageFilter.CreateFilter()"/>
-    public override void CreateFilter() =>
-        _sKImageFilter = SKImageFilter.CreateBlur(SigmaX, SigmaY);
+    /// <inheritdoc cref="ImageFilter.CreateNative()"/>
+    public override SKImageFilter CreateNative() => SKImageFilter.CreateBlur(SigmaX, SigmaY);
 
     /// <inheritdoc cref="ImageFilter.Transitionate(float, ImageFilter)"/>
     protected override ImageFilter Transitionate(float progress, ImageFilter target)
     {
         var blur = (Blur)target;
 
-        var clone = (Blur)Clone();
-
-        clone.SigmaX = SigmaX + (blur.SigmaX - SigmaX) * progress;
-        clone.SigmaY = SigmaY + (blur.SigmaY - SigmaY) * progress;
-
-        return clone;
+        return new Blur(
+            SigmaX + (blur.SigmaX - SigmaX) * progress,
+            SigmaY + (blur.SigmaY - SigmaY) * progress);
     }
 }

@@ -35,35 +35,21 @@ public abstract class PathEffect(object key)
     {
         { DashEffect.s_key, new DashEffect([1, 0], 0) }
     };
-    /// <summary>
-    /// The native Skia path effect produced by <see cref="CreateEffect"/>.
-    /// </summary>
-    /// <remarks>
-    /// This field is <see langword="protected"/> <see langword="internal"/> so the owning
-    /// <see cref="SkiaPaint"/> can read it in this assembly, while a <see cref="PathEffect"/>
-    /// subclass in another assembly can set it from its <see cref="CreateEffect"/> override.
-    /// </remarks>
-    protected internal SKPathEffect? _sKPathEffect;
 
     /// <summary>
-    /// Creates a new object that is a copy of the current instance.
+    /// Builds the native Skia path effect from this effect's parameters. The returned object is owned
+    /// by the caller (the <see cref="SkiaPaint"/>), which caches and disposes it — the effect itself
+    /// holds no native resource, so it is a lightweight, shareable value.
     /// </summary>
-    /// <returns>
-    /// A new object that is a copy of this instance.
-    /// </returns>
-    public abstract PathEffect Clone();
+    /// <returns>A new native path effect.</returns>
+    public abstract SKPathEffect CreateNative();
 
     /// <summary>
-    /// Creates the path effect.
-    /// </summary>
-    public abstract void CreateEffect();
-
-    /// <summary>
-    /// Transitions the path effect to a new one.
+    /// Returns the effect interpolated toward <paramref name="target"/> at the given progress.
     /// </summary>
     /// <param name="progress">The progress.</param>
     /// <param name="target">The end target.</param>
-    /// <returns></returns>
+    /// <returns>A new interpolated effect.</returns>
     public abstract PathEffect? Transitionate(float progress, PathEffect? target);
 
     /// <summary>
@@ -87,11 +73,5 @@ public abstract class PathEffect(object key)
         to ??= s_defaultEffects.TryGetValue(key, out var dTo) ? dTo : from;
 
         return from!.Transitionate(progress, to);
-    }
-
-    internal virtual void Dispose()
-    {
-        _sKPathEffect?.Dispose();
-        _sKPathEffect = null;
     }
 }
